@@ -12,7 +12,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
 
     <!-- Estilos Tailwind CSS -->
-    <link rel="stylesheet" href="../src/assets/style.css" />
+    <link rel="stylesheet" href="../src/assets/output.css" />
 
     <style>
       body {
@@ -70,6 +70,24 @@
               />
             </div>
             <p id="nome-error" class="hidden text-[12px] text-orange-500 mt-0.5">Por favor, insira seu nome completo.</p>
+          </div>
+
+          <!-- Campo: CPF -->
+          <div class="flex flex-col gap-1.5">
+            <label for="cpf" class="text-[13px] font-medium text-slate-700">CPF</label>
+            <div class="relative">
+              <input
+                id="cpf"
+                name="cpf"
+                type="text"
+                placeholder="000.000.000-00"
+                maxlength="14"
+                class="w-full h-[48px] px-4 rounded-lg border border-gray-200 bg-white text-[14px] text-slate-800 placeholder-gray-300
+                       focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-transparent
+                       transition-all duration-200"
+              />
+            </div>
+            <p id="cpf-error" class="hidden text-[12px] text-orange-500 mt-0.5">Por favor, insira um CPF válido.</p>
           </div>
 
           <!-- Campo: E-mail -->
@@ -180,7 +198,7 @@
         <!-- Link do rodapé -->
         <p class="mt-6 text-center text-[13px] text-gray-400">
           Já tem uma conta?
-          <a href="./login.html" class="text-orange-500 font-medium hover:text-orange-600 hover:underline transition-colors ml-1">Faça login</a>
+          <a href="./login.php" class="text-orange-500 font-medium hover:text-orange-600 hover:underline transition-colors ml-1">Faça login</a>
         </p>
 
       </div><!-- /cartão principal -->
@@ -189,11 +207,13 @@
     <script>
       const form            = document.getElementById('cadastro-form');
       const nomeInput       = document.getElementById('nome');
+      const cpfInput        = document.getElementById('cpf');
       const emailInput      = document.getElementById('email');
       const senhaInput      = document.getElementById('senha');
       const confirmarInput  = document.getElementById('confirmar-senha');
 
       const nomeError          = document.getElementById('nome-error');
+      const cpfError           = document.getElementById('cpf-error');
       const emailError         = document.getElementById('email-error');
       const emailIcon          = document.getElementById('email-icon');
       const senhaError         = document.getElementById('senha-error');
@@ -202,6 +222,16 @@
       const btnText      = document.getElementById('btn-text');
       const btnSpinner   = document.getElementById('btn-spinner');
       const btnCadastrar = document.getElementById('btn-cadastrar');
+
+      // Máscara de CPF
+      cpfInput.addEventListener('input', (e) => {
+        let v = e.target.value.replace(/\D/g, '');
+        if (v.length > 11) v = v.substring(0, 11);
+        v = v.replace(/(\d{3})(\d)/, '$1.$2');
+        v = v.replace(/(\d{3})(\d)/, '$1.$2');
+        v = v.replace(/(\d{3})(\d{1,2})$/, '$1-$2');
+        e.target.value = v;
+      });
 
       // Alternar visibilidade da senha
       document.getElementById('toggle-senha').addEventListener('click', () => {
@@ -222,7 +252,7 @@
         input.classList.add('border-orange-400', 'bg-orange-50', 'input-error');
         input.classList.remove('border-gray-200', 'bg-white');
         errorEl.classList.remove('hidden');
-        if (msg) errorEl.querySelector('span:last-child') ? (errorEl.querySelector('span:last-child').textContent = msg) : (errorEl.textContent = msg);
+        if (msg) errorEl.textContent = msg;
         if (iconEl) iconEl.classList.remove('hidden');
         setTimeout(() => input.classList.remove('input-error'), 500);
       }
@@ -240,6 +270,12 @@
         else clearError(nomeInput, nomeError);
       });
 
+      cpfInput.addEventListener('blur', () => {
+        const v = cpfInput.value.replace(/\D/g, '');
+        if (v.length !== 11) setError(cpfInput, cpfError);
+        else clearError(cpfInput, cpfError);
+      });
+
       emailInput.addEventListener('blur', () => {
         const v = emailInput.value.trim();
         const valid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
@@ -250,7 +286,6 @@
       senhaInput.addEventListener('blur', () => {
         if (senhaInput.value.length < 8) setError(senhaInput, senhaError);
         else clearError(senhaInput, senhaError);
-        // Revalidar confirmação se o campo já estiver preenchido
         if (confirmarInput.value) {
           if (confirmarInput.value !== senhaInput.value) setError(confirmarInput, confirmarError);
           else clearError(confirmarInput, confirmarError);
@@ -271,6 +306,10 @@
         if (!nomeInput.value.trim()) { setError(nomeInput, nomeError); valid = false; }
         else clearError(nomeInput, nomeError);
 
+        const cpfVal = cpfInput.value.replace(/\D/g, '');
+        if (cpfVal.length !== 11) { setError(cpfInput, cpfError); valid = false; }
+        else clearError(cpfInput, cpfError);
+
         const emailVal = emailInput.value.trim();
         if (!emailVal || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailVal)) {
           setError(emailInput, emailError, emailIcon, 'Por favor, insira um e-mail válido.');
@@ -287,20 +326,15 @@
 
         if (!valid) return;
 
-        // Simular carregamento
         btnCadastrar.disabled = true;
         btnText.textContent = 'Cadastrando...';
         btnSpinner.classList.remove('hidden');
 
-        // TODO: substituir pela chamada real à API
         await new Promise(r => setTimeout(r, 1500));
 
         btnCadastrar.disabled = false;
         btnText.textContent = 'Cadastrar';
         btnSpinner.classList.add('hidden');
-
-        // Demo: exibir erro de e-mail duplicado
-        setError(emailInput, emailError, emailIcon, 'Este e-mail já está cadastrado.');
       });
     </script>
 

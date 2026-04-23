@@ -13,7 +13,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
 
   <!-- Estilos Tailwind CSS -->
-  <link rel="stylesheet" href="../src/assets/style.css" />
+  <link rel="stylesheet" href="../src/assets/output.css" />
 
   <style>
     body {

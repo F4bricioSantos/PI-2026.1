@@ -4,21 +4,18 @@
   "type": "module",
   "main": "index.js",
   "scripts": {
-    "dev": "vite",
-    "build": "vite build",
-    "preview": "vite preview"
+    "dev": "tailwindcss -i ./src/assets/style.css -o ./src/assets/output.css --watch",
+    "build": "tailwindcss -i ./src/assets/style.css -o ./src/assets/output.css --minify"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "description": "",
   "devDependencies": {
-    "@tailwindcss/postcss": "^4.2.2",
-    "@tailwindcss/vite": "^4.2.2",
+    "@tailwindcss/cli": "^4.2.4",
     "autoprefixer": "^10.4.27",
     "postcss": "^8.5.8",
-    "tailwindcss": "^4.2.2",
-    "vite": "^8.0.3"
+    "tailwindcss": "^4.2.4"
   },
   "dependencies": {
     "lucide": "^1.8.0"

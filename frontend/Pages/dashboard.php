@@ -12,7 +12,7 @@
         extend: {
           fontFamily: { sans: ['Manrope', 'sans-serif'] },
           colors: {
-            orange:  { DEFAULT: '#F97316', light: '#FFEDD5' },
+            orange:  { DEFAULT: '#F97316', light: '#FFEDD5', dark: '#EA580C' },
             sidebar: '#16213E',
             card:    '#1E2A3A',
             bg:      '#F8F9FA',
@@ -25,84 +25,22 @@
 <body class="font-sans bg-bg text-gray-800 flex h-screen overflow-hidden">
 
   <!-- ══════════════ SIDEBAR ══════════════ -->
-  <aside class="w-60 bg-sidebar flex flex-col flex-shrink-0 h-screen">
-
-    <!-- Logo -->
-    <div class="flex items-center gap-3 px-5 py-6 border-b border-white/10">
-      <div class="w-10 h-10 bg-orange rounded-xl flex items-center justify-center flex-shrink-0">
-        <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
-          <path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/>
-        </svg>
-      </div>
-      <div>
-        <div class="font-extrabold text-white text-base leading-tight">ReformAí</div>
-        <div class="text-[10px] font-semibold text-white/40 tracking-widest uppercase">Marketplace</div>
-      </div>
-    </div>
-
-    <!-- Nav -->
-    <nav class="flex-1 px-3 py-5 space-y-1 overflow-y-auto">
-      <!-- Active -->
-      <a href="#" class="flex items-center gap-3 px-4 py-2.5 rounded-xl bg-orange text-white font-semibold text-sm">
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
-        Início
-      </a>
-      <a href="#" class="flex items-center gap-3 px-4 py-2.5 rounded-xl text-white/60 hover:text-white hover:bg-white/5 font-medium text-sm transition-all">
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-        Detalhes
-      </a>
-      <a href="#" class="flex items-center gap-3 px-4 py-2.5 rounded-xl text-white/60 hover:text-white hover:bg-white/5 font-medium text-sm transition-all">
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>
-        Cadastro
-      </a>
-      <a href="#" class="flex items-center gap-3 px-4 py-2.5 rounded-xl text-white/60 hover:text-white hover:bg-white/5 font-medium text-sm transition-all">
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M15 3h4a2 2 0 012 2v14a2 2 0 01-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
-        Login
-      </a>
-      <a href="#" class="flex items-center gap-3 px-4 py-2.5 rounded-xl text-white/60 hover:text-white hover:bg-white/5 font-medium text-sm transition-all">
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-        Meu Perfil
-      </a>
-
-      <!-- Section label -->
-      <div class="pt-5 pb-2 px-4 text-[10px] font-bold text-white/30 uppercase tracking-widest">Profissional</div>
-
-      <a href="#" class="flex items-center gap-3 px-4 py-2.5 rounded-xl text-white/60 hover:text-white hover:bg-white/5 font-medium text-sm transition-all">
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
-        Novo Serviço
-      </a>
-      <a href="#" class="flex items-center gap-3 px-4 py-2.5 rounded-xl text-white/60 hover:text-white hover:bg-white/5 font-medium text-sm transition-all">
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 010 14.14M4.93 4.93a10 10 0 000 14.14"/></svg>
-        Gerenciar
-      </a>
-      <a href="#" class="flex items-center gap-3 px-4 py-2.5 rounded-xl text-white/60 hover:text-white hover:bg-white/5 font-medium text-sm transition-all">
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
-        Portfólio
-      </a>
-      <a href="#" class="flex items-center gap-3 px-4 py-2.5 rounded-xl text-white/60 hover:text-white hover:bg-white/5 font-medium text-sm transition-all">
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-        Avaliar
-      </a>
-    </nav>
-
-    <!-- User -->
-    <div class="px-4 py-4 border-t border-white/10 flex items-center gap-3">
-      <div class="w-9 h-9 rounded-full bg-teal-500 flex items-center justify-center text-xs font-bold text-white flex-shrink-0">UT</div>
-      <div class="min-w-0">
-        <div class="text-sm font-semibold text-white truncate">Usuário Teste</div>
-        <div class="text-xs text-white/40">Sair do sistema</div>
-      </div>
-    </div>
-  </aside>
+  <div id="sidebar-container" class="w-60 bg-sidebar flex-shrink-0 h-screen"></div>
+  <script type="module">
+    import { renderSidebar } from '../src/components/sidebar.js';
+    renderSidebar('sidebar-container', 'inicio');
+  </script>
 
   <!-- ══════════════ MAIN ══════════════ -->
   <main class="flex-1 flex flex-col overflow-hidden">
 
     <!-- Top bar -->
     <header class="flex items-center justify-between px-8 py-5 border-b border-gray-200 bg-white flex-shrink-0">
-      <div class="flex items-center gap-2 text-gray-400">
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
-        <span class="text-gray-800 font-bold text-lg">Início</span>
+      <div class="flex items-center gap-2 text-gray-800">
+        <div class="w-8 h-8 bg-orange/10 rounded-lg flex items-center justify-center text-orange">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+        </div>
+        <span class="font-bold text-lg tracking-tight">Início</span>
       </div>
       <div class="flex items-center gap-4">
         <button class="relative text-gray-400 hover:text-gray-700 transition-colors">
@@ -144,7 +82,7 @@
         <!-- Card 1 -->
         <div class="bg-white rounded-2xl overflow-hidden flex flex-col shadow-lg hover:shadow-xl hover:-translate-y-0.5 transition-all duration-200">
           <div class="relative">
-            <div class="h-44 bg-gradient-to-br from-slate-100 to-slate-200"></div>
+            <img src="https://images.unsplash.com/photo-1556911220-e15b29be8c8f?auto=format&fit=crop&q=80&w=600" alt="Reforma de Cozinha" class="w-full h-44 object-cover" />
             <span class="absolute top-3 left-3 bg-orange text-white text-[10px] font-bold px-2.5 py-1 rounded-md uppercase tracking-wide">Reforma</span>
           </div>
           <div class="p-5 flex flex-col gap-2 flex-1">
@@ -159,7 +97,7 @@
                 <span class="text-xs font-semibold text-gray-700">4.8</span>
                 <span class="text-xs text-gray-400">(12 avaliações)</span>
               </div>
-              <button class="text-orange text-xs font-bold hover:underline">Ver detalhes</button>
+              <a href="detalhes.php" class="text-orange text-xs font-bold hover:underline">Ver detalhes</a>
             </div>
           </div>
         </div>
@@ -167,7 +105,7 @@
         <!-- Card 2 -->
         <div class="bg-white rounded-2xl overflow-hidden flex flex-col shadow-lg hover:shadow-xl hover:-translate-y-0.5 transition-all duration-200">
           <div class="relative">
-            <div class="h-44 bg-gradient-to-br from-blue-50 to-slate-200"></div>
+            <img src="https://images.unsplash.com/photo-1621905251189-08b45d6a269e?auto=format&fit=crop&q=80&w=600" alt="Elétrica" class="w-full h-44 object-cover" />
             <span class="absolute top-3 left-3 bg-orange text-white text-[10px] font-bold px-2.5 py-1 rounded-md uppercase tracking-wide">Elétrica</span>
           </div>
           <div class="p-5 flex flex-col gap-2 flex-1">
@@ -182,7 +120,7 @@
                 <span class="text-xs font-semibold text-gray-700">4.9</span>
                 <span class="text-xs text-gray-400">(45 avaliações)</span>
               </div>
-              <button class="text-orange text-xs font-bold hover:underline">Ver detalhes</button>
+              <a href="detalhes.php" class="text-orange text-xs font-bold hover:underline">Ver detalhes</a>
             </div>
           </div>
         </div>
@@ -190,7 +128,7 @@
         <!-- Card 3 -->
         <div class="bg-white rounded-2xl overflow-hidden flex flex-col shadow-lg hover:shadow-xl hover:-translate-y-0.5 transition-all duration-200">
           <div class="relative">
-            <div class="h-44 bg-gradient-to-br from-orange-50 to-slate-200"></div>
+            <img src="https://images.unsplash.com/photo-1589939705384-5185137a7f0f?auto=format&fit=crop&q=80&w=600" alt="Pintura" class="w-full h-44 object-cover" />
             <span class="absolute top-3 left-3 bg-orange text-white text-[10px] font-bold px-2.5 py-1 rounded-md uppercase tracking-wide">Pintura</span>
           </div>
           <div class="p-5 flex flex-col gap-2 flex-1">
@@ -205,7 +143,7 @@
                 <span class="text-xs font-semibold text-gray-700">4.7</span>
                 <span class="text-xs text-gray-400">(32 avaliações)</span>
               </div>
-              <button class="text-orange text-xs font-bold hover:underline">Ver detalhes</button>
+              <a href="detalhes.php" class="text-orange text-xs font-bold hover:underline">Ver detalhes</a>
             </div>
           </div>
         </div>
@@ -213,7 +151,7 @@
         <!-- Card 4 -->
         <div class="bg-white rounded-2xl overflow-hidden flex flex-col shadow-lg hover:shadow-xl hover:-translate-y-0.5 transition-all duration-200">
           <div class="relative">
-            <div class="h-44 bg-gradient-to-br from-cyan-50 to-slate-200"></div>
+            <img src="https://images.unsplash.com/photo-1504148455328-436306343aa1?auto=format&fit=crop&q=80&w=600" alt="Hidráulica" class="w-full h-44 object-cover" />
             <span class="absolute top-3 left-3 bg-orange text-white text-[10px] font-bold px-2.5 py-1 rounded-md uppercase tracking-wide">Hidráulica</span>
           </div>
           <div class="p-5 flex flex-col gap-2 flex-1">
@@ -228,7 +166,7 @@
                 <span class="text-xs font-semibold text-gray-700">4.5</span>
                 <span class="text-xs text-gray-400">(18 avaliações)</span>
               </div>
-              <button class="text-orange text-xs font-bold hover:underline">Ver detalhes</button>
+              <a href="detalhes.php" class="text-orange text-xs font-bold hover:underline">Ver detalhes</a>
             </div>
           </div>
         </div>
@@ -236,7 +174,7 @@
         <!-- Card 5 -->
         <div class="bg-white rounded-2xl overflow-hidden flex flex-col shadow-lg hover:shadow-xl hover:-translate-y-0.5 transition-all duration-200">
           <div class="relative">
-            <div class="h-44 bg-gradient-to-br from-purple-50 to-slate-200"></div>
+            <img src="https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?auto=format&fit=crop&q=80&w=600" alt="Design de Interiores" class="w-full h-44 object-cover" />
             <span class="absolute top-3 left-3 bg-orange text-white text-[10px] font-bold px-2.5 py-1 rounded-md uppercase tracking-wide">Design</span>
           </div>
           <div class="p-5 flex flex-col gap-2 flex-1">
@@ -251,7 +189,7 @@
                 <span class="text-xs font-semibold text-gray-700">5.0</span>
                 <span class="text-xs text-gray-400">(58 avaliações)</span>
               </div>
-              <button class="text-orange text-xs font-bold hover:underline">Ver detalhes</button>
+              <a href="detalhes.php" class="text-orange text-xs font-bold hover:underline">Ver detalhes</a>
             </div>
           </div>
         </div>
@@ -259,7 +197,7 @@
         <!-- Card 6 -->
         <div class="bg-white rounded-2xl overflow-hidden flex flex-col shadow-lg hover:shadow-xl hover:-translate-y-0.5 transition-all duration-200">
           <div class="relative">
-            <div class="h-44 bg-gradient-to-br from-red-50 to-slate-200"></div>
+            <img src="https://images.unsplash.com/photo-1632759162352-f117d873d630?auto=format&fit=crop&q=80&w=600" alt="Telhado" class="w-full h-44 object-cover" />
             <span class="absolute top-3 left-3 bg-orange text-white text-[10px] font-bold px-2.5 py-1 rounded-md uppercase tracking-wide">Telhado</span>
           </div>
           <div class="p-5 flex flex-col gap-2 flex-1">
@@ -274,7 +212,7 @@
                 <span class="text-xs font-semibold text-gray-700">4.6</span>
                 <span class="text-xs text-gray-400">(21 avaliações)</span>
               </div>
-              <button class="text-orange text-xs font-bold hover:underline">Ver detalhes</button>
+              <a href="detalhes.php" class="text-orange text-xs font-bold hover:underline">Ver detalhes</a>
             </div>
           </div>
         </div>
