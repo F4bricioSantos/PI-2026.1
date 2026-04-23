@@ -198,7 +198,7 @@
         <!-- Link do rodapé -->
         <p class="mt-6 text-center text-[13px] text-gray-400">
           Já tem uma conta?
-          <a href="./login.php" class="text-orange-500 font-medium hover:text-orange-600 hover:underline transition-colors ml-1">Faça login</a>
+          <a href="login.php" class="text-orange-500 font-medium hover:text-orange-600 hover:underline transition-colors ml-1">Faça login</a>
         </p>
 
       </div><!-- /cartão principal -->
@@ -330,11 +330,37 @@
         btnText.textContent = 'Cadastrando...';
         btnSpinner.classList.remove('hidden');
 
-        await new Promise(r => setTimeout(r, 1500));
+        try {
+          const res  = await fetch('../../backend/controllers/AuthController.php?action=cadastrar', {
+            method: 'POST',
+            body: new FormData(form),
+          });
 
-        btnCadastrar.disabled = false;
-        btnText.textContent = 'Cadastrar';
-        btnSpinner.classList.add('hidden');
+          const data = await res.json();
+
+          if (data.sucesso) {
+            window.location.href = data.redirect;
+            return;
+          }
+
+          if (data.erros) {
+            if (data.erros['nome'])            setError(nomeInput,      nomeError,      null,      data.erros['nome']);
+            if (data.erros['cpf'])             setError(cpfInput,       cpfError,       null,      data.erros['cpf']);
+            if (data.erros['email'])           setError(emailInput,     emailError,     emailIcon, data.erros['email']);
+            if (data.erros['senha'])           setError(senhaInput,     senhaError,     null,      data.erros['senha']);
+            if (data.erros['confirmar-senha']) setError(confirmarInput, confirmarError, null,      data.erros['confirmar-senha']);
+          } else {
+            alert(data.mensagem ?? 'Erro inesperado. Tente novamente.');
+          }
+
+        } catch (err) {
+          console.error(err);
+          alert('Falha na comunicação com o servidor.');
+        } finally {
+          btnCadastrar.disabled = false;
+          btnText.textContent   = 'Cadastrar';
+          btnSpinner.classList.add('hidden');
+        }
       });
     </script>
 

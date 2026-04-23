@@ -166,7 +166,7 @@
         </button>
 
         <!-- Botão: Criar Conta (contorno) -->
-        <a href="./cadastro.html" id="btn-criar-conta" class="btn-outline w-full h-[52px] border-2 border-orange-500 text-orange-500 text-[15px] font-semibold rounded-lg
+        <a href="cadastro.php" id="btn-criar-conta" class="btn-outline w-full h-[52px] border-2 border-orange-500 text-orange-500 text-[15px] font-semibold rounded-lg
                    hover:bg-orange-50 active:bg-orange-100
                    focus:outline-none focus:ring-4 focus:ring-orange-100
                    transition-all duration-200 flex items-center justify-center">
@@ -263,25 +263,36 @@
 
       if (!valid) return;
 
-      // Simular carregamento
       btnEntrar.disabled = true;
       btnText.textContent = 'Entrando...';
       btnSpinner.classList.remove('hidden');
       hideGlobalError();
 
-      // TODO: substituir pela chamada real à API
-      await new Promise(r => setTimeout(r, 1500));
+      try {
+        const res  = await fetch('../../backend/controllers/AuthController.php?action=login', {
+          method: 'POST',
+          body: new FormData(form),
+        });
 
-      btnEntrar.disabled = false;
-      btnText.textContent = 'Entrar';
-      btnSpinner.classList.add('hidden');
+        const data = await res.json();
 
-      // Demo: exibir erro de credenciais inválidas
-      setError(emailInput, emailError, emailIcon);
-      setError(senhaInput, senhaError, senhaIcon);
-      emailError.classList.add('hidden');
-      senhaError.classList.add('hidden');
-      showGlobalError();
+        if (data.sucesso) {
+          window.location.href = data.redirect;
+          return;
+        }
+
+        if (data.erros?.email) setError(emailInput, emailError, emailIcon);
+        if (data.erros?.senha) setError(senhaInput, senhaError, senhaIcon);
+        if (data.erro_global)  showGlobalError();
+
+      } catch (err) {
+        console.error(err);
+        showGlobalError();
+      } finally {
+        btnEntrar.disabled  = false;
+        btnText.textContent = 'Entrar';
+        btnSpinner.classList.add('hidden');
+      }
     });
   </script>
 </body>
