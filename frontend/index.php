@@ -30,8 +30,8 @@
         
         <!-- Action Buttons -->
         <div class="hidden md:flex items-center space-x-6 text-[15px]">
-          <a href="#" class="font-medium text-gray-500 hover:text-gray-900 transition-colors">Entrar</a>
-          <a href="#" class="px-5 py-2.5 bg-orange-500 text-white font-medium rounded-lg hover:bg-orange-600 transition-colors shadow-sm focus:outline-none focus:ring-4 focus:ring-orange-100">
+          <a href="pages/login.php" class="font-medium text-gray-500 hover:text-gray-900 transition-colors">Entrar</a>
+          <a href="pages/cadastro.php" class="px-5 py-2.5 bg-orange-500 text-white font-medium rounded-lg hover:bg-orange-600 transition-colors shadow-sm focus:outline-none focus:ring-4 focus:ring-orange-100">
             Cadastre-se grátis
           </a>
         </div>
