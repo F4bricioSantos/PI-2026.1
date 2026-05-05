@@ -6,20 +6,14 @@
     <title>Cadastro — ReformAí</title>
     <meta name="description" content="Crie sua conta no ReformAí e comece a encontrar profissionais ou oferecer seus serviços de reforma." />
 
-    <!-- Fonte Inter -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-
-    <!-- Estilos Tailwind CSS -->
     <link rel="stylesheet" href="../src/assets/output.css" />
 
     <style>
-      body {
-        font-family: 'Inter', sans-serif;
-      }
+      body { font-family: 'Inter', sans-serif; }
 
-      /* Animação de tremida ao exibir erro no campo */
       @keyframes shake {
         0%, 100% { transform: translateX(0); }
         20%       { transform: translateX(-5px); }
@@ -27,14 +21,8 @@
         60%       { transform: translateX(-4px); }
         80%       { transform: translateX(4px); }
       }
-      .input-error {
-        animation: shake 0.4s ease;
-      }
-
-      /* Efeito de pressionar o botão */
-      .btn-primary:active {
-        transform: scale(0.98);
-      }
+      .input-error { animation: shake 0.4s ease; }
+      .btn-primary:active { transform: scale(0.98); }
     </style>
   </head>
 
@@ -42,151 +30,112 @@
 
     <div class="w-full max-w-[440px]">
 
-      <!-- Cartão principal -->
       <div class="bg-white rounded-2xl shadow-sm border border-gray-100 px-10 py-10">
 
-        <!-- Cabeçalho -->
         <div class="mb-8 text-center">
           <h1 class="text-[28px] font-bold text-slate-900 leading-tight">Cadastro</h1>
           <p class="mt-1.5 text-[14px] text-gray-400">Crie sua conta para começar a reformar.</p>
         </div>
 
-        <!-- Formulário -->
         <form id="cadastro-form" novalidate class="flex flex-col gap-5">
 
-          <!-- Campo: Nome completo -->
+          <!-- Campo oculto: captura o fluxo da URL (cliente ou prestador) -->
+          <input type="hidden" name="fluxo" id="fluxo" value="cliente" />
+
+          <!-- Nome completo -->
           <div class="flex flex-col gap-1.5">
             <label for="nome" class="text-[13px] font-medium text-slate-700">Nome completo</label>
             <div class="relative">
               <input
-                id="nome"
-                name="nome"
-                type="text"
-                placeholder="Seu nome aqui"
-                autocomplete="name"
+                id="nome" name="nome" type="text"
+                placeholder="Seu nome aqui" autocomplete="name"
                 class="w-full h-[48px] px-4 rounded-lg border border-gray-200 bg-white text-[14px] text-slate-800 placeholder-gray-300
-                       focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-transparent
-                       transition-all duration-200"
+                       focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-transparent transition-all duration-200"
               />
             </div>
             <p id="nome-error" class="hidden text-[12px] text-orange-500 mt-0.5">Por favor, insira seu nome completo.</p>
           </div>
 
-          <!-- Campo: CPF -->
+          <!-- CPF -->
           <div class="flex flex-col gap-1.5">
             <label for="cpf" class="text-[13px] font-medium text-slate-700">CPF</label>
             <div class="relative">
               <input
-                id="cpf"
-                name="cpf"
-                type="text"
-                placeholder="000.000.000-00"
-                maxlength="14"
+                id="cpf" name="cpf" type="text"
+                placeholder="000.000.000-00" maxlength="14"
                 class="w-full h-[48px] px-4 rounded-lg border border-gray-200 bg-white text-[14px] text-slate-800 placeholder-gray-300
-                       focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-transparent
-                       transition-all duration-200"
+                       focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-transparent transition-all duration-200"
               />
             </div>
             <p id="cpf-error" class="hidden text-[12px] text-orange-500 mt-0.5">Por favor, insira um CPF válido.</p>
           </div>
 
-          <!-- Campo: E-mail -->
+          <!-- E-mail -->
           <div class="flex flex-col gap-1.5">
             <label for="email" class="text-[13px] font-medium text-slate-700">E-mail</label>
             <div class="relative">
               <input
-                id="email"
-                name="email"
-                type="email"
-                placeholder="Email@exemplo.com"
-                autocomplete="email"
+                id="email" name="email" type="email"
+                placeholder="Email@exemplo.com" autocomplete="email"
                 class="w-full h-[48px] px-4 pr-11 rounded-lg border border-gray-200 bg-white text-[14px] text-slate-800 placeholder-gray-300
-                       focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-transparent
-                       transition-all duration-200"
+                       focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-transparent transition-all duration-200"
               />
-              <!-- Ícone de erro (oculto por padrão) -->
               <span id="email-icon" class="hidden absolute right-4 top-1/2 -translate-y-1/2 text-orange-500 pointer-events-none">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5">
-                  <circle cx="12" cy="12" r="10"/>
-                  <line x1="12" y1="8" x2="12" y2="12"/>
-                  <line x1="12" y1="16" x2="12.01" y2="16"/>
+                  <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
                 </svg>
               </span>
             </div>
             <p id="email-error" class="hidden text-[12px] text-orange-500 mt-0.5">Este e-mail já está cadastrado.</p>
           </div>
 
-          <!-- Campo: Senha -->
+          <!-- Senha -->
           <div class="flex flex-col gap-1.5">
             <label for="senha" class="text-[13px] font-medium text-slate-700">Senha</label>
             <div class="relative">
               <input
-                id="senha"
-                name="senha"
-                type="password"
-                placeholder="Mínimo 8 caracteres"
-                autocomplete="new-password"
+                id="senha" name="senha" type="password"
+                placeholder="Mínimo 8 caracteres" autocomplete="new-password"
                 class="w-full h-[48px] px-4 pr-11 rounded-lg border border-gray-200 bg-white text-[14px] text-slate-800 placeholder-gray-300
-                       focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-transparent
-                       transition-all duration-200"
+                       focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-transparent transition-all duration-200"
               />
-              <!-- Alternar visibilidade da senha -->
-              <button
-                type="button"
-                id="toggle-senha"
-                aria-label="Mostrar senha"
-                class="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors focus:outline-none"
-              >
+              <button type="button" id="toggle-senha" aria-label="Mostrar senha"
+                class="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors focus:outline-none">
                 <svg id="eye-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5">
-                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
-                  <circle cx="12" cy="12" r="3"/>
+                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
                 </svg>
               </button>
             </div>
             <p id="senha-error" class="hidden text-[12px] text-orange-500 mt-0.5">A senha deve ter pelo menos 8 caracteres.</p>
           </div>
 
-          <!-- Campo: Confirmar Senha -->
+          <!-- Confirmar Senha -->
           <div class="flex flex-col gap-1.5">
             <label for="confirmar-senha" class="text-[13px] font-medium text-slate-700">Confirmar senha</label>
             <div class="relative">
               <input
-                id="confirmar-senha"
-                name="confirmar-senha"
-                type="password"
-                placeholder="Repita sua senha"
-                autocomplete="new-password"
+                id="confirmar-senha" name="confirmar-senha" type="password"
+                placeholder="Repita sua senha" autocomplete="new-password"
                 class="w-full h-[48px] px-4 pr-11 rounded-lg border border-gray-200 bg-white text-[14px] text-slate-800 placeholder-gray-300
-                       focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-transparent
-                       transition-all duration-200"
+                       focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-transparent transition-all duration-200"
               />
-              <!-- Alternar visibilidade da confirmação de senha -->
-              <button
-                type="button"
-                id="toggle-confirmar"
-                aria-label="Mostrar confirmação de senha"
-                class="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors focus:outline-none"
-              >
+              <button type="button" id="toggle-confirmar" aria-label="Mostrar confirmação de senha"
+                class="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors focus:outline-none">
                 <svg id="eye-icon-confirmar" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5">
-                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
-                  <circle cx="12" cy="12" r="3"/>
+                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
                 </svg>
               </button>
             </div>
             <p id="confirmar-senha-error" class="hidden text-[12px] text-orange-500 mt-0.5">As senhas não coincidem.</p>
           </div>
 
-          <!-- Botão de envio -->
-          <button
-            id="btn-cadastrar"
-            type="submit"
+          <!-- Botão -->
+          <button id="btn-cadastrar" type="submit"
             class="btn-primary mt-1 w-full h-[52px] bg-orange-500 hover:bg-orange-600 active:bg-orange-700
-                   text-white text-[15px] font-semibold rounded-lg
-                   shadow-sm focus:outline-none focus:ring-4 focus:ring-orange-200
-                   transition-all duration-200 flex items-center justify-center gap-2"
-          >
+                   text-white text-[15px] font-semibold rounded-lg shadow-sm
+                   focus:outline-none focus:ring-4 focus:ring-orange-200
+                   transition-all duration-200 flex items-center justify-center gap-2">
             <span id="btn-text">Cadastrar</span>
-            <!-- Spinner de carregamento (oculto) -->
             <svg id="btn-spinner" class="hidden w-5 h-5 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
               <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
               <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
@@ -195,35 +144,39 @@
 
         </form>
 
-        <!-- Link do rodapé -->
         <p class="mt-6 text-center text-[13px] text-gray-400">
           Já tem uma conta?
           <a href="login.php" class="text-orange-500 font-medium hover:text-orange-600 hover:underline transition-colors ml-1">Faça login</a>
         </p>
 
-      </div><!-- /cartão principal -->
+      </div>
     </div>
 
     <script>
-      const form            = document.getElementById('cadastro-form');
-      const nomeInput       = document.getElementById('nome');
-      const cpfInput        = document.getElementById('cpf');
-      const emailInput      = document.getElementById('email');
-      const senhaInput      = document.getElementById('senha');
-      const confirmarInput  = document.getElementById('confirmar-senha');
+      // ─── Lê o fluxo da URL e injeta no campo oculto ───────────────────────
+      const params = new URLSearchParams(window.location.search);
+      document.getElementById('fluxo').value = params.get('fluxo') ?? 'cliente';
 
-      const nomeError          = document.getElementById('nome-error');
-      const cpfError           = document.getElementById('cpf-error');
-      const emailError         = document.getElementById('email-error');
-      const emailIcon          = document.getElementById('email-icon');
-      const senhaError         = document.getElementById('senha-error');
-      const confirmarError     = document.getElementById('confirmar-senha-error');
+      // ─── Referências ───────────────────────────────────────────────────────
+      const form           = document.getElementById('cadastro-form');
+      const nomeInput      = document.getElementById('nome');
+      const cpfInput       = document.getElementById('cpf');
+      const emailInput     = document.getElementById('email');
+      const senhaInput     = document.getElementById('senha');
+      const confirmarInput = document.getElementById('confirmar-senha');
+
+      const nomeError      = document.getElementById('nome-error');
+      const cpfError       = document.getElementById('cpf-error');
+      const emailError     = document.getElementById('email-error');
+      const emailIcon      = document.getElementById('email-icon');
+      const senhaError     = document.getElementById('senha-error');
+      const confirmarError = document.getElementById('confirmar-senha-error');
 
       const btnText      = document.getElementById('btn-text');
       const btnSpinner   = document.getElementById('btn-spinner');
       const btnCadastrar = document.getElementById('btn-cadastrar');
 
-      // Máscara de CPF
+      // ─── Máscara CPF ───────────────────────────────────────────────────────
       cpfInput.addEventListener('input', (e) => {
         let v = e.target.value.replace(/\D/g, '');
         if (v.length > 11) v = v.substring(0, 11);
@@ -233,21 +186,20 @@
         e.target.value = v;
       });
 
-      // Alternar visibilidade da senha
+      // ─── Toggle senha ──────────────────────────────────────────────────────
       document.getElementById('toggle-senha').addEventListener('click', () => {
         const isPassword = senhaInput.type === 'password';
         senhaInput.type = isPassword ? 'text' : 'password';
         document.getElementById('eye-icon').style.opacity = isPassword ? '0.5' : '1';
       });
 
-      // Alternar visibilidade da confirmação de senha
       document.getElementById('toggle-confirmar').addEventListener('click', () => {
         const isPassword = confirmarInput.type === 'password';
         confirmarInput.type = isPassword ? 'text' : 'password';
         document.getElementById('eye-icon-confirmar').style.opacity = isPassword ? '0.5' : '1';
       });
 
-      // Funções auxiliares
+      // ─── Helpers ───────────────────────────────────────────────────────────
       function setError(input, errorEl, iconEl = null, msg = null) {
         input.classList.add('border-orange-400', 'bg-orange-50', 'input-error');
         input.classList.remove('border-gray-200', 'bg-white');
@@ -264,7 +216,7 @@
         if (iconEl) iconEl.classList.add('hidden');
       }
 
-      // Validação em tempo real ao perder o foco
+      // ─── Validação no blur ─────────────────────────────────────────────────
       nomeInput.addEventListener('blur', () => {
         if (!nomeInput.value.trim()) setError(nomeInput, nomeError);
         else clearError(nomeInput, nomeError);
@@ -298,7 +250,7 @@
         else clearError(confirmarInput, confirmarError);
       });
 
-      // Envio do formulário
+      // ─── Envio ─────────────────────────────────────────────────────────────
       form.addEventListener('submit', async (e) => {
         e.preventDefault();
         let valid = true;
@@ -327,7 +279,7 @@
         if (!valid) return;
 
         btnCadastrar.disabled = true;
-        btnText.textContent = 'Cadastrando...';
+        btnText.textContent   = 'Cadastrando...';
         btnSpinner.classList.remove('hidden');
 
         try {

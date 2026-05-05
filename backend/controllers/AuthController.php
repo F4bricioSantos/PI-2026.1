@@ -1,11 +1,10 @@
 <?php
-
 ini_set('display_errors', 1);
 error_reporting(E_ALL);
 
-session_start();
-header('Content-Type: application/json; charset=utf-8');
+if (session_status() === PHP_SESSION_NONE) session_start();
 
+header('Content-Type: application/json; charset=utf-8');
 require_once __DIR__ . '/../config/Conexao.php';
 require_once __DIR__ . '/../models/User.php';
 
@@ -14,6 +13,7 @@ $action = $_GET['action'] ?? '';
 match ($action) {
     'cadastrar' => cadastrar($pdo),
     'login'     => login($pdo),
+    'logout'    => logout(),
     default     => responder(405, ['sucesso' => false, 'mensagem' => 'Ação não reconhecida.'])
 };
 
@@ -29,6 +29,7 @@ function cadastrar(PDO $pdo): void
     $senha    = $_POST['senha']              ?? '';
     $confirma = $_POST['confirmar-senha']    ?? '';
     $telefone = trim($_POST['telefone']      ?? '') ?: null;
+    $fluxo    = trim($_POST['fluxo']         ?? 'cliente');
 
     $erros = [];
 
@@ -51,7 +52,7 @@ function cadastrar(PDO $pdo): void
     if (!empty($erros))
         responder(422, ['sucesso' => false, 'erros' => $erros]);
 
-    $user   = new User($pdo);
+    $user  = new User($pdo);
     $existe = $user->verificarExistencia($email, $cpfNumerico);
 
     if ($existe === true)
@@ -62,11 +63,25 @@ function cadastrar(PDO $pdo): void
     if (!$ok)
         responder(500, ['sucesso' => false, 'mensagem' => 'Não foi possível realizar o cadastro.']);
 
-    responder(201, [
-        'sucesso'  => true,
-        'mensagem' => 'Cadastro realizado com sucesso!',
-        'redirect' => '/PI-2026.1/frontend/pages/login.php',
-    ]);
+    $novo = $user->buscarPorEmail($email);
+    $_SESSION['usuario_id']   = $novo['id'];
+    $_SESSION['usuario_nome'] = $novo['nome'];
+    $_SESSION['logado']       = true;
+    $_SESSION['fluxo']        = $fluxo;
+
+    // cliente  → dashboard direto
+    // prestador → novo-servico primeiro, depois dashboard
+    if ($fluxo === 'prestador') {
+        responder(201, [
+            'sucesso'  => true,
+            'redirect' => '/PI-2026.1/frontend/Pages/novo-servico.php',
+        ]);
+    } else {
+        responder(201, [
+            'sucesso'  => true,
+            'redirect' => '/PI-2026.1/frontend/Pages/dashboard.php',
+        ]);
+    }
 }
 
 // ─────────────────────────────────────────────
@@ -97,8 +112,19 @@ function login(PDO $pdo): void
 
     responder(200, [
         'sucesso'  => true,
-        'redirect' => '/PI-2026.1/frontend/pages/dashboard.php',
+        'redirect' => '/PI-2026.1/frontend/Pages/dashboard.php',
     ]);
+}
+
+// ─────────────────────────────────────────────
+function logout(): void
+{
+    if (session_status() === PHP_SESSION_NONE) session_start();
+    session_unset();
+    session_destroy();
+    header('Content-Type: text/html');
+    header('Location: /PI-2026.1/frontend/Pages/login.php');
+    exit;
 }
 
 // ─────────────────────────────────────────────

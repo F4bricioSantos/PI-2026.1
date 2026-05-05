@@ -9,8 +9,8 @@ $usuario = $user->buscarPorId($_SESSION['usuario_id']);
 $categoriaAtiva = trim($_GET['categoria'] ?? 'Todos');
 $busca          = trim($_GET['busca']     ?? '');
 
-$where  = [];
-$params = [];
+$where  = ['s.prestador_id != :usuario_id'];
+$params = [':usuario_id' => $_SESSION['usuario_id']];
 
 if ($categoriaAtiva !== 'Todos') {
     $where[]              = 'LOWER(s.categoria_nome) = LOWER(:categoria)';
@@ -21,7 +21,7 @@ if ($busca !== '') {
     $params[':busca'] = "%$busca%";
 }
 
-$whereSql = $where ? 'WHERE ' . implode(' AND ', $where) : '';
+$whereSql = 'WHERE ' . implode(' AND ', $where);
 
 $sql = "
     SELECT
