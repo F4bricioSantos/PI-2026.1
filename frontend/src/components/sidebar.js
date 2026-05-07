@@ -1,11 +1,11 @@
-/**
- * Componente Sidebar reutilizável — ReformAí
+﻿/**
+ * Componente Sidebar reutilizável - ReformA\u00ed
  */
 
 const NAV_ITEMS = [
   {
     id: 'inicio',
-    label: 'Início',
+    label: 'In\u00edcio',
     href: '/PI-2026.1/frontend/Pages/dashboard.php',
     icon: '<path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>',
   },
@@ -20,7 +20,7 @@ const NAV_ITEMS = [
 const PRO_ITEMS = [
   {
     id: 'novo-servico',
-    label: 'Novo Serviço',
+    label: 'Novo Servi\u00e7o',
     href: '/PI-2026.1/frontend/Pages/novo-servico.php',
     icon: '<circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/>',
   },
@@ -32,7 +32,7 @@ const PRO_ITEMS = [
   },
   {
     id: 'portfolio',
-    label: 'Portfólio',
+    label: 'Portf\u00f3lio',
     href: '/PI-2026.1/frontend/Pages/portfolio.php',
     icon: '<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/>',
   },
@@ -75,7 +75,7 @@ export function renderSidebar(containerId, activePage = '') {
           </svg>
         </div>
         <div>
-          <div class="font-extrabold text-white text-base leading-tight">ReformAí</div>
+          <div class="font-extrabold text-white text-base leading-tight">ReformA\u00ed</div>
           <div class="text-[10px] font-semibold text-white/40 tracking-widest uppercase">Marketplace</div>
         </div>
       </div>
@@ -83,7 +83,7 @@ export function renderSidebar(containerId, activePage = '') {
       <nav class="flex-1 px-3 py-5 space-y-1 overflow-y-auto custom-scroll">
         ${mainNav}
 
-        <div class="pt-6 pb-2 px-4 text-[10px] font-bold text-white/20 uppercase tracking-[0.2em]">Área do Prestador</div>
+        <div class="pt-6 pb-2 px-4 text-[10px] font-bold text-white/20 uppercase tracking-[0.2em]">\u00c1rea do Prestador</div>
         ${proNav}
       </nav>
 
@@ -97,7 +97,7 @@ export function renderSidebar(containerId, activePage = '') {
           </div>
           <div class="min-w-0">
             <div class="text-sm font-bold text-white group-hover:text-red-400 transition-colors">Sair</div>
-            <div class="text-[10px] text-white/30 truncate">Encerrar sessão</div>
+            <div class="text-[10px] text-white/30 truncate">Encerrar sess\u00e3o</div>
           </div>
         </a>
       </div>
