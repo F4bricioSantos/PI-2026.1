@@ -93,9 +93,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
         <span class="text-gray-800 font-bold text-lg tracking-tight">Novo Serviço</span>
       </div>
+      <a href="perfil.php">
       <div class="w-9 h-9 rounded-full bg-orange/80 flex items-center justify-center text-white font-bold text-sm">
           <?= strtoupper(mb_substr($_SESSION['usuario_nome'] ?? 'U', 0, 1)) ?>
-      </div>
+      </div></a>
     </header>
 
     <div class="flex-1 overflow-y-auto px-8 py-10 custom-scroll">
@@ -202,9 +203,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
           <p class="text-slate-400 text-sm">A prévia do seu anúncio aparecerá aqui conforme você digita.</p>
         </div>
 
-        <footer class="mt-20 pt-8 border-t border-gray-100 text-center">
-          <p class="text-[10px] font-bold text-gray-300 uppercase tracking-widest">ReformAí © 2026</p>
-        </footer>
       </div>
     </div>
   </main>

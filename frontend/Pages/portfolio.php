@@ -171,8 +171,18 @@ foreach ($portfolio as $item) {
 
   <main class="flex-1 flex flex-col overflow-hidden">
     <header class="flex items-center justify-between px-8 py-5 border-b border-gray-200 bg-white flex-shrink-0">
-      <h1 class="text-gray-800 font-bold text-lg tracking-tight">ReformAí</h1>
-      <div class="w-9 h-9 rounded-full border-2 border-orange"></div>
+      <div class="flex items-center gap-2 text-gray-400">
+        <button onclick="history.back()" class="hover:text-gray-600 transition-colors p-1 -ml-1 rounded-lg hover:bg-gray-100">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
+        </button>
+        <a href="./dashboard.php" class="text-gray-400 text-sm hover:text-orange transition-colors">Início</a>
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
+        <span class="text-gray-800 font-bold text-lg tracking-tight">Portfolio</span>
+      </div>
+      <a href="perfil.php">
+      <div class="w-9 h-9 rounded-full bg-orange/80 flex items-center justify-center text-white font-bold text-sm">
+          <?= strtoupper(mb_substr($_SESSION['usuario_nome'] ?? 'U', 0, 1)) ?>
+      </div></a>
     </header>
 
     <div class="flex-1 overflow-y-auto px-8 py-6">

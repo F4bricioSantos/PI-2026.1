@@ -134,10 +134,10 @@ function getFoto(string $cat, array $map): string {
           <span class="absolute -top-1 -right-1 w-2 h-2 bg-orange rounded-full"></span>
         </button>
         <!-- Avatar com inicial do nome -->
-        <div title="<?= htmlspecialchars($usuario['nome']) ?>"
+        <a href="perfil.php"><div title="<?= htmlspecialchars($usuario['nome']) ?>"
              class="w-9 h-9 rounded-full bg-orange/80 flex-shrink-0 cursor-pointer hover:opacity-90 transition-opacity flex items-center justify-center text-white font-bold text-sm">
           <?= strtoupper(mb_substr($usuario['nome'], 0, 1)) ?>
-        </div>
+        </div></a>
       </div>
     </header>
 
