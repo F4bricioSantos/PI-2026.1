@@ -57,17 +57,7 @@ $stmtPort = $pdo->prepare($sqlPortfolio);
 $stmtPort->execute([':prestador_id' => $servico['prestador_id']]);
 $portfolio = $stmtPort->fetchAll();
 
-// Lógica de fotos de capa por categoria
-$fotosCat = [
-    'reforma'    => 'https://images.unsplash.com/photo-1556911220-e15b29be8c8f?auto=format&fit=crop&q=80&w=600',
-    'elétrica'   => 'https://images.unsplash.com/photo-1621905251189-08b45d6a269e?auto=format&fit=crop&q=80&w=600',
-    'eletrica'   => 'https://images.unsplash.com/photo-1621905251189-08b45d6a269e?auto=format&fit=crop&q=80&w=600',
-    'pintura'    => 'https://images.unsplash.com/photo-1589939705384-5185137a7f0f?auto=format&fit=crop&q=80&w=600',
-    'hidráulica' => 'https://images.unsplash.com/photo-1504148455328-436306343aa1?auto=format&fit=crop&q=80&w=600',
-    'hidraulica' => 'https://images.unsplash.com/photo-1504148455328-436306343aa1?auto=format&fit=crop&q=80&w=600',
-    'default'    => 'https://images.unsplash.com/photo-1504307651254-35680f356dfd?auto=format&fit=crop&q=80&w=600',
-];
-$fotoCapa = $fotosCat[mb_strtolower(trim($servico['categoria_nome']))] ?? $fotosCat['default'];
+
 ?>
 <!DOCTYPE html>
 <html lang="pt-BR">
@@ -121,9 +111,6 @@ $fotoCapa = $fotosCat[mb_strtolower(trim($servico['categoria_nome']))] ?? $fotos
       <div class="flex gap-8 max-w-6xl mx-auto">
         
         <div class="flex-1 space-y-8">
-          <div class="w-full h-80 rounded-3xl overflow-hidden relative shadow-md">
-             <img src="<?= $fotoCapa ?>" class="w-full h-full object-cover" alt="Capa">
-          </div>
           
           <div class="space-y-2">
             <div class="flex justify-between items-start">

@@ -6,163 +6,142 @@ require_once '../../backend/config/Conexao.php';
 $usuarioId = (int)($_SESSION['usuario_id'] ?? 0);
 $mensagem = '';
 $erro = '';
+$limiteFotos = 7;
 
 if ($usuarioId <= 0) {
     header('Location: /PI-2026.1/frontend/Pages/login.php');
     exit;
 }
 
-$stmtServicos = $pdo->prepare("SELECT id, titulo, categoria_nome FROM servicos WHERE prestador_id = :id ORDER BY id DESC");
-$stmtServicos->execute([':id' => $usuarioId]);
-$servicos = $stmtServicos->fetchAll(PDO::FETCH_ASSOC);
+// --- 1. BUSCA SERVIÇOS DO PRESTADOR ---
+$stmtS = $pdo->prepare("SELECT id, titulo, categoria_nome FROM servicos WHERE prestador_id = ? ORDER BY id DESC");
+$stmtS->execute([$usuarioId]);
+$servicos = $stmtS->fetchAll(PDO::FETCH_ASSOC);
 
 $servicosMap = [];
-foreach ($servicos as $servico) {
-    $servicosMap[(int)$servico['id']] = $servico;
+foreach ($servicos as $s) {
+    $servicosMap[$s['id']] = $s;
 }
 
-$uploadsDirAbs = __DIR__ . '/../uploads/portfolio';
-$uploadsDirWeb = '/PI-2026.1/frontend/uploads/portfolio';
-
+// --- 2. LÓGICA DE EXCLUSÃO (VIA POST) ---
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $tituloProjeto = trim($_POST['titulo_projeto'] ?? '');
-    $descricaoProjeto = trim($_POST['descricao_projeto'] ?? '');
-    $servicoRelacionando = filter_input(INPUT_POST, 'servico_id', FILTER_VALIDATE_INT);
+    // Excluir Projeto Inteiro
+    if (isset($_POST['excluir_projeto_titulo'])) {
+        $tituloExc = $_POST['excluir_projeto_titulo'];
+        $stmtB = $pdo->prepare("SELECT url_imagem FROM portfolio_imagens WHERE titulo_projeto = ? AND usuario_id = ?");
+        $stmtB->execute([$tituloExc, $usuarioId]);
+        $fotos = $stmtB->fetchAll(PDO::FETCH_ASSOC);
 
-    if ($tituloProjeto === '') {
-        $erro = 'Informe o título do projeto.';
-    } elseif (!isset($_FILES['foto_trabalho']) || ($_FILES['foto_trabalho']['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) {
-        $erro = 'Envie uma foto do trabalho.';
-    } else {
-        $arquivo = $_FILES['foto_trabalho'];
-        $mime = mime_content_type($arquivo['tmp_name']);
-        $permitidos = [
-            'image/jpeg' => 'jpg',
-            'image/png' => 'png',
-        ];
+        foreach ($fotos as $f) {
+            $caminho = __DIR__ . '/..' . str_replace('/PI-2026.1/frontend', '', $f['url_imagem']);
+            if (file_exists($caminho)) unlink($caminho);
+        }
 
-        if (!isset($permitidos[$mime])) {
-            $erro = 'Formato inválido. Envie JPG ou PNG.';
-        } elseif (($arquivo['size'] ?? 0) > 10 * 1024 * 1024) {
-            $erro = 'A imagem deve ter no máximo 10MB.';
+        $pdo->prepare("DELETE FROM portfolio_imagens WHERE titulo_projeto = ? AND usuario_id = ?")->execute([$tituloExc, $usuarioId]);
+        header('Location: portfolio.php?ok=3'); exit;
+    }
+
+    // Excluir Foto Única
+    if (isset($_POST['excluir_foto_id'])) {
+        $fotoId = (int)$_POST['excluir_foto_id'];
+        $stmtB = $pdo->prepare("SELECT url_imagem FROM portfolio_imagens WHERE id = ? AND usuario_id = ?");
+        $stmtB->execute([$fotoId, $usuarioId]);
+        $foto = $stmtB->fetch(PDO::FETCH_ASSOC);
+
+        if ($foto) {
+            $caminho = __DIR__ . '/..' . str_replace('/PI-2026.1/frontend', '', $foto['url_imagem']);
+            if (file_exists($caminho)) unlink($caminho);
+            $pdo->prepare("DELETE FROM portfolio_imagens WHERE id = ?")->execute([$fotoId]);
+            header('Location: portfolio.php?ok=2'); exit;
+        }
+    }
+
+    // Upload de Fotos
+    if (isset($_FILES['foto_trabalho'])) {
+        $servicoId = filter_input(INPUT_POST, 'servico_id', FILTER_VALIDATE_INT);
+        $tituloProjeto = $servicosMap[$servicoId]['titulo'] ?? '';
+
+        $stmtC = $pdo->prepare("SELECT COUNT(*) FROM portfolio_imagens WHERE usuario_id = ? AND titulo_projeto = ?");
+        $stmtC->execute([$usuarioId, $tituloProjeto]);
+        $jaTem = (int)$stmtC->fetchColumn();
+
+        $arquivos = $_FILES['foto_trabalho'];
+        $qtdNovas = is_array($arquivos['name']) ? count(array_filter($arquivos['name'])) : 1;
+
+        if (!$servicoId) {
+            $erro = 'Selecione um serviço relacionado.';
+        } elseif (($jaTem + $qtdNovas) > $limiteFotos) {
+            $erro = "Limite atingido! Este serviço já tem $jaTem fotos. Máximo permitido: $limiteFotos.";
         } else {
-            if (!is_dir($uploadsDirAbs)) {
-                mkdir($uploadsDirAbs, 0775, true);
-            }
+            $dirAbs = __DIR__ . '/../uploads/portfolio';
+            $dirWeb = '/PI-2026.1/frontend/uploads/portfolio';
+            if (!is_dir($dirAbs)) mkdir($dirAbs, 0775, true);
 
-            $ext = $permitidos[$mime];
-            $nomeArquivo = sprintf('portfolio_%d_%s.%s', $usuarioId, bin2hex(random_bytes(6)), $ext);
-            $destinoAbs = $uploadsDirAbs . DIRECTORY_SEPARATOR . $nomeArquivo;
-            $destinoWeb = $uploadsDirWeb . '/' . $nomeArquivo;
-
-            if (!move_uploaded_file($arquivo['tmp_name'], $destinoAbs)) {
-                $erro = 'Não foi possível salvar a imagem enviada.';
-            } else {
-                $servicoValido = $servicoRelacionando && isset($servicosMap[$servicoRelacionando]);
-                $descricaoBanco = $descricaoProjeto;
-                if ($servicoValido) {
-                    $descricaoBanco = "[servico:{$servicoRelacionando}]\n" . $descricaoProjeto;
+            for ($i = 0; $i < $qtdNovas; $i++) {
+                $tmp = is_array($arquivos['tmp_name']) ? $arquivos['tmp_name'][$i] : $arquivos['tmp_name'];
+                if (is_uploaded_file($tmp)) {
+                    $nome = sprintf('port_%d_%s.jpg', $usuarioId, bin2hex(random_bytes(6)));
+                    if (move_uploaded_file($tmp, $dirAbs . '/' . $nome)) {
+                        $pdo->prepare("INSERT INTO portfolio_imagens (usuario_id, titulo_projeto, url_imagem) VALUES (?, ?, ?)")
+                            ->execute([$usuarioId, $tituloProjeto, $dirWeb . '/' . $nome]);
+                    }
                 }
-
-                $stmtInsert = $pdo->prepare(
-                    "INSERT INTO portfolio_imagens (usuario_id, titulo_projeto, descricao_projeto, url_imagem)
-                     VALUES (:usuario_id, :titulo, :descricao, :url)"
-                );
-
-                $ok = $stmtInsert->execute([
-                    ':usuario_id' => $usuarioId,
-                    ':titulo' => $tituloProjeto,
-                    ':descricao' => $descricaoBanco !== '' ? $descricaoBanco : null,
-                    ':url' => $destinoWeb,
-                ]);
-
-                if ($ok) {
-                    header('Location: /PI-2026.1/frontend/Pages/portfolio.php?ok=1');
-                    exit;
-                }
-
-                $erro = 'Não foi possível salvar o projeto no banco.';
             }
+            header('Location: portfolio.php?ok=1'); exit;
         }
     }
 }
 
-if (($_GET['ok'] ?? '') === '1') {
-    $mensagem = 'Projeto adicionado ao portfólio com sucesso.';
-}
+// Mensagens de Feedback
+$status = $_GET['ok'] ?? '';
+if ($status === '1') $mensagem = 'Fotos adicionadas com sucesso!';
+if ($status === '2') $mensagem = 'A foto foi removida.';
+if ($status === '3') $mensagem = 'O projeto foi excluído permanentemente.';
 
-$stmtPortfolio = $pdo->prepare(
-    "SELECT id, titulo_projeto, descricao_projeto, url_imagem, data_upload
-     FROM portfolio_imagens
-     WHERE usuario_id = :id
-     ORDER BY data_upload DESC"
-);
-$stmtPortfolio->execute([':id' => $usuarioId]);
-$portfolio = $stmtPortfolio->fetchAll(PDO::FETCH_ASSOC);
-
-$items = [];
-$mesesPt = [
-    1 => 'jan',
-    2 => 'fev',
-    3 => 'mar',
-    4 => 'abr',
-    5 => 'mai',
-    6 => 'jun',
-    7 => 'jul',
-    8 => 'ago',
-    9 => 'set',
-    10 => 'out',
-    11 => 'nov',
-    12 => 'dez',
-];
-foreach ($portfolio as $item) {
-    $descricaoRaw = (string)($item['descricao_projeto'] ?? '');
-    $servicoIdAssoc = null;
-
-    if (preg_match('/^\[servico:(\d+)\]\s*/', $descricaoRaw, $match)) {
-        $servicoIdAssoc = (int)$match[1];
-        $descricaoRaw = preg_replace('/^\[servico:\d+\]\s*/', '', $descricaoRaw, 1);
-    }
-
-    $categoriaTag = 'PROJETO';
-    if ($servicoIdAssoc && isset($servicosMap[$servicoIdAssoc])) {
-        $categoriaTag = strtoupper($servicosMap[$servicoIdAssoc]['categoria_nome'] ?: 'PROJETO');
-    }
-
-    $items[] = [
-        'id' => (int)$item['id'],
-        'titulo' => $item['titulo_projeto'],
-        'descricao' => $descricaoRaw,
-        'url' => $item['url_imagem'],
-        'data' => $item['data_upload'],
-        'tag' => $categoriaTag,
-    ];
+// --- 3. BUSCA E ORGANIZAÇÃO DOS CARDS ---
+$stmtP = $pdo->prepare("SELECT * FROM portfolio_imagens WHERE usuario_id = ? ORDER BY data_upload DESC");
+$stmtP->execute([$usuarioId]);
+$projetosAgrupados = [];
+foreach ($stmtP->fetchAll(PDO::FETCH_ASSOC) as $item) {
+    $projetosAgrupados[$item['titulo_projeto']][] = $item;
 }
 ?>
+
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>ReformAí - Gerenciar Portfólio</title>
+  <title>Portfólio | ReformAí</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&display=swap" rel="stylesheet" />
   <script>
     tailwind.config = {
-      theme: {
-        extend: {
-          fontFamily: { sans: ['Manrope', 'sans-serif'] },
-          colors: {
-            orange:  { DEFAULT: '#F97316', light: '#FFEDD5', dark: '#EA580C' },
-            sidebar: '#16213E',
-            bg:      '#F8F9FA',
-          }
-        }
-      }
+      theme: { extend: { fontFamily: { sans: ['Manrope', 'sans-serif'] }, colors: { orange: '#F97316', sidebar: '#16213E', bg: '#F8F9FA' } } }
     }
   </script>
 </head>
-<body class="font-sans bg-bg text-gray-800 flex h-screen overflow-hidden">
+<body class="bg-bg text-gray-800 flex h-screen overflow-hidden font-sans">
+
+  <div id="modalConfirm" class="fixed inset-0 z-[100] hidden flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+    <div class="bg-white rounded-2xl w-full max-w-sm overflow-hidden shadow-2xl scale-95 transition-all">
+      <div class="p-6 text-center">
+        <div class="w-16 h-16 bg-red-50 text-red-500 rounded-full flex items-center justify-center mx-auto mb-4">
+          <svg class="w-8 h-8" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+        </div>
+        <h3 id="modalTitle" class="text-xl font-black text-slate-900 mb-2">Excluir?</h3>
+        <p id="modalDesc" class="text-sm text-gray-500">Essa ação não pode ser desfeita.</p>
+      </div>
+      <div class="bg-gray-50 p-4 flex gap-3">
+        <button onclick="fecharModal()" class="flex-1 py-3 text-sm font-bold text-gray-500 hover:bg-gray-200 rounded-xl transition-colors">Cancelar</button>
+        <form id="modalForm" method="POST" class="flex-1">
+            <input type="hidden" name="" id="modalInput">
+            <button type="submit" class="w-full py-3 text-sm font-bold bg-red-500 text-white hover:bg-red-600 rounded-xl shadow-lg shadow-red-500/20 transition-all">Confirmar</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
   <div id="sidebar-container" class="w-60 bg-sidebar flex-shrink-0 h-screen"></div>
   <script type="module">
     import { renderSidebar } from '../src/components/sidebar.js';
@@ -171,107 +150,131 @@ foreach ($portfolio as $item) {
 
   <main class="flex-1 flex flex-col overflow-hidden">
     <header class="flex items-center justify-between px-8 py-5 border-b border-gray-200 bg-white flex-shrink-0">
-      <div class="flex items-center gap-2 text-gray-400">
-        <button onclick="history.back()" class="hover:text-gray-600 transition-colors p-1 -ml-1 rounded-lg hover:bg-gray-100">
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
-        </button>
-        <a href="./dashboard.php" class="text-gray-400 text-sm hover:text-orange transition-colors">Início</a>
+      <div class="flex items-center gap-2 text-gray-400 font-bold">
+        <a href="./dashboard.php" class="hover:text-orange transition-colors">Início</a>
         <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
-        <span class="text-gray-800 font-bold text-lg tracking-tight">Portfolio</span>
+        <span class="text-slate-800 text-lg">Portfolio</span>
       </div>
-      <a href="perfil.php">
-      <div class="w-9 h-9 rounded-full bg-orange/80 flex items-center justify-center text-white font-bold text-sm">
+      <div class="w-9 h-9 rounded-full bg-orange/80 flex items-center justify-center text-white font-bold">
           <?= strtoupper(mb_substr($_SESSION['usuario_nome'] ?? 'U', 0, 1)) ?>
-      </div></a>
+      </div>
     </header>
 
     <div class="flex-1 overflow-y-auto px-8 py-6">
       <div class="mb-6">
-        <h2 class="text-4xl font-extrabold text-slate-900 tracking-tight">Configurações do Portfólio</h2>
-        <p class="text-sm text-gray-500 mt-1">Gerencie seus projetos realizados e atraia novos clientes.</p>
+        <h2 class="text-4xl font-extrabold text-slate-900 tracking-tight">Meus Trabalhos</h2>
+        <p class="text-sm text-gray-500 mt-1">Gerencie seu histórico visual de serviços.</p>
       </div>
 
-      <?php if ($mensagem): ?>
-        <div class="mb-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-emerald-700 text-sm font-semibold"><?= htmlspecialchars($mensagem) ?></div>
-      <?php endif; ?>
-      <?php if ($erro): ?>
-        <div class="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-red-600 text-sm font-semibold"><?= htmlspecialchars($erro) ?></div>
-      <?php endif; ?>
+      <?php if ($mensagem): ?><div class="mb-4 bg-emerald-50 text-emerald-700 px-4 py-3 rounded-xl border border-emerald-100 text-sm font-bold"><?= $mensagem ?></div><?php endif; ?>
+      <?php if ($erro): ?><div class="mb-4 bg-red-50 text-red-600 px-4 py-3 rounded-xl border border-red-100 text-sm font-bold"><?= $erro ?></div><?php endif; ?>
 
-      <div class="grid grid-cols-1 xl:grid-cols-12 gap-6">
-        <section class="xl:col-span-4 bg-white border border-gray-200 rounded-xl p-5 shadow-sm h-fit">
-          <h3 class="text-2xl font-extrabold text-slate-900 mb-5">Novo Trabalho</h3>
-
-          <form method="POST" enctype="multipart/form-data" class="space-y-4">
+      <div class="grid grid-cols-1 xl:grid-cols-12 gap-8">
+        <section class="xl:col-span-4 bg-white border border-gray-200 rounded-2xl p-6 shadow-sm h-fit">
+          <h3 class="text-2xl font-extrabold text-slate-900 mb-6">Novo Trabalho</h3>
+          <form method="POST" enctype="multipart/form-data" class="space-y-5">
             <div>
-              <label class="block text-xs font-bold text-gray-700 mb-2">Título do Projeto</label>
-              <input name="titulo_projeto" type="text" placeholder="Ex: Reforma Cozinha Moderna" required class="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-orange" />
-            </div>
-
-            <div>
-              <label class="block text-xs font-bold text-gray-700 mb-2">Descrição</label>
-              <textarea name="descricao_projeto" rows="3" placeholder="Descreva os serviços realizados..." class="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-orange resize-none"></textarea>
-            </div>
-
-            <div>
-              <label class="block text-xs font-bold text-gray-700 mb-2">Serviço Relacionado</label>
-              <select name="servico_id" class="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-orange bg-white">
-                <option value="">Selecione um serviço</option>
-                <?php foreach ($servicos as $servico): ?>
-                  <option value="<?= (int)$servico['id'] ?>"><?= htmlspecialchars($servico['titulo']) ?><?= !empty($servico['categoria_nome']) ? ' (' . htmlspecialchars($servico['categoria_nome']) . ')' : '' ?></option>
+              <label class="block text-xs font-bold text-gray-700 mb-2 uppercase tracking-widest">Serviço Realizado</label>
+              <select name="servico_id" required class="w-full border border-gray-200 rounded-xl px-4 py-3.5 text-sm focus:border-orange outline-none bg-white font-bold text-slate-700">
+                <option value="">Selecione o serviço...</option>
+                <?php foreach ($servicos as $s): ?>
+                  <option value="<?= $s['id'] ?>"><?= htmlspecialchars($s['titulo']) ?></option>
                 <?php endforeach; ?>
               </select>
             </div>
 
             <div>
-              <label class="block text-xs font-bold text-gray-700 mb-2">Fotos do Trabalho</label>
-              <label class="border-2 border-dashed border-gray-300 rounded-xl p-6 text-center block cursor-pointer hover:border-orange transition-colors">
-                <input type="file" name="foto_trabalho" accept="image/png,image/jpeg" required class="hidden" />
-                <p class="text-sm text-gray-500">Arraste fotos ou clique para enviar</p>
-                <p class="text-xs text-gray-400 mt-1">PNG, JPG até 10MB</p>
+              <label class="block text-xs font-bold text-gray-700 mb-2 uppercase tracking-widest">Fotos (Limite 7)</label>
+              <label class="border-2 border-dashed border-gray-200 rounded-2xl p-10 text-center block cursor-pointer hover:border-orange hover:bg-orange/5 transition-all">
+                <input type="file" name="foto_trabalho[]" multiple accept="image/*" required class="hidden" onchange="document.getElementById('file-msg').innerText = this.files.length + ' fotos prontas'" />
+                <p id="file-msg" class="text-xs font-black text-gray-400 uppercase tracking-[0.2em]">Selecionar Imagens</p>
               </label>
             </div>
 
-            <button type="submit" class="w-full bg-orange hover:bg-orange-600 text-white py-3 rounded-xl font-bold text-sm transition-colors">Adicionar ao Portfólio</button>
+            <button type="submit" class="w-full bg-orange text-white py-4 rounded-xl font-bold text-sm shadow-lg shadow-orange/20 hover:bg-orange-600 transition-all uppercase">Vincular Fotos</button>
           </form>
         </section>
 
-        <section class="xl:col-span-8">
-          <div class="flex items-center justify-between mb-4">
-            <h3 class="text-2xl font-extrabold text-slate-900">Meus Trabalhos</h3>
-            <p class="text-sm text-gray-500">Total: <?= count($items) ?> projetos</p>
-          </div>
-
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <?php foreach ($items as $item): ?>
-              <article class="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
-                <div class="h-36 bg-gray-100">
-                  <img src="<?= htmlspecialchars($item['url']) ?>" alt="<?= htmlspecialchars($item['titulo']) ?>" class="w-full h-full object-cover" />
+        <section class="xl:col-span-8 space-y-8">
+          <?php foreach ($projetosAgrupados as $titulo => $fotos): ?>
+            <?php 
+              $tag = 'PROJETO';
+              foreach($servicos as $s) { if($s['titulo'] === $titulo) { $tag = strtoupper($s['categoria_nome'] ?: 'PROJETO'); break; } }
+            ?>
+            <div class="bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm group">
+              <div class="px-6 py-4 border-b border-gray-50 flex justify-between items-center bg-gray-50/30">
+                <div>
+                  <p class="text-[10px] font-black text-orange uppercase tracking-widest mb-1"><?= $tag ?></p>
+                  <h4 class="text-base font-black text-slate-800 uppercase leading-none"><?= htmlspecialchars($titulo) ?></h4>
                 </div>
-                <div class="p-4">
-                  <p class="text-[10px] font-extrabold tracking-wide text-orange mb-1"><?= htmlspecialchars($item['tag']) ?></p>
-                  <h4 class="text-lg font-extrabold text-slate-900 leading-tight"><?= htmlspecialchars($item['titulo']) ?></h4>
-                  <?php
-                    $ts = strtotime($item['data']);
-                    $mesAno = $mesesPt[(int)date('n', $ts)] . ' ' . date('Y', $ts);
-                  ?>
-                  <p class="text-xs text-gray-500 mt-1"><?= htmlspecialchars($mesAno) ?></p>
-                </div>
-              </article>
-            <?php endforeach; ?>
-
-            <?php if (count($items) === 0): ?>
-              <div class="md:col-span-2 h-52 rounded-xl border border-dashed border-gray-300 bg-gray-50 flex items-center justify-center text-gray-400 text-sm">
-                Novo projeto será exibido aqui
+                <button onclick="confirmarExcluirTudo('<?= addslashes($titulo) ?>')" class="flex items-center gap-2 text-[10px] font-bold text-red-300 hover:text-red-500 transition-colors uppercase tracking-widest">
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                  Remover Tudo
+                </button>
               </div>
-            <?php endif; ?>
-          </div>
+              
+              <div class="p-5 grid grid-cols-2 sm:grid-cols-4 gap-4">
+                <?php foreach ($fotos as $f): ?>
+                  <div class="relative group aspect-square rounded-2xl overflow-hidden bg-gray-50 border border-gray-100">
+                    <img src="<?= htmlspecialchars($f['url_imagem']) ?>" class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
+                    <button type="button" onclick="confirmarExcluirFoto(<?= $f['id'] ?>)" class="absolute top-2 right-2 opacity-0 group-hover:opacity-100 bg-white text-red-500 p-2 rounded-xl shadow-xl hover:bg-red-500 hover:text-white transition-all">
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12"/></svg>
+                    </button>
+                  </div>
+                <?php endforeach; ?>
+
+                <?php if(count($fotos) < $limiteFotos): ?>
+                   <div class="aspect-square rounded-2xl border-2 border-dashed border-gray-100 flex items-center justify-center text-gray-200">
+                      <span class="text-[10px] font-bold"><?= count($fotos) ?>/7</span>
+                   </div>
+                <?php endif; ?>
+              </div>
+            </div>
+          <?php endforeach; ?>
+
+          <?php if (empty($projetosAgrupados)): ?>
+            <div class="h-64 rounded-3xl border-2 border-dashed border-gray-200 flex flex-col items-center justify-center text-gray-400">
+                <p class="font-bold uppercase tracking-widest text-xs">Seu portfólio está vazio</p>
+            </div>
+          <?php endif; ?>
         </section>
       </div>
     </div>
   </main>
+
+  <script>
+    const modal = document.getElementById('modalConfirm');
+    const modalInput = document.getElementById('modalInput');
+    const modalTitle = document.getElementById('modalTitle');
+    const modalDesc = document.getElementById('modalDesc');
+
+    function confirmarExcluirFoto(id) {
+        modalTitle.innerText = "Remover esta foto?";
+        modalDesc.innerText = "A imagem será apagada permanentemente do seu portfólio.";
+        modalInput.name = "excluir_foto_id";
+        modalInput.value = id;
+        abrirModal();
+    }
+
+    function confirmarExcluirTudo(titulo) {
+        modalTitle.innerText = "Excluir projeto?";
+        modalDesc.innerText = `Isso apagará todas as fotos vinculadas ao serviço "${titulo}".`;
+        modalInput.name = "excluir_projeto_titulo";
+        modalInput.value = titulo;
+        abrirModal();
+    }
+
+    function abrirModal() {
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+    }
+
+    function fecharModal() {
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+    }
+
+    window.onclick = (e) => { if (e.target == modal) fecharModal(); }
+  </script>
 </body>
 </html>
-
-
-
