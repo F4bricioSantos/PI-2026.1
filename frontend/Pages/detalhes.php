@@ -10,7 +10,7 @@ if (!$idServico) {
     exit;
 }
 
-// 2. Busca os detalhes do serviço e do prestador (Incluindo Nicho e Experiência)
+// 2. Busca os detalhes do serviço e do prestador
 $sqlServico = "
     SELECT 
         s.*, 
@@ -18,6 +18,7 @@ $sqlServico = "
         u.cidade, 
         u.email AS prestador_email, 
         u.telefone,
+        u.foto_perfil AS prestador_foto,
         pd.bio,
         pd.nicho,
         pd.experiencia_anos,
@@ -34,6 +35,7 @@ $sqlServico = "
 $stmt = $pdo->prepare($sqlServico);
 $stmt->execute([':id' => $idServico]);
 $servico = $stmt->fetch();
+$urlBaseSupabase = "https://yplpxzmwtkencrrtxmof.supabase.co/storage/v1/object/public/fotos/";
 
 if (!$servico) {
     die("Serviço não encontrado.");
@@ -51,12 +53,14 @@ $stmtAval = $pdo->prepare($sqlAvaliacoes);
 $stmtAval->execute([':prestador_id' => $servico['prestador_id']]);
 $avaliacoes = $stmtAval->fetchAll();
 
-// 4. Busca imagens do portfólio do prestador
-$sqlPortfolio = "SELECT * FROM portfolio_imagens WHERE usuario_id = :prestador_id ORDER BY data_upload DESC";
+// 4. Busca imagens do portfólio filtradas por este serviço específico
+$sqlPortfolio = "SELECT * FROM portfolio_imagens WHERE usuario_id = :prestador_id AND titulo_projeto = :titulo ORDER BY data_upload DESC";
 $stmtPort = $pdo->prepare($sqlPortfolio);
-$stmtPort->execute([':prestador_id' => $servico['prestador_id']]);
+$stmtPort->execute([
+    ':prestador_id' => $servico['prestador_id'],
+    ':titulo'       => $servico['titulo']
+]);
 $portfolio = $stmtPort->fetchAll();
-
 
 ?>
 <!DOCTYPE html>
@@ -75,7 +79,7 @@ $portfolio = $stmtPort->fetchAll();
           colors: {
             orange:  { DEFAULT: '#F97316', light: '#FFEDD5', dark: '#EA580C' },
             sidebar: '#16213E',
-            bg:       '#F8F9FA',
+            bg:      '#F8F9FA',
           }
         }
       }
@@ -158,15 +162,15 @@ $portfolio = $stmtPort->fetchAll();
           <div class="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
             <div class="flex items-center gap-2 mb-6">
               <div class="w-1 h-5 bg-orange rounded-full"></div>
-              <h2 class="text-sm font-bold text-gray-800 uppercase tracking-wide">Galeria de Projetos</h2>
+              <h2 class="text-sm font-bold text-gray-800 uppercase tracking-wide">Galeria deste Serviço</h2>
             </div>
             <?php if(empty($portfolio)): ?>
-              <p class="text-gray-400 text-xs italic">Nenhum projeto cadastrado no portfólio.</p>
+              <p class="text-gray-400 text-xs italic">Nenhuma foto de trabalho real cadastrada para este serviço.</p>
             <?php else: ?>
               <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
                 <?php foreach($portfolio as $projeto): ?>
                   <div class="group relative aspect-square bg-gray-100 rounded-xl overflow-hidden border border-gray-100 shadow-sm">
-                    <img src="<?= htmlspecialchars($projeto['url_imagem']) ?>" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" alt="<?= htmlspecialchars($projeto['titulo_projeto']) ?>">
+                    <img src="<?= $urlBaseSupabase . htmlspecialchars($projeto['url_imagem']) ?>" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" alt="Foto do Trabalho">
                     <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-end p-3">
                       <p class="text-white text-[10px] font-bold uppercase tracking-wider"><?= htmlspecialchars($projeto['titulo_projeto']) ?></p>
                     </div>
@@ -207,8 +211,12 @@ $portfolio = $stmtPort->fetchAll();
           <div class="sticky top-0 bg-white rounded-2xl border border-gray-100 shadow-sm p-5 space-y-6">
             <div class="flex items-center gap-4">
               <div class="relative">
-                <div class="w-14 h-14 rounded-2xl bg-orange/10 flex items-center justify-center text-orange font-bold text-xl">
+                <div class="w-14 h-14 rounded-2xl bg-orange/10 flex items-center justify-center text-orange font-bold text-xl overflow-hidden border border-gray-100">
+                  <?php if($servico['prestador_foto'] && $servico['prestador_foto'] !== 'default.png'): ?>
+                    <img src="<?= $urlBaseSupabase . $servico['prestador_foto'] ?>" class="w-full h-full object-cover">
+                  <?php else: ?>
                     <?= strtoupper(mb_substr($servico['prestador_nome'], 0, 2)) ?>
+                  <?php endif; ?>
                 </div>
                 <div class="verified-dot absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-emerald-400 rounded-full border-2 border-white"></div>
               </div>

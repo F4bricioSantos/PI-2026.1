@@ -21,3 +21,94 @@ try {
     echo json_encode(['sucesso' => false, 'mensagem' => 'Erro de conexão com o banco.']);
     exit;
 }
+
+
+// 1. URL do seu projeto (fica no topo dessa tela de API ou na aba 'Project Settings')
+define('SB_URL', 'https://yplpxzmwtkencrrtxmof.supabase.co'); 
+
+// 2. A 'Publishable Key' que você viu na imagem (anon public)
+define('SB_KEY', 'sb_publishable_dWPgiqmCzxZjTXicYc9mAQ_enwu5UE7'); 
+
+function gerenciarFotoSupabase($arquivoTmp, $nomeAntigo = null) {
+    // PASSO A: APAGAR DO SERVIDOR ONLINE
+    // Se existe uma foto antiga e não é a 'default.png', mandamos um DELETE para o Supabase
+    if ($nomeAntigo && $nomeAntigo !== 'default.png') {
+        $ch = curl_init(SB_URL . "/storage/v1/object/fotos/" . $nomeAntigo);
+        curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "DELETE");
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, [
+            "Authorization: Bearer " . SB_KEY,
+            "apikey: " . SB_KEY
+        ]);
+        curl_exec($ch);
+        curl_close($ch);
+    }
+
+    // Se o código foi chamado apenas para apagar (sem novo arquivo), retorna o padrão
+    if (!$arquivoTmp) return 'default.png';
+
+    // PASSO B: UPLOAD DA NOVA FOTO
+    $extensao = pathinfo($_FILES['foto_perfil']['name'], PATHINFO_EXTENSION);
+    $novoNome = uniqid() . "." . $extensao;
+    
+    $ch = curl_init(SB_URL . "/storage/v1/object/fotos/" . $novoNome);
+    curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "POST");
+    curl_setopt($ch, CURLOPT_POSTFIELDS, file_get_contents($arquivoTmp));
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_HTTPHEADER, [
+        "Authorization: Bearer " . SB_KEY,
+        "apikey: " . SB_KEY,
+        "Content-Type: " . $_FILES['foto_perfil']['type']
+    ]);
+    
+    curl_exec($ch);
+    curl_close($ch);
+
+    return $novoNome; 
+}
+
+function fazerUploadPortfolioSupabase($arquivoTmp, $nomeOriginal) {
+    $extensao = pathinfo($nomeOriginal, PATHINFO_EXTENSION);
+    // Salvamos dentro da subpasta 'portfolio/' para organizar
+    $novoNome = "portfolio/" . uniqid() . "." . $extensao;
+    
+    $ch = curl_init(SB_URL . "/storage/v1/object/fotos/" . $novoNome);
+    curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "POST");
+    curl_setopt($ch, CURLOPT_POSTFIELDS, file_get_contents($arquivoTmp));
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_HTTPHEADER, [
+        "Authorization: Bearer " . SB_KEY,
+        "apikey: " . SB_KEY,
+        "Content-Type: image/" . $extensao // Simplificado
+    ]);
+    
+    $resposta = curl_exec($ch);
+    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+
+    // Se o código for 200 (OK), retorna o caminho salvo
+    return ($httpCode === 200) ? $novoNome : false;
+}
+
+// Adicione isto ao seu Conexao.php
+// Adicione ou atualize esta função no seu Conexao.php
+function apagarArquivoSupabase($caminhoRelativo) {
+    if (!$caminhoRelativo || $caminhoRelativo === 'default.png') return false;
+
+    // Remove barras extras se existirem
+    $caminhoRelativo = ltrim($caminhoRelativo, '/');
+
+    $ch = curl_init(SB_URL . "/storage/v1/object/fotos/" . $caminhoRelativo);
+    curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "DELETE");
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_HTTPHEADER, [
+        "Authorization: Bearer " . SB_KEY,
+        "apikey: " . SB_KEY
+    ]);
+    
+    $resposta = curl_exec($ch);
+    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+
+    return ($httpCode === 200);
+}

@@ -5,52 +5,93 @@ require_once '../../backend/config/Conexao.php';
 $idUsuario = $_SESSION['usuario_id']; 
 $mensagem = "";
 
-// 1. VERIFICAÇÃO: O usuário já possui serviços cadastrados?
-$sqlCheckServico = "SELECT COUNT(*) FROM servicos WHERE prestador_id = :id"; 
-$stmtCheck = $pdo->prepare($sqlCheckServico);
-$stmtCheck->execute([':id' => $idUsuario]);
-$temServico = $stmtCheck->fetchColumn() > 0;
+// 1. BUSCA DADOS ATUAIS (Importante para comparação e evitar erro 25P02)
+try {
+    $stmtAtuais = $pdo->prepare("SELECT email, foto_perfil, cidade FROM usuarios WHERE id = :id");
+    $stmtAtuais->execute([':id' => $idUsuario]);
+    $dadosBD = $stmtAtuais->fetch();
 
-// 2. LÓGICA PARA SALVAR
+    $stmtCheck = $pdo->prepare("SELECT COUNT(*) FROM servicos WHERE prestador_id = :id");
+    $stmtCheck->execute([':id' => $idUsuario]);
+    $temServico = $stmtCheck->fetchColumn() > 0;
+} catch (Exception $e) {
+    $mensagem = "Erro de conexão: " . $e->getMessage();
+}
+
+// 2. PROCESSAMENTO DO FORMULÁRIO
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $nome      = filter_input(INPUT_POST, 'nome', FILTER_SANITIZE_SPECIAL_CHARS);
-    $cidade    = filter_input(INPUT_POST, 'cidade', FILTER_SANITIZE_SPECIAL_CHARS); // Recebe "Cidade - UF"
+    $cidade    = filter_input(INPUT_POST, 'cidade', FILTER_SANITIZE_SPECIAL_CHARS);
     $telefone  = filter_input(INPUT_POST, 'telefone', FILTER_SANITIZE_SPECIAL_CHARS);
-    $email     = filter_input(INPUT_POST, 'email', FILTER_VALIDATE_EMAIL);
-    
-    $bio       = $_POST['bio'] ?? null;
-    $nicho     = $_POST['nicho'] ?? null;
-    $exp_anos  = !empty($_POST['experiencia']) ? (int)$_POST['experiencia'] : null;
+    $emailNovo = filter_input(INPUT_POST, 'email', FILTER_VALIDATE_EMAIL);
 
     try {
+        // Lógica de Foto (Supabase)
+        $nomeFotoNova = $dadosBD['foto_perfil'];
+        if (isset($_POST['remover_foto'])) {
+            gerenciarFotoSupabase(null, $dadosBD['foto_perfil']); 
+            $nomeFotoNova = 'default.png';
+        } elseif (isset($_FILES['foto_perfil']) && $_FILES['foto_perfil']['error'] === UPLOAD_ERR_OK) {
+            $nomeFotoNova = gerenciarFotoSupabase($_FILES['foto_perfil']['tmp_name'], $dadosBD['foto_perfil']);
+        }
+
+        // Início da Transação
         $pdo->beginTransaction();
 
-        $sqlUser = "UPDATE usuarios SET nome = :nome, cidade = :cidade, telefone = :telefone, email = :email WHERE id = :id";
-        $pdo->prepare($sqlUser)->execute([':nome'=>$nome, ':cidade'=>$cidade, ':telefone'=>$telefone, ':email'=>$email, ':id'=>$idUsuario]);
+        // SQL Dinâmico: Só altera o email se ele for de fato novo
+        $campos = ["nome = :nome", "cidade = :cidade", "telefone = :telefone", "foto_perfil = :foto"];
+        $params = [
+            ':nome'     => $nome, 
+            ':cidade'   => $cidade, 
+            ':telefone' => $telefone, 
+            ':foto'     => $nomeFotoNova, 
+            ':id'       => $idUsuario
+        ];
 
-        $sqlDet = "INSERT INTO prestadores_detalhes (usuario_id, bio, nicho, experiencia_anos) 
-                   VALUES (:id, :bio, :nicho, :exp)
-                   ON CONFLICT (usuario_id) 
-                   DO UPDATE SET bio = EXCLUDED.bio, nicho = EXCLUDED.nicho, experiencia_anos = EXCLUDED.experiencia_anos";
-        $pdo->prepare($sqlDet)->execute([':id'=>$idUsuario, ':bio'=>$bio, ':nicho'=>$nicho, ':exp'=>$exp_anos]);
+        if ($emailNovo !== $dadosBD['email']) {
+            $campos[] = "email = :email";
+            $params[':email'] = $emailNovo;
+        }
+
+        $sqlUser = "UPDATE usuarios SET " . implode(', ', $campos) . " WHERE id = :id";
+        $pdo->prepare($sqlUser)->execute($params);
+
+        // Atualização de Prestador (ON CONFLICT)
+        if ($temServico) {
+            $bio = $_POST['bio'] ?? '';
+            $nicho = $_POST['nicho'] ?? '';
+            $exp = (isset($_POST['experiencia']) && $_POST['experiencia'] !== '') ? (int)$_POST['experiencia'] : 0;
+
+            $sqlDet = "INSERT INTO prestadores_detalhes (usuario_id, bio, nicho, experiencia_anos) 
+                       VALUES (:id, :bio, :nicho, :exp)
+                       ON CONFLICT (usuario_id) DO UPDATE SET 
+                       bio = EXCLUDED.bio, nicho = EXCLUDED.nicho, experiencia_anos = EXCLUDED.experiencia_anos";
+            $pdo->prepare($sqlDet)->execute([':id'=>$idUsuario, ':bio'=>$bio, ':nicho'=>$nicho, ':exp'=>$exp]);
+        }
 
         $pdo->commit();
-        $mensagem = "Informações atualizadas!";
-        header("Refresh:1"); 
+        echo "<script>window.location.href='perfil.php?sucesso=1';</script>";
+        exit;
+
     } catch (Exception $e) {
-        $pdo->rollBack();
-        $mensagem = "Erro ao salvar.";
+        if ($pdo->inTransaction()) $pdo->rollBack();
+        
+        if (strpos($e->getMessage(), 'usuarios_email_key') !== false) {
+            $mensagem = "O e-mail informado já está em uso.";
+        } else {
+            $mensagem = "Erro técnico: " . $e->getMessage();
+        }
     }
 }
 
-// 3. BUSCA DADOS PARA EXIBIR
-$sql = "SELECT u.*, pd.bio, pd.nicho, pd.experiencia_anos 
-        FROM usuarios u 
-        LEFT JOIN prestadores_detalhes pd ON pd.usuario_id = u.id 
-        WHERE u.id = :id";
+// 3. BUSCA DADOS FINAIS PARA EXIBIÇÃO
+$sql = "SELECT u.*, pd.bio, pd.nicho, pd.experiencia_anos FROM usuarios u LEFT JOIN prestadores_detalhes pd ON pd.usuario_id = u.id WHERE u.id = :id";
 $stmt = $pdo->prepare($sql);
 $stmt->execute([':id' => $idUsuario]);
 $dados = $stmt->fetch();
+
+$urlBaseSupabase = SB_URL . "/storage/v1/object/public/fotos/";
+$fotoExibicao = ($dados['foto_perfil'] == 'default.png' || empty($dados['foto_perfil'])) ? null : $urlBaseSupabase . $dados['foto_perfil'];
 ?>
 
 <!DOCTYPE html>
@@ -60,18 +101,10 @@ $dados = $stmt->fetch();
   <title>ReformAí – Meu Perfil</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <script src="https://unpkg.com/@phosphor-icons/web"></script>
   <script>
     tailwind.config = {
-      theme: {
-        extend: {
-          fontFamily: { sans: ['Manrope', 'sans-serif'] },
-          colors: {
-            orange:  { DEFAULT: '#F97316', light: '#FFEDD5', dark: '#EA580C' },
-            sidebar: '#16213E',
-            bg:      '#F8F9FA',
-          }
-        }
-      }
+      theme: { extend: { fontFamily: { sans: ['Manrope', 'sans-serif'] }, colors: { orange: '#F97316', sidebar: '#16213E', bg: '#F8F9FA' } } }
     }
   </script>
 </head>
@@ -84,139 +117,175 @@ $dados = $stmt->fetch();
   </script>
 
   <main class="flex-1 flex flex-col overflow-hidden">
-    <header class="flex items-center justify-between px-8 py-5 border-b border-gray-200 bg-white flex-shrink-0">
+    <header class="flex items-center justify-between px-8 py-5 border-b border-gray-200 bg-white">
       <h1 class="text-gray-800 font-bold text-lg tracking-tight">Meu Perfil</h1>
-      <?php if($mensagem): ?>
-        <span class="text-xs font-bold text-emerald-600 bg-emerald-50 px-3 py-1 rounded-lg"><?= $mensagem ?></span>
-      <?php endif; ?>
+      <div class="flex gap-3">
+        <?php if(isset($_GET['sucesso']) && empty($mensagem)): ?>
+            <span class="text-xs font-bold text-emerald-600 bg-emerald-50 px-3 py-1 rounded-lg border border-emerald-100">Alterações salvas!</span>
+        <?php endif; ?>
+        <?php if($mensagem): ?>
+            <span class="text-xs font-bold text-red-600 bg-red-50 px-3 py-1 rounded-lg border border-red-100"><?= $mensagem ?></span>
+        <?php endif; ?>
+      </div>
     </header>
 
     <div class="flex-1 overflow-y-auto px-8 py-8">
-      <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 max-w-6xl mx-auto">
+      <form method="POST" enctype="multipart/form-data" class="grid grid-cols-1 lg:grid-cols-12 gap-8 max-w-6xl mx-auto">
         
-        <div class="lg:col-span-4 space-y-6">
+        <div class="lg:col-span-4">
           <div class="bg-white rounded-3xl border border-gray-100 shadow-sm p-8 text-center">
-            <div class="w-24 h-24 bg-gray-100 rounded-full mx-auto mb-4 flex items-center justify-center">
-               <span class="text-2xl font-bold text-gray-400"><?= strtoupper(substr($dados['nome'], 0, 1)) ?></span>
+            <div class="relative w-32 h-32 mx-auto mb-6">
+               <?php if($fotoExibicao): ?>
+                 <img id="preview" src="<?= $fotoExibicao ?>" class="w-full h-full rounded-full object-cover border-4 border-gray-50 shadow-sm">
+               <?php else: ?>
+                 <div id="placeholder" class="w-full h-full bg-slate-100 rounded-full flex items-center justify-center border-4 border-gray-50 shadow-sm">
+                    <span class="text-3xl font-black text-slate-300"><?= strtoupper(substr($dados['nome'] ?? 'R', 0, 1)) ?></span>
+                 </div>
+               <?php endif; ?>
+
+               <label class="absolute bottom-0 right-0 bg-blue-600 hover:bg-blue-700 text-white w-9 h-9 rounded-full flex items-center justify-center cursor-pointer border-2 border-white shadow-lg transition-all hover:scale-110">
+                  <i class="ph-bold ph-pencil-simple text-sm"></i>
+                  <input type="file" name="foto_perfil" id="foto_input" class="hidden" accept="image/*">
+               </label>
+
+               <?php if($fotoExibicao): ?>
+                 <button type="submit" name="remover_foto" value="1" class="absolute bottom-0 -left-2 bg-white hover:bg-red-50 text-red-500 w-9 h-9 rounded-full flex items-center justify-center border-2 border-gray-100 shadow-lg transition-all hover:scale-110">
+                    <i class="ph-bold ph-trash text-sm"></i>
+                 </button>
+               <?php endif; ?>
             </div>
+
             <h2 class="text-xl font-extrabold text-slate-900"><?= htmlspecialchars($dados['nome']) ?></h2>
-            <p class="text-gray-400 text-sm"><?= htmlspecialchars($dados['cidade'] ?: 'Cidade não informada') ?></p>
+            <p class="text-gray-400 text-[10px] font-bold uppercase tracking-widest mt-1">
+                <i class="ph ph-map-pin"></i> <?= htmlspecialchars($dados['cidade'] ?: 'Não informada') ?>
+            </p>
+            
+            <?php if($temServico && !empty($dados['nicho'])): ?>
+                <div class="mt-4 flex flex-wrap justify-center gap-2">
+                    <span class="px-3 py-1 bg-orange-50 text-orange text-[10px] font-bold rounded-full uppercase tracking-tighter border border-orange-100">
+                        <?= htmlspecialchars($dados['nicho']) ?>
+                    </span>
+                    <span class="px-3 py-1 bg-slate-50 text-slate-500 text-[10px] font-bold rounded-full uppercase tracking-tighter border border-slate-100">
+                        <?= $dados['experiencia_anos'] ?> anos exp.
+                    </span>
+                </div>
+            <?php endif; ?>
           </div>
         </div>
 
         <div class="lg:col-span-8">
           <div class="bg-white rounded-3xl border border-gray-100 shadow-sm p-8">
-            <form method="POST" class="space-y-6">
+              <h3 class="text-lg font-bold text-slate-900 mb-6">Informações Pessoais</h3>
               
-              <h3 class="text-lg font-bold text-slate-900">Informações Básicas</h3>
               <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div class="space-y-1.5">
                   <label class="text-xs font-bold text-gray-400 uppercase ml-1">Nome Completo</label>
-                  <input type="text" name="nome" value="<?= htmlspecialchars($dados['nome']) ?>" class="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:border-orange outline-none">
+                  <input type="text" name="nome" value="<?= htmlspecialchars($dados['nome']) ?>" class="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:border-orange outline-none transition-all">
                 </div>
-                
                 <div class="space-y-1.5">
                   <label class="text-xs font-bold text-gray-400 uppercase ml-1">Telefone</label>
-                  <input type="text" name="telefone" value="<?= htmlspecialchars($dados['telefone']) ?>" class="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:border-orange outline-none">
+                  <input type="text" name="telefone" value="<?= htmlspecialchars($dados['telefone']) ?>" class="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:border-orange outline-none transition-all">
                 </div>
               </div>
 
               <div class="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4">
                 <div class="space-y-1.5">
                     <label class="text-xs font-bold text-gray-400 uppercase ml-1">Estado (UF)</label>
-                    <select id="uf" class="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:border-orange outline-none">
-                        <option value="">Selecione o Estado</option>
-                    </select>
+                    <select id="uf" class="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:border-orange outline-none"></select>
                 </div>
                 <div class="space-y-1.5">
                     <label class="text-xs font-bold text-gray-400 uppercase ml-1">Cidade</label>
-                    <select id="cidade" name="cidade" class="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:border-orange outline-none" disabled>
-                        <option value="">Selecione a Cidade</option>
-                    </select>
+                    <select id="cidade" name="cidade" class="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:border-orange outline-none" disabled></select>
                     <input type="hidden" id="cidade_atual" value="<?= htmlspecialchars($dados['cidade']) ?>">
                 </div>
               </div>
 
-              <div class="space-y-1.5">
+              <div class="space-y-1.5 pt-4 pb-4">
                 <label class="text-xs font-bold text-gray-400 uppercase ml-1">E-mail</label>
-                <input type="email" name="email" value="<?= htmlspecialchars($dados['email']) ?>" class="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:border-orange outline-none">
+                <input type="email" name="email" value="<?= htmlspecialchars($dados['email']) ?>" class="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:border-orange outline-none transition-all">
               </div>
 
               <?php if($temServico): ?>
-                <div class="pt-8 border-t border-gray-100">
-                    <h3 class="text-lg font-bold text-orange mb-4">Configurações de Prestador</h3>
+                <div class="pt-8 border-t border-gray-100 space-y-6">
+                    <h3 class="text-lg font-bold text-orange">Dados de Prestador</h3>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div class="space-y-1.5">
-                        <label class="text-xs font-bold text-gray-400 uppercase ml-1">Nicho Principal</label>
-                        <input type="text" name="nicho" value="<?= htmlspecialchars($dados['nicho']) ?>" class="w-full bg-orange-50/30 border border-orange-100 rounded-xl px-4 py-3 text-sm focus:border-orange outline-none">
+                            <label class="text-xs font-bold text-gray-400 uppercase ml-1">Nicho / Especialidade</label>
+                            <input type="text" name="nicho" value="<?= htmlspecialchars($dados['nicho'] ?? '') ?>" class="w-full bg-orange-50/30 border border-orange-100 rounded-xl px-4 py-3 text-sm outline-none">
                         </div>
                         <div class="space-y-1.5">
-                        <label class="text-xs font-bold text-gray-400 uppercase ml-1">Anos de Experiência</label>
-                        <input type="number" name="experiencia" value="<?= $dados['experiencia_anos'] ?>" class="w-full bg-orange-50/30 border border-orange-100 rounded-xl px-4 py-3 text-sm focus:border-orange outline-none">
+                            <label class="text-xs font-bold text-gray-400 uppercase ml-1">Experiência (anos)</label>
+                            <input type="number" name="experiencia" value="<?= $dados['experiencia_anos'] ?>" class="w-full bg-orange-50/30 border border-orange-100 rounded-xl px-4 py-3 text-sm outline-none">
                         </div>
                     </div>
-                    <div class="mt-6 space-y-1.5">
-                    <label class="text-xs font-bold text-gray-400 uppercase ml-1">Bio Profissional</label>
-                    <textarea name="bio" rows="4" class="w-full bg-orange-50/30 border border-orange-100 rounded-xl px-4 py-3 text-sm focus:border-orange outline-none resize-none"><?= htmlspecialchars($dados['bio']) ?></textarea>
+                    <div class="space-y-1.5">
+                        <label class="text-xs font-bold text-gray-400 uppercase ml-1">Bio Profissional</label>
+                        <textarea name="bio" rows="4" class="w-full bg-orange-50/30 border border-orange-100 rounded-xl px-4 py-3 text-sm outline-none resize-none"><?= htmlspecialchars($dados['bio'] ?? '') ?></textarea>
                     </div>
                 </div>
               <?php endif; ?>
 
-              <div class="flex items-center justify-end pt-6">
-                <button type="submit" class="bg-orange hover:bg-orange-600 text-white px-10 py-3 rounded-xl font-bold text-sm shadow-lg transition-all hover:scale-[1.02]">
-                    SALVAR ALTERAÇÕES
-                </button>
+              <div class="flex justify-end pt-8">
+                <button type="submit" class="bg-orange hover:bg-orange-600 text-white px-12 py-3.5 rounded-xl font-black text-sm shadow-lg transition-transform active:scale-95">SALVAR ALTERAÇÕES</button>
               </div>
-            </form>
           </div>
         </div>
-
-      </div>
+      </form>
     </div>
   </main>
 
   <script>
+    // Preview de Imagem
+    document.getElementById('foto_input').onchange = e => {
+        const [file] = e.target.files;
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = event => {
+                let img = document.getElementById('preview');
+                if(!img) {
+                    img = document.createElement('img');
+                    img.id = 'preview';
+                    img.className = "w-full h-full rounded-full object-cover border-4 border-gray-50 shadow-sm";
+                    document.getElementById('placeholder')?.replaceWith(img);
+                }
+                img.src = event.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+    };
+
+    // Lógica Completa do IBGE
     document.addEventListener('DOMContentLoaded', () => {
         const ufSelect = document.getElementById('uf');
         const cidadeSelect = document.getElementById('cidade');
         const cidadeAtual = document.getElementById('cidade_atual').value;
 
-        // 1. Carregar Estados
         fetch('https://servicodados.ibge.gov.br/api/v1/localidades/estados?orderBy=nome')
             .then(res => res.json())
             .then(estados => {
-                estados.forEach(estado => {
-                    const option = new Option(estado.nome, estado.sigla);
-                    ufSelect.add(option);
-                });
-                
-                if (cidadeAtual && cidadeAtual.includes(' - ')) {
-                    const siglaSalva = cidadeAtual.split(' - ')[1].trim();
-                    ufSelect.value = siglaSalva;
+                ufSelect.innerHTML = '<option value="">UF</option>';
+                estados.forEach(e => ufSelect.add(new Option(e.nome, e.sigla)));
+                if(cidadeAtual.includes('-')) {
+                    const ufCravada = cidadeAtual.split('-')[1].trim();
+                    ufSelect.value = ufCravada;
                     ufSelect.dispatchEvent(new Event('change'));
                 }
             });
 
-        // 2. Carregar Cidades ao mudar Estado
-        ufSelect.addEventListener('change', async () => {
-            const sigla = ufSelect.value;
-            cidadeSelect.innerHTML = '<option value="">Carregando...</option>';
+        ufSelect.onchange = async () => {
+            if(!ufSelect.value) return;
             cidadeSelect.disabled = true;
-
-            if (!sigla) return;
-
-            const res = await fetch(`https://servicodados.ibge.gov.br/api/v1/localidades/estados/${sigla}/municipios?orderBy=nome`);
+            const res = await fetch(`https://servicodados.ibge.gov.br/api/v1/localidades/estados/${ufSelect.value}/municipios`);
             const cidades = await res.json();
-
-            cidadeSelect.innerHTML = '<option value="">Selecione a Cidade</option>';
-            cidades.forEach(m => {
-                const valorFormatado = `${m.nome} - ${sigla}`;
-                const option = new Option(m.nome, valorFormatado);
-                if (valorFormatado === cidadeAtual) option.selected = true;
-                cidadeSelect.add(option);
+            cidadeSelect.innerHTML = '<option value="">Cidade</option>';
+            cidades.forEach(c => {
+                const val = `${c.nome} - ${ufSelect.value}`;
+                const opt = new Option(c.nome, val);
+                if(val === cidadeAtual) opt.selected = true;
+                cidadeSelect.add(opt);
             });
             cidadeSelect.disabled = false;
-        });
+        };
     });
   </script>
 </body>

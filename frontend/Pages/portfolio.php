@@ -2,18 +2,24 @@
 header('Content-Type: text/html; charset=UTF-8');
 require_once '../../backend/config/auth.php';
 require_once '../../backend/config/Conexao.php';
+require_once '../../backend/models/User.php';
 
 $usuarioId = (int)($_SESSION['usuario_id'] ?? 0);
 $mensagem = '';
 $erro = '';
 $limiteFotos = 7;
+$urlBaseSupabase = "https://yplpxzmwtkencrrtxmof.supabase.co/storage/v1/object/public/fotos/";
+
+$idParaSelecionar = filter_input(INPUT_GET, 'selecionar', FILTER_VALIDATE_INT);
 
 if ($usuarioId <= 0) {
     header('Location: /PI-2026.1/frontend/Pages/login.php');
     exit;
 }
 
-// --- 1. BUSCA SERVIÇOS DO PRESTADOR ---
+$userModel = new User($pdo);
+$usuarioLogado = $userModel->buscarPorId($usuarioId);
+
 $stmtS = $pdo->prepare("SELECT id, titulo, categoria_nome FROM servicos WHERE prestador_id = ? ORDER BY id DESC");
 $stmtS->execute([$usuarioId]);
 $servicos = $stmtS->fetchAll(PDO::FETCH_ASSOC);
@@ -23,40 +29,41 @@ foreach ($servicos as $s) {
     $servicosMap[$s['id']] = $s;
 }
 
-// --- 2. LÓGICA DE EXCLUSÃO (VIA POST) ---
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    // Excluir Projeto Inteiro
+
     if (isset($_POST['excluir_projeto_titulo'])) {
         $tituloExc = $_POST['excluir_projeto_titulo'];
-        $stmtB = $pdo->prepare("SELECT url_imagem FROM portfolio_imagens WHERE titulo_projeto = ? AND usuario_id = ?");
-        $stmtB->execute([$tituloExc, $usuarioId]);
-        $fotos = $stmtB->fetchAll(PDO::FETCH_ASSOC);
+        $stmtBusca = $pdo->prepare("SELECT url_imagem FROM portfolio_imagens WHERE titulo_projeto = ? AND usuario_id = ?");
+        $stmtBusca->execute([$tituloExc, $usuarioId]);
+        $fotosParaApagar = $stmtBusca->fetchAll();
 
-        foreach ($fotos as $f) {
-            $caminho = __DIR__ . '/..' . str_replace('/PI-2026.1/frontend', '', $f['url_imagem']);
-            if (file_exists($caminho)) unlink($caminho);
+        foreach ($fotosParaApagar as $f) {
+            apagarArquivoSupabase($f['url_imagem']); 
         }
-
-        $pdo->prepare("DELETE FROM portfolio_imagens WHERE titulo_projeto = ? AND usuario_id = ?")->execute([$tituloExc, $usuarioId]);
-        header('Location: portfolio.php?ok=3'); exit;
+        
+        $stmtDel = $pdo->prepare("DELETE FROM portfolio_imagens WHERE titulo_projeto = ? AND usuario_id = ?");
+        if ($stmtDel->execute([$tituloExc, $usuarioId])) {
+            header('Location: portfolio.php?ok=3'); 
+            exit;
+        }
     }
 
-    // Excluir Foto Única
     if (isset($_POST['excluir_foto_id'])) {
         $fotoId = (int)$_POST['excluir_foto_id'];
-        $stmtB = $pdo->prepare("SELECT url_imagem FROM portfolio_imagens WHERE id = ? AND usuario_id = ?");
-        $stmtB->execute([$fotoId, $usuarioId]);
-        $foto = $stmtB->fetch(PDO::FETCH_ASSOC);
+        $stmtBusca = $pdo->prepare("SELECT url_imagem FROM portfolio_imagens WHERE id = ? AND usuario_id = ?");
+        $stmtBusca->execute([$fotoId, $usuarioId]);
+        $foto = $stmtBusca->fetch();
 
         if ($foto) {
-            $caminho = __DIR__ . '/..' . str_replace('/PI-2026.1/frontend', '', $foto['url_imagem']);
-            if (file_exists($caminho)) unlink($caminho);
-            $pdo->prepare("DELETE FROM portfolio_imagens WHERE id = ?")->execute([$fotoId]);
-            header('Location: portfolio.php?ok=2'); exit;
+            apagarArquivoSupabase($foto['url_imagem']); 
+            $stmtDel = $pdo->prepare("DELETE FROM portfolio_imagens WHERE id = ? AND usuario_id = ?");
+            if ($stmtDel->execute([$fotoId, $usuarioId])) {
+                header('Location: portfolio.php?ok=2'); 
+                exit;
+            }
         }
     }
 
-    // Upload de Fotos
     if (isset($_FILES['foto_trabalho'])) {
         $servicoId = filter_input(INPUT_POST, 'servico_id', FILTER_VALIDATE_INT);
         $tituloProjeto = $servicosMap[$servicoId]['titulo'] ?? '';
@@ -66,39 +73,48 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $jaTem = (int)$stmtC->fetchColumn();
 
         $arquivos = $_FILES['foto_trabalho'];
-        $qtdNovas = is_array($arquivos['name']) ? count(array_filter($arquivos['name'])) : 1;
+        $qtdNovas = is_array($arquivos['name']) ? count(array_filter($arquivos['name'])) : 0;
 
         if (!$servicoId) {
             $erro = 'Selecione um serviço relacionado.';
         } elseif (($jaTem + $qtdNovas) > $limiteFotos) {
             $erro = "Limite atingido! Este serviço já tem $jaTem fotos. Máximo permitido: $limiteFotos.";
-        } else {
-            $dirAbs = __DIR__ . '/../uploads/portfolio';
-            $dirWeb = '/PI-2026.1/frontend/uploads/portfolio';
-            if (!is_dir($dirAbs)) mkdir($dirAbs, 0775, true);
+        } elseif ($qtdNovas > 0) {
+            $sucessoUpload = false;
 
             for ($i = 0; $i < $qtdNovas; $i++) {
-                $tmp = is_array($arquivos['tmp_name']) ? $arquivos['tmp_name'][$i] : $arquivos['tmp_name'];
-                if (is_uploaded_file($tmp)) {
-                    $nome = sprintf('port_%d_%s.jpg', $usuarioId, bin2hex(random_bytes(6)));
-                    if (move_uploaded_file($tmp, $dirAbs . '/' . $nome)) {
-                        $pdo->prepare("INSERT INTO portfolio_imagens (usuario_id, titulo_projeto, url_imagem) VALUES (?, ?, ?)")
-                            ->execute([$usuarioId, $tituloProjeto, $dirWeb . '/' . $nome]);
+                $tmpNome = $arquivos['tmp_name'][$i];
+                $nomeOri = $arquivos['name'][$i];
+
+                if (is_uploaded_file($tmpNome)) {
+                    $caminhoNoSupabase = fazerUploadPortfolioSupabase($tmpNome, $nomeOri);
+
+                    if ($caminhoNoSupabase) {
+                        $stmtIns = $pdo->prepare("INSERT INTO portfolio_imagens (usuario_id, titulo_projeto, url_imagem) VALUES (?, ?, ?)");
+                        $stmtIns->execute([$usuarioId, $tituloProjeto, $caminhoNoSupabase]);
+                        $sucessoUpload = true;
                     }
                 }
             }
-            header('Location: portfolio.php?ok=1'); exit;
+            if ($sucessoUpload) {
+                // Redirecionamento limpa o POST e evita duplicidade por F5
+                header('Location: portfolio.php?ok=1'); 
+                exit;
+            } else {
+                $erro = "Erro ao enviar fotos para o armazenamento online.";
+            }
         }
     }
 }
 
-// Mensagens de Feedback
 $status = $_GET['ok'] ?? '';
 if ($status === '1') $mensagem = 'Fotos adicionadas com sucesso!';
-if ($status === '2') $mensagem = 'A foto foi removida.';
-if ($status === '3') $mensagem = 'O projeto foi excluído permanentemente.';
+if ($status === '2') $mensagem = 'A foto foi removida com sucesso!';
+if ($status === '3') $mensagem = 'O projeto e todas as suas fotos foram excluídos!';
+if ($idParaSelecionar && !$status) {
+    $mensagem = 'Serviço cadastrado com sucesso! Agora adicione fotos para o seu portfólio.';
+}
 
-// --- 3. BUSCA E ORGANIZAÇÃO DOS CARDS ---
 $stmtP = $pdo->prepare("SELECT * FROM portfolio_imagens WHERE usuario_id = ? ORDER BY data_upload DESC");
 $stmtP->execute([$usuarioId]);
 $projetosAgrupados = [];
@@ -130,7 +146,7 @@ foreach ($stmtP->fetchAll(PDO::FETCH_ASSOC) as $item) {
           <svg class="w-8 h-8" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
         </div>
         <h3 id="modalTitle" class="text-xl font-black text-slate-900 mb-2">Excluir?</h3>
-        <p id="modalDesc" class="text-sm text-gray-500">Essa ação não pode ser desfeita.</p>
+        <p id="modalDesc" class="text-sm text-gray-500">Essa ação removerá os registos e os arquivos permanentemente.</p>
       </div>
       <div class="bg-gray-50 p-4 flex gap-3">
         <button onclick="fecharModal()" class="flex-1 py-3 text-sm font-bold text-gray-500 hover:bg-gray-200 rounded-xl transition-colors">Cancelar</button>
@@ -150,14 +166,22 @@ foreach ($stmtP->fetchAll(PDO::FETCH_ASSOC) as $item) {
 
   <main class="flex-1 flex flex-col overflow-hidden">
     <header class="flex items-center justify-between px-8 py-5 border-b border-gray-200 bg-white flex-shrink-0">
-      <div class="flex items-center gap-2 text-gray-400 font-bold">
-        <a href="./dashboard.php" class="hover:text-orange transition-colors">Início</a>
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
-        <span class="text-slate-800 text-lg">Portfolio</span>
-      </div>
-      <div class="w-9 h-9 rounded-full bg-orange/80 flex items-center justify-center text-white font-bold">
-          <?= strtoupper(mb_substr($_SESSION['usuario_nome'] ?? 'U', 0, 1)) ?>
-      </div>
+        <div class="flex items-center gap-2 text-gray-400">
+          <button onclick="history.back()" class="hover:text-gray-600 p-1 -ml-1 rounded-lg hover:bg-gray-100"><svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg></button>
+          <a href="./dashboard.php" class="text-gray-400 text-sm hover:text-orange transition-colors">Início</a>
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
+          <span class="text-gray-800 font-bold text-lg tracking-tight">Portfólio</span>
+        </div>
+        
+        <a href="perfil.php" class="hover:opacity-80 transition-opacity">
+            <div class="w-10 h-10 rounded-full bg-orange flex items-center justify-center text-white font-bold text-sm overflow-hidden border-2 border-orange/20">
+                <?php if(!empty($usuarioLogado['foto_perfil']) && $usuarioLogado['foto_perfil'] !== 'default.png'): ?>
+                    <img src="<?= $urlBaseSupabase . $usuarioLogado['foto_perfil'] ?>" class="w-full h-full object-cover">
+                <?php else: ?>
+                    <?= strtoupper(mb_substr($usuarioLogado['nome'] ?? 'U', 0, 1)) ?>
+                <?php endif; ?>
+            </div>
+        </a>
     </header>
 
     <div class="flex-1 overflow-y-auto px-8 py-6">
@@ -172,14 +196,17 @@ foreach ($stmtP->fetchAll(PDO::FETCH_ASSOC) as $item) {
       <div class="grid grid-cols-1 xl:grid-cols-12 gap-8">
         <section class="xl:col-span-4 bg-white border border-gray-200 rounded-2xl p-6 shadow-sm h-fit">
           <h3 class="text-2xl font-extrabold text-slate-900 mb-6">Novo Trabalho</h3>
-          <form method="POST" enctype="multipart/form-data" class="space-y-5">
+          
+          <form method="POST" enctype="multipart/form-data" class="space-y-5" onsubmit="const btn=this.querySelector('button[type=submit]'); btn.disabled=true; btn.innerHTML='Enviando...';">
             <div>
               <label class="block text-xs font-bold text-gray-700 mb-2 uppercase tracking-widest">Serviço Realizado</label>
               <select name="servico_id" required class="w-full border border-gray-200 rounded-xl px-4 py-3.5 text-sm focus:border-orange outline-none bg-white font-bold text-slate-700">
-                <option value="">Selecione o serviço...</option>
-                <?php foreach ($servicos as $s): ?>
-                  <option value="<?= $s['id'] ?>"><?= htmlspecialchars($s['titulo']) ?></option>
-                <?php endforeach; ?>
+                  <option value="">Selecione o serviço...</option>
+                  <?php foreach ($servicos as $s): ?>
+                      <option value="<?= $s['id'] ?>" <?= ($idParaSelecionar == $s['id']) ? 'selected' : '' ?>>
+                          <?= htmlspecialchars($s['titulo']) ?>
+                      </option>
+                  <?php endforeach; ?>
               </select>
             </div>
 
@@ -216,7 +243,8 @@ foreach ($stmtP->fetchAll(PDO::FETCH_ASSOC) as $item) {
               <div class="p-5 grid grid-cols-2 sm:grid-cols-4 gap-4">
                 <?php foreach ($fotos as $f): ?>
                   <div class="relative group aspect-square rounded-2xl overflow-hidden bg-gray-50 border border-gray-100">
-                    <img src="<?= htmlspecialchars($f['url_imagem']) ?>" class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
+                    <img src="<?= $urlBaseSupabase . htmlspecialchars($f['url_imagem']) ?>" class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" alt="Trabalho" />
+                    
                     <button type="button" onclick="confirmarExcluirFoto(<?= $f['id'] ?>)" class="absolute top-2 right-2 opacity-0 group-hover:opacity-100 bg-white text-red-500 p-2 rounded-xl shadow-xl hover:bg-red-500 hover:text-white transition-all">
                       <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12"/></svg>
                     </button>
@@ -250,7 +278,7 @@ foreach ($stmtP->fetchAll(PDO::FETCH_ASSOC) as $item) {
 
     function confirmarExcluirFoto(id) {
         modalTitle.innerText = "Remover esta foto?";
-        modalDesc.innerText = "A imagem será apagada permanentemente do seu portfólio.";
+        modalDesc.innerText = "A imagem será apagada permanentemente do armazenamento.";
         modalInput.name = "excluir_foto_id";
         modalInput.value = id;
         abrirModal();
@@ -258,7 +286,7 @@ foreach ($stmtP->fetchAll(PDO::FETCH_ASSOC) as $item) {
 
     function confirmarExcluirTudo(titulo) {
         modalTitle.innerText = "Excluir projeto?";
-        modalDesc.innerText = `Isso apagará todas as fotos vinculadas ao serviço "${titulo}".`;
+        modalDesc.innerText = `Isto apagará permanentemente todas as fotos vinculadas ao serviço "${titulo}".`;
         modalInput.name = "excluir_projeto_titulo";
         modalInput.value = titulo;
         abrirModal();

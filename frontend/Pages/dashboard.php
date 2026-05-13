@@ -6,6 +6,10 @@ require_once '../../backend/models/User.php';
 $user    = new User($pdo);
 $usuario = $user->buscarPorId($_SESSION['usuario_id']);
 
+// --- CONFIGURAÇÃO SUPABASE ---
+// URL base para as fotos públicas (ajuste conforme o seu projeto se necessário)
+$urlBaseSupabase = "https://yplpxzmwtkencrrtxmof.supabase.co/storage/v1/object/public/fotos/";
+
 // Captura de Filtros
 $categoriaAtiva = trim($_GET['categoria'] ?? 'Todos');
 $busca          = trim($_GET['busca']     ?? '');
@@ -66,15 +70,7 @@ $stmt = $pdo->prepare($sql);
 $stmt->execute($params);
 $servicos = $stmt->fetchAll();
 
-// Categorias Gerais focadas em Reforma (Baseadas no seu datalist)
-$categoriasGerais = [
-    "Reformas", 
-    "Pintura e Textura", 
-    "Elétrica", 
-    "Hidráulica", 
-    "Pisos e Revestimentos", 
-    "Alvenaria e Construção"
-];
+$categoriasGerais = ["Reformas", "Pintura e Textura", "Elétrica", "Hidráulica", "Pisos e Revestimentos", "Alvenaria e Construção"];
 ?>
 
 <!DOCTYPE html>
@@ -100,7 +96,6 @@ $categoriasGerais = [
     .card-reveal { animation: fadeUp 0.3s ease both; }
     .custom-scroll::-webkit-scrollbar { width: 6px; }
     .custom-scroll::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 99px; }
-    /* Remove as setinhas do input number */
     input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
   </style>
 </head>
@@ -123,10 +118,11 @@ $categoriasGerais = [
         </div>
         <span class="font-bold text-lg tracking-tight">Início</span>
       </div>
+      
       <a href="perfil.php" class="hover:opacity-80 transition-opacity">
         <div class="w-10 h-10 rounded-full bg-orange flex items-center justify-center text-white font-bold text-sm overflow-hidden border-2 border-orange/20">
           <?php if($usuario['foto_perfil'] && $usuario['foto_perfil'] !== 'default.png'): ?>
-            <img src="../../uploads/perfis/<?= $usuario['foto_perfil'] ?>" class="w-full h-full object-cover">
+            <img src="<?= $urlBaseSupabase . $usuario['foto_perfil'] ?>" class="w-full h-full object-cover">
           <?php else: ?>
             <?= strtoupper(mb_substr($usuario['nome'], 0, 1)) ?>
           <?php endif; ?>
@@ -155,9 +151,7 @@ $categoriasGerais = [
         </div>
 
         <div class="flex items-center gap-2 flex-wrap">
-          <?php 
-            $urlParams = "&busca=".urlencode($busca)."&cidade=".urlencode($cidade)."&preco_min=".$precoMin."&preco_max=".$precoMax;
-          ?>
+          <?php $urlParams = "&busca=".urlencode($busca)."&cidade=".urlencode($cidade)."&preco_min=".$precoMin."&preco_max=".$precoMax; ?>
           <a href="?categoria=Todos<?= $urlParams ?>" class="px-5 py-2 rounded-full text-[11px] font-bold transition-all <?= $categoriaAtiva === 'Todos' ? 'bg-orange text-white' : 'bg-white text-gray-500 border border-gray-200 hover:border-orange hover:text-orange' ?>">TODOS</a>
           
           <?php foreach ($categoriasGerais as $cat): ?>
@@ -176,7 +170,7 @@ $categoriasGerais = [
               <div class="flex items-center gap-3">
                 <div class="w-11 h-11 rounded-full bg-gray-100 flex-shrink-0 overflow-hidden border border-gray-200">
                   <?php if($s['prestador_foto'] && $s['prestador_foto'] !== 'default.png'): ?>
-                    <img src="../../uploads/perfis/<?= $s['prestador_foto'] ?>" class="w-full h-full object-cover">
+                    <img src="<?= $urlBaseSupabase . $s['prestador_foto'] ?>" class="w-full h-full object-cover">
                   <?php else: ?>
                     <div class="w-full h-full flex items-center justify-center bg-orange/10 text-orange font-bold text-xs">
                       <?= strtoupper(substr($s['prestador_nome'], 0, 1)) ?>
@@ -223,30 +217,17 @@ $categoriasGerais = [
     const listaCidades = document.getElementById('listaCidades');
     const filtroForm = document.getElementById('filtroForm');
 
-    // Lógica do Autocomplete
     inputCidade.addEventListener('input', async (e) => {
         const termo = e.target.value;
-        if (termo.length < 2) { 
-            listaCidades.classList.add('hidden'); 
-            return; 
-        }
-
+        if (termo.length < 2) { listaCidades.classList.add('hidden'); return; }
         const res = await fetch(`?ajax_cidades=${encodeURIComponent(termo)}`);
         const cidades = await res.json();
-
         if (cidades.length > 0) {
-            listaCidades.innerHTML = cidades.map(c => `
-                <div class="px-4 py-3 hover:bg-orange/5 cursor-pointer text-sm border-b border-gray-50 last:border-none item-cidade transition-colors">
-                    ${c}
-                </div>
-            `).join('');
+            listaCidades.innerHTML = cidades.map(c => `<div class="px-4 py-3 hover:bg-orange/5 cursor-pointer text-sm border-b border-gray-50 last:border-none item-cidade transition-colors">${c}</div>`).join('');
             listaCidades.classList.remove('hidden');
-        } else {
-            listaCidades.classList.add('hidden');
-        }
+        } else { listaCidades.classList.add('hidden'); }
     });
 
-    // Clique na sugestão
     document.addEventListener('click', (e) => {
         if (e.target.classList.contains('item-cidade')) {
             inputCidade.value = e.target.innerText.trim();

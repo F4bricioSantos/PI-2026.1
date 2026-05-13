@@ -7,6 +7,12 @@ if (empty($_SESSION['usuario_id'])) {
 }
 
 require_once '../../backend/config/Conexao.php';
+require_once '../../backend/models/User.php';
+
+// --- BUSCA DADOS DO USUÁRIO PARA O HEADER ---
+$userModel = new User($pdo);
+$usuario = $userModel->buscarPorId($_SESSION['usuario_id']);
+$urlBaseSupabase = "https://yplpxzmwtkencrrtxmof.supabase.co/storage/v1/object/public/fotos/";
 
 $erro = '';
 
@@ -14,30 +20,42 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $titulo    = trim($_POST['titulo']    ?? '');
     $categoria = trim($_POST['categoria'] ?? '');
     $valor     = $_POST['valor']          ?? '';
-    $descricao = trim($_POST['descricao'] ?? '');
+    $descricao = mb_strimwidth(trim($_POST['descricao'] ?? ''), 0, 255);
 
     if (empty($titulo) || empty($categoria)) {
         $erro = 'Título e categoria são obrigatórios.';
     } elseif ($valor !== '' && (!is_numeric($valor) || $valor < 0)) {
         $erro = 'Informe um valor numérico válido.';
     } else {
-        $stmt = $pdo->prepare("
-            INSERT INTO servicos (prestador_id, titulo, categoria_nome, valor_base, descricao_curta)
-            VALUES (:prestador_id, :titulo, :categoria, :valor, :descricao)
-        ");
-        $ok = $stmt->execute([
-            ':prestador_id' => $_SESSION['usuario_id'],
-            ':titulo'       => $titulo,
-            ':categoria'    => $categoria,
-            ':valor'        => $valor !== '' ? (float)$valor : null,
-            ':descricao'    => $descricao ?: null,
-        ]);
+        // --- NOVA REGRA: VERIFICA LIMITE DE 3 SERVIÇOS ---
+        $stmtCheck = $pdo->prepare("SELECT COUNT(*) FROM servicos WHERE prestador_id = :id");
+        $stmtCheck->execute([':id' => $_SESSION['usuario_id']]);
+        $totalServicos = $stmtCheck->fetchColumn();
 
-        if ($ok) {
-            header('Location: /PI-2026.1/frontend/Pages/dashboard.php');
-            exit;
+        if ($totalServicos >= 3) {
+            $erro = 'Você já atingiu o limite máximo de 3 serviços cadastrados.';
         } else {
-            $erro = 'Erro ao salvar o serviço. Tente novamente.';
+            // Se estiver abaixo do limite, procede com o cadastro
+            $stmt = $pdo->prepare("
+                INSERT INTO servicos (prestador_id, titulo, categoria_nome, valor_base, descricao_curta)
+                VALUES (:prestador_id, :titulo, :categoria, :valor, :descricao)
+            ");
+
+            $ok = $stmt->execute([
+                ':prestador_id' => $_SESSION['usuario_id'],
+                ':titulo'       => $titulo,
+                ':categoria'    => $categoria,
+                ':valor'        => $valor !== '' ? (float)$valor : null,
+                ':descricao'    => $descricao ?: null,
+            ]);
+
+            if ($ok) {
+                $novoServicoId = $pdo->lastInsertId();
+                header("Location: /PI-2026.1/frontend/Pages/portfolio.php?selecionar=" . $novoServicoId);
+                exit;
+            } else {
+                $erro = 'Erro ao salvar o serviço. Tente novamente.';
+            }
         }
     }
 }
@@ -68,11 +86,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     .custom-scroll::-webkit-scrollbar { width: 6px; }
     .custom-scroll::-webkit-scrollbar-track { background: transparent; }
     .custom-scroll::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 99px; }
-    
-    /* Remove a seta padrão do datalist para parecer um campo de busca limpo */
-    #input-categoria::-webkit-calendar-picker-indicator {
-      display: none !important;
-    }
+    #input-categoria::-webkit-calendar-picker-indicator { display: none !important; }
   </style>
 </head>
 <body class="font-sans bg-bg text-gray-800 flex h-screen overflow-hidden">
@@ -93,10 +107,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
         <span class="text-gray-800 font-bold text-lg tracking-tight">Novo Serviço</span>
       </div>
-      <a href="perfil.php">
-      <div class="w-9 h-9 rounded-full bg-orange/80 flex items-center justify-center text-white font-bold text-sm">
-          <?= strtoupper(mb_substr($_SESSION['usuario_nome'] ?? 'U', 0, 1)) ?>
-      </div></a>
+      
+      <a href="perfil.php" class="hover:opacity-80 transition-opacity">
+        <div class="w-10 h-10 rounded-full bg-orange flex items-center justify-center text-white font-bold text-sm overflow-hidden border-2 border-orange/20">
+          <?php if(!empty($usuario['foto_perfil']) && $usuario['foto_perfil'] !== 'default.png'): ?>
+            <img src="<?= $urlBaseSupabase . $usuario['foto_perfil'] ?>" class="w-full h-full object-cover">
+          <?php else: ?>
+            <?= strtoupper(mb_substr($usuario['nome'] ?? 'U', 0, 1)) ?>
+          <?php endif; ?>
+        </div>
+      </a>
     </header>
 
     <div class="flex-1 overflow-y-auto px-8 py-10 custom-scroll">
@@ -111,7 +131,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
           </div>
         <?php endif; ?>
 
-        <form method="POST" action="" class="space-y-8">
+        <form method="POST" action="" class="space-y-8" onsubmit="const btn=this.querySelector('button[type=submit]'); btn.disabled=true; btn.innerHTML='Salvando...';">
           <div class="space-y-2">
             <label class="text-sm font-bold text-slate-700 ml-1">Título do Serviço</label>
             <input type="text" name="titulo" required
@@ -159,7 +179,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                   <option value="Limpeza e Conservação">
                   <option value="Montagem de Móveis">
                   <option value="Reparos">
-                  <option value="Reformas"></option>
+                  <option value="Reformas">
                   <option value="Piscinas">
                   <option value="Arquitetura e Projetos">
                   <option value="Design de Interiores">
@@ -185,9 +205,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
           <div class="space-y-2">
             <label class="text-sm font-bold text-slate-700 ml-1">Descrição Detalhada</label>
-            <textarea name="descricao" rows="6"
+            <textarea name="descricao" rows="6" maxlength="255"
               placeholder="Descreva o que está incluso no serviço, materiais e prazos..."
               class="w-full bg-white border border-gray-200 rounded-3xl px-6 py-4 text-base focus:outline-none focus:border-orange focus:ring-4 focus:ring-orange/5 transition-all shadow-sm resize-none"><?= htmlspecialchars($_POST['descricao'] ?? '') ?></textarea>
+          </div>
+
+          <div class="mt-16 bg-slate-50 border-2 border-dashed border-slate-200 rounded-3xl p-12 text-center" id="preview-area">
+            <p class="text-slate-400 text-sm">A prévia do seu anúncio aparecerá aqui conforme você digita.</p>
           </div>
 
           <div class="flex items-center justify-end gap-6 pt-4">
@@ -198,11 +222,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             </button>
           </div>
         </form>
-
-        <div class="mt-16 bg-slate-50 border-2 border-dashed border-slate-200 rounded-3xl p-12 text-center" id="preview-area">
-          <p class="text-slate-400 text-sm">A prévia do seu anúncio aparecerá aqui conforme você digita.</p>
-        </div>
-
       </div>
     </div>
   </main>
@@ -215,7 +234,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     const previewArea = document.getElementById('preview-area');
 
     function gerenciarDatalist(input) {
-      // Ativa sugestões apenas se houver texto para não abrir menu sozinho
       if (input.value.length > 0) {
         input.setAttribute('list', 'categorias-list');
       } else {
@@ -245,7 +263,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       `;
     }
 
-    // Ouvintes para atualizar a prévia em tempo real
     [inputTitulo, inputCat, inputValor, areaDesc].forEach(el => {
       el.addEventListener('input', atualizarPrevia);
     });
