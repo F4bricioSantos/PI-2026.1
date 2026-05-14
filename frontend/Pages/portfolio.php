@@ -1,7 +1,7 @@
 ﻿<?php
 header('Content-Type: text/html; charset=UTF-8');
 
-// 1. PROTEÇÃO DE SESSÃO (Adicionado)
+// 1. PROTEÇÃO DE SESSÃO E INCLUDES ORIGINAIS
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
@@ -15,7 +15,8 @@ require_once '../../backend/config/auth.php';
 require_once '../../backend/config/Conexao.php';
 require_once '../../backend/models/User.php';
 
-$usuarioId = (int)$_SESSION['usuario_id']; // Garante o ID da sessão
+// Variáveis de Configuração
+$usuarioId = (int)$_SESSION['usuario_id'];
 $mensagem = '';
 $erro = '';
 $limiteFotos = 7;
@@ -23,29 +24,37 @@ $urlBaseSupabase = "https://yplpxzmwtkencrrtxmof.supabase.co/storage/v1/object/p
 
 $idParaSelecionar = filter_input(INPUT_GET, 'selecionar', FILTER_VALIDATE_INT);
 
+// Busca dados do utilizador
 $userModel = new User($pdo);
 $usuarioLogado = $userModel->buscarPorId($usuarioId);
 
+// Busca serviços (para o Select e para a Sidebar)
 $stmtS = $pdo->prepare("SELECT id, titulo, categoria_nome FROM servicos WHERE prestador_id = ? ORDER BY id DESC");
 $stmtS->execute([$usuarioId]);
 $servicos = $stmtS->fetchAll(PDO::FETCH_ASSOC);
+$temServico = count($servicos) > 0;
 
 $servicosMap = [];
 foreach ($servicos as $s) {
     $servicosMap[$s['id']] = $s;
 }
 
-// 2. LÓGICA DE PROCESSAMENTO
+// 2. LÓGICA DE PROCESSAMENTO COMPLETA (POST)
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
+    // Ação: Excluir Projeto Completo
     if (isset($_POST['excluir_projeto_titulo'])) {
         $tituloExc = $_POST['excluir_projeto_titulo'];
+        
+        // Busca URLs para apagar no Supabase antes de deletar do banco
         $stmtBusca = $pdo->prepare("SELECT url_imagem FROM portfolio_imagens WHERE titulo_projeto = ? AND usuario_id = ?");
         $stmtBusca->execute([$tituloExc, $usuarioId]);
         $fotosParaApagar = $stmtBusca->fetchAll();
 
         foreach ($fotosParaApagar as $f) {
-            apagarArquivoSupabase($f['url_imagem']); 
+            if (function_exists('apagarArquivoSupabase')) {
+                apagarArquivoSupabase($f['url_imagem']); 
+            }
         }
         
         $stmtDel = $pdo->prepare("DELETE FROM portfolio_imagens WHERE titulo_projeto = ? AND usuario_id = ?");
@@ -55,6 +64,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 
+    // Ação: Excluir Foto Individual
     if (isset($_POST['excluir_foto_id'])) {
         $fotoId = (int)$_POST['excluir_foto_id'];
         $stmtBusca = $pdo->prepare("SELECT url_imagem FROM portfolio_imagens WHERE id = ? AND usuario_id = ?");
@@ -62,7 +72,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $foto = $stmtBusca->fetch();
 
         if ($foto) {
-            apagarArquivoSupabase($foto['url_imagem']); 
+            if (function_exists('apagarArquivoSupabase')) {
+                apagarArquivoSupabase($foto['url_imagem']); 
+            }
             $stmtDel = $pdo->prepare("DELETE FROM portfolio_imagens WHERE id = ? AND usuario_id = ?");
             if ($stmtDel->execute([$fotoId, $usuarioId])) {
                 header('Location: portfolio.php?ok=2'); 
@@ -71,10 +83,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 
+    // Ação: Upload de Fotos (vincular ao serviço)
     if (isset($_FILES['foto_trabalho'])) {
         $servicoId = filter_input(INPUT_POST, 'servico_id', FILTER_VALIDATE_INT);
         $tituloProjeto = $servicosMap[$servicoId]['titulo'] ?? '';
 
+        // Contagem atual de fotos para este projeto
         $stmtC = $pdo->prepare("SELECT COUNT(*) FROM portfolio_imagens WHERE usuario_id = ? AND titulo_projeto = ?");
         $stmtC->execute([$usuarioId, $tituloProjeto]);
         $jaTem = (int)$stmtC->fetchColumn();
@@ -88,18 +102,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $erro = "Limite atingido! Este serviço já tem $jaTem fotos. Máximo permitido: $limiteFotos.";
         } elseif ($qtdNovas > 0) {
             $sucessoUpload = false;
-
             for ($i = 0; $i < $qtdNovas; $i++) {
                 $tmpNome = $arquivos['tmp_name'][$i];
                 $nomeOri = $arquivos['name'][$i];
 
                 if (is_uploaded_file($tmpNome)) {
-                    $caminhoNoSupabase = fazerUploadPortfolioSupabase($tmpNome, $nomeOri);
-
-                    if ($caminhoNoSupabase) {
-                        $stmtIns = $pdo->prepare("INSERT INTO portfolio_imagens (usuario_id, titulo_projeto, url_imagem) VALUES (?, ?, ?)");
-                        $stmtIns->execute([$usuarioId, $tituloProjeto, $caminhoNoSupabase]);
-                        $sucessoUpload = true;
+                    if (function_exists('fazerUploadPortfolioSupabase')) {
+                        $caminhoNoSupabase = fazerUploadPortfolioSupabase($tmpNome, $nomeOri);
+                        if ($caminhoNoSupabase) {
+                            $stmtIns = $pdo->prepare("INSERT INTO portfolio_imagens (usuario_id, titulo_projeto, url_imagem) VALUES (?, ?, ?)");
+                            $stmtIns->execute([$usuarioId, $tituloProjeto, $caminhoNoSupabase]);
+                            $sucessoUpload = true;
+                        }
                     }
                 }
             }
@@ -113,6 +127,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
+// Mensagens de retorno
 $status = $_GET['ok'] ?? '';
 if ($status === '1') $mensagem = 'Fotos adicionadas com sucesso!';
 if ($status === '2') $mensagem = 'A foto foi removida com sucesso!';
@@ -121,6 +136,7 @@ if ($idParaSelecionar && !$status) {
     $mensagem = 'Serviço cadastrado com sucesso! Agora adicione fotos para o seu portfólio.';
 }
 
+// Agrupamento de Projetos
 $stmtP = $pdo->prepare("SELECT * FROM portfolio_imagens WHERE usuario_id = ? ORDER BY data_upload DESC");
 $stmtP->execute([$usuarioId]);
 $projetosAgrupados = [];
@@ -152,13 +168,13 @@ foreach ($stmtP->fetchAll(PDO::FETCH_ASSOC) as $item) {
           <svg class="w-8 h-8" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
         </div>
         <h3 id="modalTitle" class="text-xl font-black text-slate-900 mb-2">Excluir?</h3>
-        <p id="modalDesc" class="text-sm text-gray-500">Essa ação removerá os registos e os arquivos permanentemente.</p>
+        <p id="modalDesc" class="text-sm text-gray-500">Essa ação removerá os registos permanentemente.</p>
       </div>
       <div class="bg-gray-50 p-4 flex gap-3">
         <button onclick="fecharModal()" class="flex-1 py-3 text-sm font-bold text-gray-500 hover:bg-gray-200 rounded-xl transition-colors">Cancelar</button>
         <form id="modalForm" method="POST" class="flex-1">
             <input type="hidden" name="" id="modalInput">
-            <button type="submit" class="w-full py-3 text-sm font-bold bg-red-500 text-white hover:bg-red-600 rounded-xl shadow-lg shadow-red-500/20 transition-all">Confirmar</button>
+            <button type="submit" class="w-full py-3 text-sm font-bold bg-red-500 text-white hover:bg-red-600 rounded-xl shadow-lg transition-all">Confirmar</button>
         </form>
       </div>
     </div>
@@ -167,13 +183,13 @@ foreach ($stmtP->fetchAll(PDO::FETCH_ASSOC) as $item) {
   <div id="sidebar-container" class="w-60 bg-sidebar flex-shrink-0 h-screen"></div>
   <script type="module">
     import { renderSidebar } from '../src/components/sidebar.js';
-    renderSidebar('sidebar-container', 'portfolio');
+    renderSidebar('sidebar-container', 'portfolio', <?= $temServico ? 'true' : 'false' ?>);
   </script>
 
   <main class="flex-1 flex flex-col overflow-hidden">
     <header class="flex items-center justify-between px-8 py-5 border-b border-gray-200 bg-white flex-shrink-0">
         <div class="flex items-center gap-2 text-gray-400">
-          <button onclick="history.back()" class="hover:text-gray-600 p-1 -ml-1 rounded-lg hover:bg-gray-100"><svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg></button>
+          <button onclick="history.back()" class="hover:text-gray-600 p-1 rounded-lg hover:bg-gray-100"><svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg></button>
           <a href="./dashboard.php" class="text-gray-400 text-sm hover:text-orange transition-colors">Início</a>
           <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
           <span class="text-gray-800 font-bold text-lg tracking-tight">Portfólio</span>
@@ -199,8 +215,9 @@ foreach ($stmtP->fetchAll(PDO::FETCH_ASSOC) as $item) {
       <?php if ($mensagem): ?><div class="mb-4 bg-emerald-50 text-emerald-700 px-4 py-3 rounded-xl border border-emerald-100 text-sm font-bold"><?= $mensagem ?></div><?php endif; ?>
       <?php if ($erro): ?><div class="mb-4 bg-red-50 text-red-600 px-4 py-3 rounded-xl border border-red-100 text-sm font-bold"><?= $erro ?></div><?php endif; ?>
 
-      <div class="grid grid-cols-1 xl:grid-cols-12 gap-8">
-        <section class="xl:col-span-4 bg-white border border-gray-200 rounded-2xl p-6 shadow-sm h-fit">
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        
+        <section class="lg:col-span-4 bg-white border border-gray-200 rounded-2xl p-6 shadow-sm h-fit lg:sticky lg:top-0">
           <h3 class="text-2xl font-extrabold text-slate-900 mb-6">Novo Trabalho</h3>
           
           <form method="POST" enctype="multipart/form-data" class="space-y-5" onsubmit="const btn=this.querySelector('button[type=submit]'); btn.disabled=true; btn.innerHTML='Enviando...';">
@@ -228,7 +245,7 @@ foreach ($stmtP->fetchAll(PDO::FETCH_ASSOC) as $item) {
           </form>
         </section>
 
-        <section class="xl:col-span-8 space-y-8">
+        <section class="lg:col-span-8 space-y-8">
           <?php foreach ($projetosAgrupados as $titulo => $fotos): ?>
             <?php 
               $tag = 'PROJETO';
@@ -246,11 +263,10 @@ foreach ($stmtP->fetchAll(PDO::FETCH_ASSOC) as $item) {
                 </button>
               </div>
               
-              <div class="p-5 grid grid-cols-2 sm:grid-cols-4 gap-4">
+              <div class="p-5 grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-4">
                 <?php foreach ($fotos as $f): ?>
                   <div class="relative group aspect-square rounded-2xl overflow-hidden bg-gray-50 border border-gray-100">
                     <img src="<?= $urlBaseSupabase . htmlspecialchars($f['url_imagem']) ?>" class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" alt="Trabalho" />
-                    
                     <button type="button" onclick="confirmarExcluirFoto(<?= $f['id'] ?>)" class="absolute top-2 right-2 opacity-0 group-hover:opacity-100 bg-white text-red-500 p-2 rounded-xl shadow-xl hover:bg-red-500 hover:text-white transition-all">
                       <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12"/></svg>
                     </button>
@@ -268,7 +284,7 @@ foreach ($stmtP->fetchAll(PDO::FETCH_ASSOC) as $item) {
 
           <?php if (empty($projetosAgrupados)): ?>
             <div class="h-64 rounded-3xl border-2 border-dashed border-gray-200 flex flex-col items-center justify-center text-gray-400">
-                <p class="font-bold uppercase tracking-widest text-xs">Seu portfólio está vazio</p>
+                <p class="font-bold uppercase tracking-widest text-xs">O seu portfólio está vazio</p>
             </div>
           <?php endif; ?>
         </section>
@@ -284,7 +300,7 @@ foreach ($stmtP->fetchAll(PDO::FETCH_ASSOC) as $item) {
 
     function confirmarExcluirFoto(id) {
         modalTitle.innerText = "Remover esta foto?";
-        modalDesc.innerText = "A imagem será apagada permanentemente do armazenamento.";
+        modalDesc.innerText = "A imagem será apagada permanentemente.";
         modalInput.name = "excluir_foto_id";
         modalInput.value = id;
         abrirModal();
@@ -292,7 +308,7 @@ foreach ($stmtP->fetchAll(PDO::FETCH_ASSOC) as $item) {
 
     function confirmarExcluirTudo(titulo) {
         modalTitle.innerText = "Excluir projeto?";
-        modalDesc.innerText = `Isto apagará permanentemente todas as fotos vinculadas ao serviço "${titulo}".`;
+        modalDesc.innerText = `Isto apagará permanentemente as fotos de "${titulo}".`;
         modalInput.name = "excluir_projeto_titulo";
         modalInput.value = titulo;
         abrirModal();

@@ -11,6 +11,7 @@ require_once '../../backend/config/Conexao.php';
 
 // 2. CAPTURA E VALIDA O ID
 $idServico = filter_input(INPUT_GET, 'id', FILTER_VALIDATE_INT);
+$idUsuarioLogado = $_SESSION['usuario_id'] ?? 0;
 
 if (!$idServico) {
     header('Location: dashboard.php');
@@ -22,6 +23,11 @@ if (!defined('SB_URL')) define('SB_URL', 'https://yplpxzmwtkencrrtxmof.supabase.
 $urlBaseSupabase = SB_URL . "/storage/v1/object/public/fotos/";
 
 try {
+    // --- VERIFICAÇÃO PARA A SIDEBAR (Se o usuário logado é prestador) ---
+    $stmtCheck = $pdo->prepare("SELECT COUNT(*) FROM servicos WHERE prestador_id = :id");
+    $stmtCheck->execute([':id' => $idUsuarioLogado]);
+    $temServico = $stmtCheck->fetchColumn() > 0;
+
     // 3. BUSCA DETALHES DO SERVIÇO E PRESTADOR
     $sqlServico = "
         SELECT 
@@ -67,7 +73,7 @@ try {
     $stmtAval->execute([':prestador_id' => $servico['prestador_id']]);
     $avaliacoes = $stmtAval->fetchAll(PDO::FETCH_ASSOC);
 
-    // 5. BUSCA IMAGENS DO PORTFÓLIO (Filtradas pelo título do projeto/serviço)
+    // 5. BUSCA IMAGENS DO PORTFÓLIO
     $sqlPortfolio = "SELECT * FROM portfolio_imagens WHERE usuario_id = :prestador_id AND titulo_projeto = :titulo ORDER BY data_upload DESC";
     $stmtPort = $pdo->prepare($sqlPortfolio);
     $stmtPort->execute([
@@ -113,9 +119,15 @@ try {
 <body class="font-sans bg-bg text-gray-800 flex h-screen overflow-hidden">
 
   <div id="sidebar-container" class="w-60 bg-sidebar flex-shrink-0 h-screen"></div>
+
   <script type="module">
     import { renderSidebar } from '../src/components/sidebar.js';
-    renderSidebar('sidebar-container', 'detalhes');
+    
+    // Verifica se o usuário logado tem serviços para liberar as abas PRO na sidebar
+    const hasServices = <?= $temServico ? 'true' : 'false' ?>;
+    
+    // Renderiza a sidebar (id do container, id da página ativa, booleano se é pro)
+    renderSidebar('sidebar-container', 'inicio', hasServices);
   </script>
 
   <main class="flex-1 flex flex-col overflow-hidden">
@@ -124,7 +136,9 @@ try {
         <button onclick="history.back()" class="hover:text-gray-600 transition-colors p-1 -ml-1 rounded-lg hover:bg-gray-100">
           <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
         </button>
-        <span class="text-gray-800 font-bold text-lg tracking-tight ml-2">Detalhes do Serviço</span>
+        <a href="dashboard.php" class="text-gray-400 text-sm hover:text-orange transition-colors ml-2">Início</a>
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
+        <span class="text-gray-800 font-bold text-lg tracking-tight">Detalhes</span>
       </div>
     </header>
 
@@ -193,9 +207,6 @@ try {
                          class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" 
                          alt="Foto do Trabalho"
                          onerror="this.src='https://via.placeholder.com/400?text=Imagem+Indisponível'">
-                    <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-end p-3">
-                      <p class="text-white text-[10px] font-bold uppercase tracking-wider"><?= htmlspecialchars($projeto['titulo_projeto']) ?></p>
-                    </div>
                   </div>
                 <?php endforeach; ?>
               </div>
@@ -265,10 +276,6 @@ try {
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
                 ENTRAR EM CONTATO
               </a>
-              <button class="w-full border-2 border-gray-100 hover:border-orange hover:text-orange text-gray-700 font-bold py-3 rounded-xl text-xs flex items-center justify-center gap-2 transition-all">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-                AVALIAR PRESTADOR
-              </button>
             </div>
           </div>
         </div>

@@ -115,10 +115,14 @@ $categoriasGerais = ["Reformas", "Pintura e Textura", "Elétrica", "Hidráulica"
 
   <div id="sidebar-container" class="w-60 bg-sidebar flex-shrink-0 h-screen"></div>
   <script type="module">
-    import { renderSidebar } from '../src/components/sidebar.js';
-    // Passamos o status 'temServico' (true ou false) para o componente
-    renderSidebar('sidebar-container', 'inicio', <?= $temServico ? 'true' : 'false' ?>);
-  </script>
+  import { renderSidebar } from '../src/components/sidebar.js';
+  
+  // Se ele já tem serviços (temServico), libera Gerenciar e Portfólio. 
+  // Caso contrário, ele verá apenas Início, Perfil e Novo Serviço.
+  const isPro = <?= ($temServico || (isset($totalServicos) && $totalServicos > 0)) ? 'true' : 'false' ?>;
+  
+  renderSidebar('sidebar-container', '<?= $pagina_ativa ?? "inicio" ?>', isPro);
+</script>
 
   <main class="flex-1 flex flex-col overflow-hidden">
     <header class="flex items-center justify-between px-8 py-5 border-b border-gray-200 bg-white flex-shrink-0">

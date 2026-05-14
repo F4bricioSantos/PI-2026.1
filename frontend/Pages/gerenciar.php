@@ -19,7 +19,7 @@ $idUsuario = (int)$_SESSION['usuario_id'];
 $mensagem = '';
 $erro = '';
 
-// Define a URL do Supabase caso não esteja no config
+// Define a URL do Supabase
 if (!defined('SB_URL')) define('SB_URL', 'https://yplpxzmwtkencrrtxmof.supabase.co');
 $urlBaseSupabase = SB_URL . "/storage/v1/object/public/fotos/";
 
@@ -52,7 +52,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($servicoParaExcluir) {
                 $tituloProjeto = $servicoParaExcluir['titulo'];
 
-                // Deleta fotos do Supabase
+                // Deleta fotos do Supabase (se a função existir)
                 $stmtFotos = $pdo->prepare("SELECT url_imagem FROM portfolio_imagens WHERE titulo_projeto = :titulo AND usuario_id = :u_id");
                 $stmtFotos->execute([':titulo' => $tituloProjeto, ':u_id' => $idUsuario]);
                 $fotos = $stmtFotos->fetchAll(PDO::FETCH_ASSOC);
@@ -111,17 +111,18 @@ if ($sucesso === 'excluido') $mensagem = 'Serviço e fotos removidos do sistema.
 
 // 4. BUSCA LISTA DE SERVIÇOS
 $stmtServicos = $pdo->prepare(
-    'SELECT s.id, s.titulo, s.categoria_nome, s.valor_base, s.descricao_curta,
-            COALESCE(ROUND(AVG(a.nota)::NUMERIC, 1), 0) AS media_nota
+    'SELECT s.id, s.titulo, s.categoria_nome, s.valor_base, s.descricao_curta
      FROM servicos s
-     LEFT JOIN avaliacoes a ON a.prestador_id = s.prestador_id
      WHERE s.prestador_id = :id
-     GROUP BY s.id
      ORDER BY s.id DESC'
 );
 $stmtServicos->execute([':id' => $idUsuario]);
 $servicos = $stmtServicos->fetchAll(PDO::FETCH_ASSOC);
+
+// CORREÇÃO DA SIDEBAR: Verifica se existem serviços para definir como "Pro"
+$temServico = count($servicos) > 0;
 ?>
+
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -140,7 +141,7 @@ $servicos = $stmtServicos->fetchAll(PDO::FETCH_ASSOC);
           <svg class="w-8 h-8" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
         </div>
         <h3 class="text-xl font-black text-slate-900 mb-2">Excluir serviço?</h3>
-        <p class="text-sm text-gray-500">Isso removerá o serviço e todas as fotos do portfólio vinculadas a ele permanentemente.</p>
+        <p class="text-sm text-gray-500">Isso removerá o serviço e as fotos permanentemente.</p>
       </div>
       <div class="bg-gray-50 p-4 flex gap-3">
         <button onclick="fecharModalExcluir()" class="flex-1 py-3 text-sm font-bold text-gray-500 hover:bg-gray-200 rounded-xl transition-colors">Cancelar</button>
@@ -154,41 +155,31 @@ $servicos = $stmtServicos->fetchAll(PDO::FETCH_ASSOC);
   </div>
 
   <div id="sidebar-container" class="w-60 bg-sidebar flex-shrink-0 h-screen"></div>
-  <script type="module">
-    import { renderSidebar } from '../src/components/sidebar.js';
-    renderSidebar('sidebar-container', 'gerenciar');
-  </script>
 
   <main class="flex-1 flex flex-col overflow-hidden">
     <header class="flex items-center justify-between px-8 py-5 border-b border-gray-200 bg-white flex-shrink-0">
         <div class="flex items-center gap-2 text-gray-400">
-          <button onclick="history.back()" class="hover:text-gray-600 p-1 -ml-1 rounded-lg hover:bg-gray-100"><svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg></button>
+          <button onclick="history.back()" class="hover:text-gray-600 p-1 -ml-1 rounded-lg hover:bg-gray-100">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
+          </button>
           <a href="./dashboard.php" class="text-gray-400 text-sm hover:text-orange transition-colors">Início</a>
           <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
           <span class="text-gray-800 font-bold text-lg tracking-tight">Gerenciar</span>
         </div>
-        <a href="perfil.php" class="hover:opacity-80 transition-opacity">
-            <div class="w-10 h-10 rounded-full bg-orange flex items-center justify-center text-white font-bold text-sm overflow-hidden border-2 border-orange/20">
-                <?php if(!empty($usuarioLogado['foto_perfil']) && $usuarioLogado['foto_perfil'] !== 'default.png'): ?>
-                    <img src="<?= $urlBaseSupabase . $usuarioLogado['foto_perfil'] ?>" class="w-full h-full object-cover">
-                <?php else: ?>
-                    <?= strtoupper(mb_substr($usuarioLogado['nome'] ?? 'U', 0, 1)) ?>
-                <?php endif; ?>
-            </div>
-        </a>
+        <div class="w-10 h-10 rounded-full bg-orange flex items-center justify-center text-white font-bold text-sm overflow-hidden border-2 border-orange/20">
+            <?php if(!empty($usuarioLogado['foto_perfil']) && $usuarioLogado['foto_perfil'] !== 'default.png'): ?>
+                <img src="<?= $urlBaseSupabase . $usuarioLogado['foto_perfil'] ?>" class="w-full h-full object-cover">
+            <?php else: ?>
+                <?= strtoupper(mb_substr($usuarioLogado['nome'] ?? 'U', 0, 1)) ?>
+            <?php endif; ?>
+        </div>
     </header>
 
     <div class="flex-1 overflow-y-auto px-8 py-6">
       <h2 class="text-4xl font-extrabold text-slate-900 mb-6 tracking-tight">Seus Serviços</h2>
 
-      <div class="mb-8 bg-white border-l-4 border-orange rounded-2xl p-6 shadow-sm">
-        <h3 class="text-xs font-bold text-gray-400 uppercase mb-2">Bio Atual</h3>
-        <p class="text-gray-700 italic text-sm">"<?= htmlspecialchars($bioAtual) ?>"</p>
-      </div>
-
       <?php if ($mensagem): ?>
         <div class="mb-6 p-4 bg-emerald-50 border border-emerald-100 text-emerald-700 rounded-2xl font-bold text-sm flex items-center gap-3">
-            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path></svg>
             <?= $mensagem ?>
         </div>
       <?php endif; ?>
@@ -202,52 +193,60 @@ $servicos = $stmtServicos->fetchAll(PDO::FETCH_ASSOC);
         </div>
 
         <?php if(empty($servicos)): ?>
-            <div class="p-10 text-center text-gray-400 text-sm italic">Você ainda não cadastrou serviços.</div>
+            <div class="p-10 text-center text-gray-400 text-sm italic">Nenhum serviço cadastrado.</div>
+        <?php else: ?>
+            <?php foreach ($servicos as $s): ?>
+              <div class="grid grid-cols-12 border-b last:border-b-0 items-center hover:bg-gray-50/50 transition-colors">
+                <div class="col-span-4 px-5 py-4 text-sm font-bold text-slate-800 uppercase"><?= htmlspecialchars($s['titulo']) ?></div>
+                <div class="col-span-2 px-5 py-4 text-center"><span class="bg-gray-100 px-3 py-1 rounded-full text-[10px] font-black text-gray-500 uppercase"><?= htmlspecialchars($s['categoria_nome']) ?></span></div>
+                <div class="col-span-2 px-5 py-4 text-center text-sm font-bold text-slate-600">R$ <?= number_format((float)$s['valor_base'], 2, ',', '.') ?></div>
+                <div class="col-span-4 px-5 py-4 flex justify-end gap-2">
+                  <button type="button" class="bg-white border border-gray-200 text-slate-700 px-4 py-2 rounded-xl text-xs font-bold hover:border-orange hover:text-orange transition-all"
+                    data-editar 
+                    data-id="<?= $s['id'] ?>"
+                    data-titulo="<?= htmlspecialchars($s['titulo']) ?>"
+                    data-categoria="<?= htmlspecialchars($s['categoria_nome']) ?>"
+                    data-valor="<?= $s['valor_base'] ?>"
+                    data-descricao="<?= htmlspecialchars($s['descricao_curta'] ?? '') ?>">Editar</button>
+                  <button type="button" onclick="abrirModalExcluir(<?= $s['id'] ?>)" class="bg-white border border-gray-200 text-red-400 px-4 py-2 rounded-xl text-xs font-bold hover:bg-red-50 hover:text-red-500 transition-all">Excluir</button>
+                </div>
+              </div>
+            <?php endforeach; ?>
         <?php endif; ?>
-
-        <?php foreach ($servicos as $s): ?>
-          <div class="grid grid-cols-12 border-b last:border-b-0 items-center hover:bg-gray-50/50 transition-colors">
-            <div class="col-span-4 px-5 py-4 text-sm font-bold text-slate-800 uppercase"><?= htmlspecialchars($s['titulo']) ?></div>
-            <div class="col-span-2 px-5 py-4 text-center"><span class="bg-gray-100 px-3 py-1 rounded-full text-[10px] font-black text-gray-500 uppercase"><?= htmlspecialchars($s['categoria_nome']) ?></span></div>
-            <div class="col-span-2 px-5 py-4 text-center text-sm font-bold text-slate-600">R$ <?= number_format((float)$s['valor_base'], 2, ',', '.') ?></div>
-            <div class="col-span-4 px-5 py-4 flex justify-end gap-2">
-              <button type="button" class="bg-white border border-gray-200 text-slate-700 px-4 py-2 rounded-xl text-xs font-bold hover:border-orange hover:text-orange transition-all"
-                data-editar 
-                data-id="<?= $s['id'] ?>"
-                data-titulo="<?= htmlspecialchars($s['titulo']) ?>"
-                data-categoria="<?= htmlspecialchars($s['categoria_nome']) ?>"
-                data-valor="<?= $s['valor_base'] ?>"
-                data-descricao="<?= htmlspecialchars($s['descricao_curta'] ?? '') ?>">Editar</button>
-              
-              <button type="button" onclick="abrirModalExcluir(<?= $s['id'] ?>)" class="bg-white border border-gray-200 text-red-400 px-4 py-2 rounded-xl text-xs font-bold hover:bg-red-50 hover:border-red-200 hover:text-red-500 transition-all">Excluir</button>
-            </div>
-          </div>
-        <?php endforeach; ?>
       </section>
     </div>
   </main>
 
   <div id="modal-editar" class="hidden fixed inset-0 z-50 bg-black/45 flex items-center justify-center p-4 backdrop-blur-sm">
     <div class="w-full max-w-lg bg-white rounded-3xl shadow-2xl p-8">
-        <div class="flex justify-between items-center mb-6">
-          <h3 class="text-2xl font-black text-slate-900 uppercase tracking-tighter">Editar Serviço</h3>
-          <button onclick="fecharModalEditar()" class="text-gray-400 hover:text-slate-900 transition-colors"><svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12"/></svg></button>
-        </div>
+        <h3 class="text-2xl font-black text-slate-900 uppercase mb-6">Editar Serviço</h3>
         <form method="POST" class="space-y-4">
           <input type="hidden" name="acao" value="editar"><input type="hidden" id="edit-id" name="servico_id">
-          <div><label class="block text-[10px] font-black text-gray-400 mb-1 uppercase tracking-widest">Título do Serviço</label><input type="text" id="edit-titulo" name="titulo" required class="w-full bg-gray-50 border-gray-200 border rounded-xl px-4 py-3 text-sm font-bold outline-none focus:border-orange"></div>
+          <div><label class="block text-[10px] font-black text-gray-400 mb-1 uppercase">Título</label>
+          <input type="text" id="edit-titulo" name="titulo" required class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm font-bold outline-none focus:border-orange"></div>
           <div class="grid grid-cols-2 gap-4">
-            <div><label class="block text-[10px] font-black text-gray-400 mb-1 uppercase tracking-widest">Categoria</label><input type="text" id="edit-categoria" name="categoria" required class="w-full bg-gray-50 border-gray-200 border rounded-xl px-4 py-3 text-sm font-bold outline-none focus:border-orange"></div>
-            <div><label class="block text-[10px] font-black text-gray-400 mb-1 uppercase tracking-widest">Valor Base (R$)</label><input type="number" id="edit-valor" name="valor" step="0.01" class="w-full bg-gray-50 border-gray-200 border rounded-xl px-4 py-3 text-sm font-bold outline-none focus:border-orange"></div>
+            <div><label class="block text-[10px] font-black text-gray-400 mb-1 uppercase">Categoria</label>
+            <input type="text" id="edit-categoria" name="categoria" required class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm font-bold outline-none focus:border-orange"></div>
+            <div><label class="block text-[10px] font-black text-gray-400 mb-1 uppercase">Valor (R$)</label>
+            <input type="number" id="edit-valor" name="valor" step="0.01" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm font-bold outline-none focus:border-orange"></div>
           </div>
-          <div><label class="block text-[10px] font-black text-gray-400 mb-1 uppercase tracking-widest">Descrição do Serviço</label><textarea id="edit-descricao" name="descricao" rows="3" class="w-full bg-gray-50 border-gray-200 border rounded-xl px-4 py-3 text-sm font-bold outline-none focus:border-orange resize-none"></textarea></div>
-          <div class="pt-4 flex gap-3"><button type="button" onclick="fecharModalEditar()" class="flex-1 py-3.5 text-sm font-bold text-gray-400 uppercase tracking-widest">Cancelar</button><button type="submit" class="flex-1 bg-orange text-white py-3.5 rounded-2xl text-sm font-black shadow-lg shadow-orange/20 uppercase tracking-widest">Salvar Alterações</button></div>
+          <div><label class="block text-[10px] font-black text-gray-400 mb-1 uppercase">Descrição</label>
+          <textarea id="edit-descricao" name="descricao" rows="3" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm font-bold outline-none focus:border-orange resize-none"></textarea></div>
+          <div class="pt-4 flex gap-3">
+            <button type="button" onclick="fecharModalEditar()" class="flex-1 py-3.5 text-sm font-bold text-gray-400">Cancelar</button>
+            <button type="submit" class="flex-1 bg-orange text-white py-3.5 rounded-2xl text-sm font-black shadow-lg">Salvar</button>
+          </div>
         </form>
     </div>
   </div>
 
+  <script type="module">
+    import { renderSidebar } from '../src/components/sidebar.js';
+    const isPro = <?= $temServico ? 'true' : 'false' ?>;
+    renderSidebar('sidebar-container', 'gerenciar', isPro);
+  </script>
+
   <script>
-    // JS do Modal Editar
     const modalEditar = document.getElementById('modal-editar');
     const inputId = document.getElementById('edit-id');
     const inputTit = document.getElementById('edit-titulo');
@@ -269,7 +268,6 @@ $servicos = $stmtServicos->fetchAll(PDO::FETCH_ASSOC);
 
     const fecharModalEditar = () => modalEditar.classList.add('hidden');
 
-    // JS do Modal Excluir
     const modalExcluir = document.getElementById('modal-excluir');
     const inputExcluirId = document.getElementById('excluir-id');
 

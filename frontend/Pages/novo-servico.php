@@ -105,10 +105,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <body class="font-sans bg-bg text-gray-800 flex h-screen overflow-hidden">
 
   <div id="sidebar-container" class="w-60 bg-sidebar flex-shrink-0 h-screen"></div>
+
   <script type="module">
     import { renderSidebar } from '../src/components/sidebar.js';
-    renderSidebar('sidebar-container', 'novo-servico');
-  </script>
+    
+    // Convertemos o número $totalServicos em booleano (se for > 0, vira true)
+    const isPro = <?= ($totalServicos > 0) ? 'true' : 'false' ?>;
+    
+    // Renderiza definindo 'novo-servico' como a página ativa
+    renderSidebar('sidebar-container', 'novo-servico', isPro);
+</script>
 
   <main class="flex-1 flex flex-col overflow-hidden">
     <header class="flex items-center justify-between px-8 py-5 border-b border-gray-200 bg-white flex-shrink-0">

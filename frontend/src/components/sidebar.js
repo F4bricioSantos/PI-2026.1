@@ -1,11 +1,11 @@
 ﻿/**
- * Componente Sidebar reutilizável - ReformA\u00ed
+ * Componente Sidebar reutilizável - ReformAí
  */
 
 const NAV_ITEMS = [
   {
     id: 'inicio',
-    label: 'In\u00edcio',
+    label: 'Início',
     href: '/PI-2026.1/frontend/Pages/dashboard.php',
     icon: '<path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>',
   },
@@ -15,15 +15,17 @@ const NAV_ITEMS = [
     href: '/PI-2026.1/frontend/Pages/perfil.php',
     icon: '<path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/>',
   },
-];
-
-const PRO_ITEMS = [
+  // O "Novo Serviço" agora fica aqui, visível para todos
   {
     id: 'novo-servico',
-    label: 'Novo Servi\u00e7o',
+    label: 'Novo Serviço',
     href: '/PI-2026.1/frontend/Pages/novo-servico.php',
     icon: '<circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/>',
   },
+];
+
+// Apenas os itens que exigem que o usuário já seja prestador
+const PRO_ONLY_ITEMS = [
   {
     id: 'gerenciar',
     label: 'Gerenciar',
@@ -32,7 +34,7 @@ const PRO_ITEMS = [
   },
   {
     id: 'portfolio',
-    label: 'Portf\u00f3lio',
+    label: 'Portfólio',
     href: '/PI-2026.1/frontend/Pages/portfolio.php',
     icon: '<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/>',
   },
@@ -53,21 +55,30 @@ function buildNavLink(item, isActive) {
   `;
 }
 
-export function renderSidebar(containerId, activePage = '') {
+export function renderSidebar(containerId, activePage = '', isPro = false) {
   const container = document.getElementById(containerId);
   if (!container) return;
 
+  // Itens que todos veem (Início, Perfil, Novo Serviço)
   const mainNav = NAV_ITEMS
     .map((item) => buildNavLink(item, item.id === activePage))
     .join('');
 
-  const proNav = PRO_ITEMS
-    .map((item) => buildNavLink(item, item.id === activePage))
-    .join('');
+  // Itens que só aparecem se isPro for true (Gerenciar, Portfólio)
+  let proNavHtml = '';
+  if (isPro) {
+    const proLinks = PRO_ONLY_ITEMS
+      .map((item) => buildNavLink(item, item.id === activePage))
+      .join('');
+    
+    proNavHtml = `
+      <div class="pt-6 pb-2 px-4 text-[10px] font-bold text-white/20 uppercase tracking-[0.2em]">Gestão Profissional</div>
+      ${proLinks}
+    `;
+  }
 
   container.innerHTML = `
     <aside class="w-60 bg-sidebar flex flex-col flex-shrink-0 h-screen border-r border-white/5">
-
       <div class="flex items-center gap-3 px-5 py-6 border-b border-white/10">
         <div class="w-10 h-10 bg-orange rounded-xl flex items-center justify-center flex-shrink-0">
           <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
@@ -75,16 +86,15 @@ export function renderSidebar(containerId, activePage = '') {
           </svg>
         </div>
         <div>
-          <div class="font-extrabold text-white text-base leading-tight">ReformA\u00ed</div>
+          <div class="font-extrabold text-white text-base leading-tight">ReformAí</div>
           <div class="text-[10px] font-semibold text-white/40 tracking-widest uppercase">Marketplace</div>
         </div>
       </div>
 
       <nav class="flex-1 px-3 py-5 space-y-1 overflow-y-auto custom-scroll">
+        <div class="pb-2 px-4 text-[10px] font-bold text-white/20 uppercase tracking-[0.2em]">Menu</div>
         ${mainNav}
-
-        <div class="pt-6 pb-2 px-4 text-[10px] font-bold text-white/20 uppercase tracking-[0.2em]">\u00c1rea do Prestador</div>
-        ${proNav}
+        ${proNavHtml}
       </nav>
 
       <div class="p-3">
@@ -97,11 +107,10 @@ export function renderSidebar(containerId, activePage = '') {
           </div>
           <div class="min-w-0">
             <div class="text-sm font-bold text-white group-hover:text-red-400 transition-colors">Sair</div>
-            <div class="text-[10px] text-white/30 truncate">Encerrar sess\u00e3o</div>
+            <div class="text-[10px] text-white/30 truncate">Encerrar sessão</div>
           </div>
         </a>
       </div>
-
     </aside>
   `;
 }

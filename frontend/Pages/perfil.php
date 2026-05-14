@@ -107,11 +107,16 @@ $fotoExibicao = ($dados['foto_perfil'] == 'default.png' || empty($dados['foto_pe
 <body class="font-sans bg-bg text-gray-800 flex h-screen overflow-hidden">
 
   <div id="sidebar-container" class="w-60 bg-sidebar flex-shrink-0 h-screen"></div>
+
   <script type="module">
     import { renderSidebar } from '../src/components/sidebar.js';
-    renderSidebar('sidebar-container', 'perfil');
-  </script>
-
+    
+    // No perfil.php a variável que você usou no topo é $temServico
+    const isPro = <?= ($temServico) ? 'true' : 'false' ?>;
+    
+    // Renderiza definindo 'perfil' como a página ativa
+    renderSidebar('sidebar-container', 'perfil', isPro);
+</script>
   <main class="flex-1 flex flex-col overflow-hidden">
     <header class="flex items-center justify-between px-8 py-5 border-b border-gray-200 bg-white">
       <h1 class="text-gray-800 font-bold text-lg tracking-tight">Meu Perfil</h1>
