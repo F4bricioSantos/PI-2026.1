@@ -1,21 +1,27 @@
 ﻿<?php
 header('Content-Type: text/html; charset=UTF-8');
+
+// 1. PROTEÇÃO DE SESSÃO (Adicionado)
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
+if (empty($_SESSION['usuario_id'])) {
+    header('Location: /PI-2026.1/frontend/Pages/login.php');
+    exit;
+}
+
 require_once '../../backend/config/auth.php';
 require_once '../../backend/config/Conexao.php';
 require_once '../../backend/models/User.php';
 
-$usuarioId = (int)($_SESSION['usuario_id'] ?? 0);
+$usuarioId = (int)$_SESSION['usuario_id']; // Garante o ID da sessão
 $mensagem = '';
 $erro = '';
 $limiteFotos = 7;
 $urlBaseSupabase = "https://yplpxzmwtkencrrtxmof.supabase.co/storage/v1/object/public/fotos/";
 
 $idParaSelecionar = filter_input(INPUT_GET, 'selecionar', FILTER_VALIDATE_INT);
-
-if ($usuarioId <= 0) {
-    header('Location: /PI-2026.1/frontend/Pages/login.php');
-    exit;
-}
 
 $userModel = new User($pdo);
 $usuarioLogado = $userModel->buscarPorId($usuarioId);
@@ -29,6 +35,7 @@ foreach ($servicos as $s) {
     $servicosMap[$s['id']] = $s;
 }
 
+// 2. LÓGICA DE PROCESSAMENTO
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if (isset($_POST['excluir_projeto_titulo'])) {
@@ -97,7 +104,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
             }
             if ($sucessoUpload) {
-                // Redirecionamento limpa o POST e evita duplicidade por F5
                 header('Location: portfolio.php?ok=1'); 
                 exit;
             } else {

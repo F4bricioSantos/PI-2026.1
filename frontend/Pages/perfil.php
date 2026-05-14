@@ -5,7 +5,7 @@ require_once '../../backend/config/Conexao.php';
 $idUsuario = $_SESSION['usuario_id']; 
 $mensagem = "";
 
-// 1. BUSCA DADOS ATUAIS (Importante para comparação e evitar erro 25P02)
+// 1. BUSCA DADOS ATUAIS
 try {
     $stmtAtuais = $pdo->prepare("SELECT email, foto_perfil, cidade FROM usuarios WHERE id = :id");
     $stmtAtuais->execute([':id' => $idUsuario]);
@@ -26,19 +26,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $emailNovo = filter_input(INPUT_POST, 'email', FILTER_VALIDATE_EMAIL);
 
     try {
-        // Lógica de Foto (Supabase)
         $nomeFotoNova = $dadosBD['foto_perfil'];
         if (isset($_POST['remover_foto'])) {
-            gerenciarFotoSupabase(null, $dadosBD['foto_perfil']); 
+            if (function_exists('gerenciarFotoSupabase')) {
+                gerenciarFotoSupabase(null, $dadosBD['foto_perfil']); 
+            }
             $nomeFotoNova = 'default.png';
         } elseif (isset($_FILES['foto_perfil']) && $_FILES['foto_perfil']['error'] === UPLOAD_ERR_OK) {
-            $nomeFotoNova = gerenciarFotoSupabase($_FILES['foto_perfil']['tmp_name'], $dadosBD['foto_perfil']);
+            if (function_exists('gerenciarFotoSupabase')) {
+                $nomeFotoNova = gerenciarFotoSupabase($_FILES['foto_perfil']['tmp_name'], $dadosBD['foto_perfil']);
+            }
         }
 
-        // Início da Transação
         $pdo->beginTransaction();
 
-        // SQL Dinâmico: Só altera o email se ele for de fato novo
         $campos = ["nome = :nome", "cidade = :cidade", "telefone = :telefone", "foto_perfil = :foto"];
         $params = [
             ':nome'     => $nome, 
@@ -56,7 +57,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $sqlUser = "UPDATE usuarios SET " . implode(', ', $campos) . " WHERE id = :id";
         $pdo->prepare($sqlUser)->execute($params);
 
-        // Atualização de Prestador (ON CONFLICT)
         if ($temServico) {
             $bio = $_POST['bio'] ?? '';
             $nicho = $_POST['nicho'] ?? '';
@@ -75,21 +75,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     } catch (Exception $e) {
         if ($pdo->inTransaction()) $pdo->rollBack();
-        
-        if (strpos($e->getMessage(), 'usuarios_email_key') !== false) {
-            $mensagem = "O e-mail informado já está em uso.";
-        } else {
-            $mensagem = "Erro técnico: " . $e->getMessage();
-        }
+        $mensagem = (strpos($e->getMessage(), 'usuarios_email_key') !== false) ? "O e-mail informado já está em uso." : "Erro técnico: " . $e->getMessage();
     }
 }
 
-// 3. BUSCA DADOS FINAIS PARA EXIBIÇÃO
+// 3. BUSCA DADOS FINAIS
 $sql = "SELECT u.*, pd.bio, pd.nicho, pd.experiencia_anos FROM usuarios u LEFT JOIN prestadores_detalhes pd ON pd.usuario_id = u.id WHERE u.id = :id";
 $stmt = $pdo->prepare($sql);
 $stmt->execute([':id' => $idUsuario]);
 $dados = $stmt->fetch();
 
+if (!defined('SB_URL')) define('SB_URL', ''); 
 $urlBaseSupabase = SB_URL . "/storage/v1/object/public/fotos/";
 $fotoExibicao = ($dados['foto_perfil'] == 'default.png' || empty($dados['foto_perfil'])) ? null : $urlBaseSupabase . $dados['foto_perfil'];
 ?>
@@ -155,21 +151,10 @@ $fotoExibicao = ($dados['foto_perfil'] == 'default.png' || empty($dados['foto_pe
                <?php endif; ?>
             </div>
 
-            <h2 class="text-xl font-extrabold text-slate-900"><?= htmlspecialchars($dados['nome']) ?></h2>
+            <h2 class="text-xl font-extrabold text-slate-900"><?= htmlspecialchars($dados['nome'] ?? '') ?></h2>
             <p class="text-gray-400 text-[10px] font-bold uppercase tracking-widest mt-1">
                 <i class="ph ph-map-pin"></i> <?= htmlspecialchars($dados['cidade'] ?: 'Não informada') ?>
             </p>
-            
-            <?php if($temServico && !empty($dados['nicho'])): ?>
-                <div class="mt-4 flex flex-wrap justify-center gap-2">
-                    <span class="px-3 py-1 bg-orange-50 text-orange text-[10px] font-bold rounded-full uppercase tracking-tighter border border-orange-100">
-                        <?= htmlspecialchars($dados['nicho']) ?>
-                    </span>
-                    <span class="px-3 py-1 bg-slate-50 text-slate-500 text-[10px] font-bold rounded-full uppercase tracking-tighter border border-slate-100">
-                        <?= $dados['experiencia_anos'] ?> anos exp.
-                    </span>
-                </div>
-            <?php endif; ?>
           </div>
         </div>
 
@@ -180,11 +165,11 @@ $fotoExibicao = ($dados['foto_perfil'] == 'default.png' || empty($dados['foto_pe
               <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div class="space-y-1.5">
                   <label class="text-xs font-bold text-gray-400 uppercase ml-1">Nome Completo</label>
-                  <input type="text" name="nome" value="<?= htmlspecialchars($dados['nome']) ?>" class="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:border-orange outline-none transition-all">
+                  <input type="text" name="nome" value="<?= htmlspecialchars($dados['nome'] ?? '') ?>" class="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:border-orange outline-none transition-all">
                 </div>
                 <div class="space-y-1.5">
                   <label class="text-xs font-bold text-gray-400 uppercase ml-1">Telefone</label>
-                  <input type="text" name="telefone" value="<?= htmlspecialchars($dados['telefone']) ?>" class="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:border-orange outline-none transition-all">
+                  <input type="text" name="telefone" value="<?= htmlspecialchars($dados['telefone'] ?? '') ?>" class="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:border-orange outline-none transition-all">
                 </div>
               </div>
 
@@ -196,18 +181,18 @@ $fotoExibicao = ($dados['foto_perfil'] == 'default.png' || empty($dados['foto_pe
                 <div class="space-y-1.5">
                     <label class="text-xs font-bold text-gray-400 uppercase ml-1">Cidade</label>
                     <select id="cidade" name="cidade" class="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:border-orange outline-none" disabled></select>
-                    <input type="hidden" id="cidade_atual" value="<?= htmlspecialchars($dados['cidade']) ?>">
+                    <input type="hidden" id="cidade_atual" value="<?= htmlspecialchars($dados['cidade'] ?? '') ?>">
                 </div>
               </div>
 
               <div class="space-y-1.5 pt-4 pb-4">
                 <label class="text-xs font-bold text-gray-400 uppercase ml-1">E-mail</label>
-                <input type="email" name="email" value="<?= htmlspecialchars($dados['email']) ?>" class="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:border-orange outline-none transition-all">
+                <input type="email" name="email" value="<?= htmlspecialchars($dados['email'] ?? '') ?>" class="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:border-orange outline-none transition-all">
               </div>
 
-              <?php if($temServico): ?>
-                <div class="pt-8 border-t border-gray-100 space-y-6">
-                    <h3 class="text-lg font-bold text-orange">Dados de Prestador</h3>
+              <div class="pt-8 border-t border-gray-100">
+                <?php if($temServico): ?>
+                    <h3 class="text-lg font-bold text-orange mb-6">Dados de Prestador</h3>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div class="space-y-1.5">
                             <label class="text-xs font-bold text-gray-400 uppercase ml-1">Nicho / Especialidade</label>
@@ -215,15 +200,20 @@ $fotoExibicao = ($dados['foto_perfil'] == 'default.png' || empty($dados['foto_pe
                         </div>
                         <div class="space-y-1.5">
                             <label class="text-xs font-bold text-gray-400 uppercase ml-1">Experiência (anos)</label>
-                            <input type="number" name="experiencia" value="<?= $dados['experiencia_anos'] ?>" class="w-full bg-orange-50/30 border border-orange-100 rounded-xl px-4 py-3 text-sm outline-none">
+                            <input type="number" name="experiencia" value="<?= $dados['experiencia_anos'] ?? 0 ?>" class="w-full bg-orange-50/30 border border-orange-100 rounded-xl px-4 py-3 text-sm outline-none">
                         </div>
                     </div>
-                    <div class="space-y-1.5">
+                    <div class="space-y-1.5 mt-6">
                         <label class="text-xs font-bold text-gray-400 uppercase ml-1">Bio Profissional</label>
                         <textarea name="bio" rows="4" class="w-full bg-orange-50/30 border border-orange-100 rounded-xl px-4 py-3 text-sm outline-none resize-none"><?= htmlspecialchars($dados['bio'] ?? '') ?></textarea>
                     </div>
-                </div>
-              <?php endif; ?>
+                <?php else: ?>
+                    <div class="p-6 bg-blue-50 rounded-3xl border border-blue-100 flex items-center justify-between">
+                        <p class="text-xs text-blue-700 font-medium max-w-[70%]">Quer trabalhar com a ReformAí? Comece cadastrando seu primeiro serviço para liberar as ferramentas de prestador!</p>
+                        <a href="novo-servico.php" class="bg-blue-600 text-white text-[10px] font-bold px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">CADASTRAR SERVIÇO</a>
+                    </div>
+                <?php endif; ?>
+              </div>
 
               <div class="flex justify-end pt-8">
                 <button type="submit" class="bg-orange hover:bg-orange-600 text-white px-12 py-3.5 rounded-xl font-black text-sm shadow-lg transition-transform active:scale-95">SALVAR ALTERAÇÕES</button>
@@ -235,7 +225,7 @@ $fotoExibicao = ($dados['foto_perfil'] == 'default.png' || empty($dados['foto_pe
   </main>
 
   <script>
-    // Preview de Imagem
+    // Scripts de Preview e IBGE (Mantidos conforme originais)
     document.getElementById('foto_input').onchange = e => {
         const [file] = e.target.files;
         if (file) {
@@ -254,7 +244,6 @@ $fotoExibicao = ($dados['foto_perfil'] == 'default.png' || empty($dados['foto_pe
         }
     };
 
-    // Lógica Completa do IBGE
     document.addEventListener('DOMContentLoaded', () => {
         const ufSelect = document.getElementById('uf');
         const cidadeSelect = document.getElementById('cidade');

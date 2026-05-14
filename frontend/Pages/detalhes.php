@@ -1,8 +1,15 @@
 <?php
+header('Content-Type: text/html; charset=UTF-8');
+
+// 1. PROTEÇÃO DE SESSÃO
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
 require_once '../../backend/config/auth.php';
 require_once '../../backend/config/Conexao.php';
 
-// 1. Captura o ID do serviço e valida
+// 2. CAPTURA E VALIDA O ID
 $idServico = filter_input(INPUT_GET, 'id', FILTER_VALIDATE_INT);
 
 if (!$idServico) {
@@ -10,58 +17,68 @@ if (!$idServico) {
     exit;
 }
 
-// 2. Busca os detalhes do serviço e do prestador
-$sqlServico = "
-    SELECT 
-        s.*, 
-        u.nome AS prestador_nome, 
-        u.cidade, 
-        u.email AS prestador_email, 
-        u.telefone,
-        u.foto_perfil AS prestador_foto,
-        pd.bio,
-        pd.nicho,
-        pd.experiencia_anos,
-        COALESCE(ROUND(AVG(a.nota)::NUMERIC, 1), 0) AS media_nota,
-        COUNT(a.id)::INT AS total_avaliacoes
-    FROM servicos s
-    JOIN usuarios u ON u.id = s.prestador_id
-    LEFT JOIN prestadores_detalhes pd ON pd.usuario_id = u.id
-    LEFT JOIN avaliacoes a ON a.prestador_id = u.id
-    WHERE s.id = :id
-    GROUP BY s.id, u.id, pd.id
-";
+// Define a URL base do Supabase (Centralizado)
+if (!defined('SB_URL')) define('SB_URL', 'https://yplpxzmwtkencrrtxmof.supabase.co');
+$urlBaseSupabase = SB_URL . "/storage/v1/object/public/fotos/";
 
-$stmt = $pdo->prepare($sqlServico);
-$stmt->execute([':id' => $idServico]);
-$servico = $stmt->fetch();
-$urlBaseSupabase = "https://yplpxzmwtkencrrtxmof.supabase.co/storage/v1/object/public/fotos/";
+try {
+    // 3. BUSCA DETALHES DO SERVIÇO E PRESTADOR
+    $sqlServico = "
+        SELECT 
+            s.*, 
+            u.nome AS prestador_nome, 
+            u.cidade, 
+            u.email AS prestador_email, 
+            u.telefone,
+            u.foto_perfil AS prestador_foto,
+            pd.bio,
+            pd.nicho,
+            pd.experiencia_anos,
+            COALESCE(ROUND(AVG(a.nota)::NUMERIC, 1), 0) AS media_nota,
+            COUNT(a.id)::INT AS total_avaliacoes
+        FROM servicos s
+        JOIN usuarios u ON u.id = s.prestador_id
+        LEFT JOIN prestadores_detalhes pd ON pd.usuario_id = u.id
+        LEFT JOIN avaliacoes a ON a.prestador_id = u.id
+        WHERE s.id = :id
+        GROUP BY s.id, u.id, pd.id
+    ";
 
-if (!$servico) {
-    die("Serviço não encontrado.");
+    $stmt = $pdo->prepare($sqlServico);
+    $stmt->execute([':id' => $idServico]);
+    $servico = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if (!$servico) {
+        die("<div style='font-family:sans-serif; text-align:center; padding:50px;'>
+                <h2>Serviço não encontrado.</h2>
+                <a href='dashboard.php'>Voltar ao início</a>
+             </div>");
+    }
+
+    // 4. BUSCA AVALIAÇÕES DETALHADAS
+    $sqlAvaliacoes = "
+        SELECT a.*, u.nome AS cliente_nome 
+        FROM avaliacoes a
+        JOIN usuarios u ON u.id = a.cliente_id
+        WHERE a.prestador_id = :prestador_id
+        ORDER BY a.data_avaliacao DESC
+    ";
+    $stmtAval = $pdo->prepare($sqlAvaliacoes);
+    $stmtAval->execute([':prestador_id' => $servico['prestador_id']]);
+    $avaliacoes = $stmtAval->fetchAll(PDO::FETCH_ASSOC);
+
+    // 5. BUSCA IMAGENS DO PORTFÓLIO (Filtradas pelo título do projeto/serviço)
+    $sqlPortfolio = "SELECT * FROM portfolio_imagens WHERE usuario_id = :prestador_id AND titulo_projeto = :titulo ORDER BY data_upload DESC";
+    $stmtPort = $pdo->prepare($sqlPortfolio);
+    $stmtPort->execute([
+        ':prestador_id' => $servico['prestador_id'],
+        ':titulo'       => $servico['titulo']
+    ]);
+    $portfolio = $stmtPort->fetchAll(PDO::FETCH_ASSOC);
+
+} catch (PDOException $e) {
+    die("Erro ao carregar dados: " . $e->getMessage());
 }
-
-// 3. Busca avaliações detalhadas
-$sqlAvaliacoes = "
-    SELECT a.*, u.nome AS cliente_nome 
-    FROM avaliacoes a
-    JOIN usuarios u ON u.id = a.cliente_id
-    WHERE a.prestador_id = :prestador_id
-    ORDER BY a.data_avaliacao DESC
-";
-$stmtAval = $pdo->prepare($sqlAvaliacoes);
-$stmtAval->execute([':prestador_id' => $servico['prestador_id']]);
-$avaliacoes = $stmtAval->fetchAll();
-
-// 4. Busca imagens do portfólio filtradas por este serviço específico
-$sqlPortfolio = "SELECT * FROM portfolio_imagens WHERE usuario_id = :prestador_id AND titulo_projeto = :titulo ORDER BY data_upload DESC";
-$stmtPort = $pdo->prepare($sqlPortfolio);
-$stmtPort->execute([
-    ':prestador_id' => $servico['prestador_id'],
-    ':titulo'       => $servico['titulo']
-]);
-$portfolio = $stmtPort->fetchAll();
-
 ?>
 <!DOCTYPE html>
 <html lang="pt-BR">
@@ -112,18 +129,18 @@ $portfolio = $stmtPort->fetchAll();
     </header>
 
     <div class="flex-1 overflow-y-auto px-8 py-8 custom-scroll">
-      <div class="flex gap-8 max-w-6xl mx-auto">
+      <div class="flex flex-col lg:flex-row gap-8 max-w-6xl mx-auto">
         
         <div class="flex-1 space-y-8">
           
           <div class="space-y-2">
-            <div class="flex justify-between items-start">
+            <div class="flex justify-between items-start gap-4">
               <h1 class="text-2xl font-extrabold text-gray-900"><?= htmlspecialchars($servico['titulo']) ?></h1>
-              <p class="text-2xl font-extrabold text-orange">
-                <?= $servico['valor_base'] ? 'R$ ' . number_format($servico['valor_base'], 2, ',', '.') : 'A combinar' ?>
+              <p class="text-2xl font-extrabold text-orange whitespace-nowrap">
+                <?= $servico['valor_base'] > 0 ? 'R$ ' . number_format($servico['valor_base'], 2, ',', '.') : 'A combinar' ?>
               </p>
             </div>
-            <div class="flex items-center gap-3">
+            <div class="flex flex-wrap items-center gap-3">
               <div class="flex items-center gap-1.5 bg-orange/10 px-3 py-1.5 rounded-lg">
                 <svg class="w-4 h-4 fill-orange" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
                 <span class="text-sm font-bold text-orange"><?= $servico['media_nota'] ?: '0.0' ?> (<?= $servico['total_avaliacoes'] ?>)</span>
@@ -144,14 +161,14 @@ $portfolio = $stmtPort->fetchAll();
                 
                 <?php if(!empty($servico['bio']) || !empty($servico['nicho']) || !empty($servico['experiencia_anos'])): ?>
                     <div class="mt-6 pt-6 border-t border-gray-50">
-                        <strong class="text-gray-800 block mb-2">Sobre o prestador:</strong>
-                        <?php if(!empty($servico['bio'])): ?><p class="italic mb-4"><?= nl2br(htmlspecialchars($servico['bio'])) ?></p><?php endif; ?>
+                        <strong class="text-gray-800 block mb-2 font-bold uppercase text-[11px] tracking-wider">Perfil do Prestador</strong>
+                        <?php if(!empty($servico['bio'])): ?><p class="italic mb-4 text-gray-500">"<?= nl2br(htmlspecialchars($servico['bio'])) ?>"</p><?php endif; ?>
                         <div class="grid grid-cols-2 gap-4 bg-gray-50 p-4 rounded-xl">
                             <?php if(!empty($servico['nicho'])): ?>
-                                <div><span class="block text-[10px] font-bold text-gray-400 uppercase">Nicho</span><span class="text-xs font-bold text-gray-700"><?= htmlspecialchars($servico['nicho']) ?></span></div>
+                                <div><span class="block text-[10px] font-bold text-gray-400 uppercase">Especialidade</span><span class="text-xs font-bold text-gray-700"><?= htmlspecialchars($servico['nicho']) ?></span></div>
                             <?php endif; ?>
                             <?php if(!empty($servico['experiencia_anos'])): ?>
-                                <div><span class="block text-[10px] font-bold text-gray-400 uppercase">Experiência</span><span class="text-xs font-bold text-gray-700"><?= $servico['experiencia_anos'] ?> anos</span></div>
+                                <div><span class="block text-[10px] font-bold text-gray-400 uppercase">Experiência</span><span class="text-xs font-bold text-gray-700"><?= (int)$servico['experiencia_anos'] ?> anos</span></div>
                             <?php endif; ?>
                         </div>
                     </div>
@@ -162,15 +179,20 @@ $portfolio = $stmtPort->fetchAll();
           <div class="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
             <div class="flex items-center gap-2 mb-6">
               <div class="w-1 h-5 bg-orange rounded-full"></div>
-              <h2 class="text-sm font-bold text-gray-800 uppercase tracking-wide">Galeria deste Serviço</h2>
+              <h2 class="text-sm font-bold text-gray-800 uppercase tracking-wide">Fotos de Trabalhos Reais</h2>
             </div>
             <?php if(empty($portfolio)): ?>
-              <p class="text-gray-400 text-xs italic">Nenhuma foto de trabalho real cadastrada para este serviço.</p>
+              <div class="py-10 text-center border-2 border-dashed border-gray-100 rounded-2xl">
+                <p class="text-gray-400 text-xs italic">Nenhuma foto cadastrada para este serviço.</p>
+              </div>
             <?php else: ?>
               <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
                 <?php foreach($portfolio as $projeto): ?>
                   <div class="group relative aspect-square bg-gray-100 rounded-xl overflow-hidden border border-gray-100 shadow-sm">
-                    <img src="<?= $urlBaseSupabase . htmlspecialchars($projeto['url_imagem']) ?>" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" alt="Foto do Trabalho">
+                    <img src="<?= $urlBaseSupabase . htmlspecialchars($projeto['url_imagem']) ?>" 
+                         class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" 
+                         alt="Foto do Trabalho"
+                         onerror="this.src='https://via.placeholder.com/400?text=Imagem+Indisponível'">
                     <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-end p-3">
                       <p class="text-white text-[10px] font-bold uppercase tracking-wider"><?= htmlspecialchars($projeto['titulo_projeto']) ?></p>
                     </div>
@@ -183,7 +205,7 @@ $portfolio = $stmtPort->fetchAll();
           <div class="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
             <div class="flex items-center gap-2 mb-6">
               <div class="w-1 h-5 bg-orange rounded-full"></div>
-              <h2 class="text-sm font-bold text-gray-800 uppercase tracking-wide">Avaliações</h2>
+              <h2 class="text-sm font-bold text-gray-800 uppercase tracking-wide">Avaliações dos Clientes</h2>
             </div>
             <div class="space-y-4">
               <?php if(empty($avaliacoes)): ?>
@@ -207,22 +229,22 @@ $portfolio = $stmtPort->fetchAll();
           </div>
         </div>
 
-        <div class="w-80">
-          <div class="sticky top-0 bg-white rounded-2xl border border-gray-100 shadow-sm p-5 space-y-6">
+        <div class="w-full lg:w-80">
+          <div class="sticky top-6 bg-white rounded-2xl border border-gray-100 shadow-sm p-5 space-y-6">
             <div class="flex items-center gap-4">
               <div class="relative">
                 <div class="w-14 h-14 rounded-2xl bg-orange/10 flex items-center justify-center text-orange font-bold text-xl overflow-hidden border border-gray-100">
                   <?php if($servico['prestador_foto'] && $servico['prestador_foto'] !== 'default.png'): ?>
                     <img src="<?= $urlBaseSupabase . $servico['prestador_foto'] ?>" class="w-full h-full object-cover">
                   <?php else: ?>
-                    <?= strtoupper(mb_substr($servico['prestador_nome'], 0, 2)) ?>
+                    <?= strtoupper(mb_substr($servico['prestador_nome'] ?? 'U', 0, 2)) ?>
                   <?php endif; ?>
                 </div>
                 <div class="verified-dot absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-emerald-400 rounded-full border-2 border-white"></div>
               </div>
               <div>
                 <p class="font-bold text-gray-900 text-sm"><?= htmlspecialchars($servico['prestador_nome']) ?></p>
-                <p class="text-xs text-gray-400"><?= htmlspecialchars($servico['cidade']) ?></p>
+                <p class="text-xs text-gray-400"><?= htmlspecialchars($servico['cidade'] ?: 'Brasil') ?></p>
               </div>
             </div>
 
@@ -238,7 +260,8 @@ $portfolio = $stmtPort->fetchAll();
             </div>
 
             <div class="space-y-2.5">
-              <a href="https://wa.me/<?= preg_replace('/\D/', '', $servico['telefone']) ?>" target="_blank" class="w-full bg-orange hover:bg-orange-600 text-white font-bold py-3 rounded-xl text-xs flex items-center justify-center gap-2 transition-all">
+              <?php $linkWa = !empty($servico['telefone']) ? "https://wa.me/" . preg_replace('/\D/', '', $servico['telefone']) : "#"; ?>
+              <a href="<?= $linkWa ?>" target="_blank" class="w-full bg-orange hover:bg-orange-600 text-white font-bold py-3 rounded-xl text-xs flex items-center justify-center gap-2 transition-all">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
                 ENTRAR EM CONTATO
               </a>

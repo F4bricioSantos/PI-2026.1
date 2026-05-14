@@ -1,21 +1,36 @@
 <?php
-if (session_status() === PHP_SESSION_NONE) session_start();
+// 1. PROTEÇÃO DE SESSÃO
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 
 if (empty($_SESSION['usuario_id'])) {
     header('Location: /PI-2026.1/frontend/Pages/login.php');
     exit;
 }
 
+// 2. INCLUDES E CONFIGURAÇÕES
 require_once '../../backend/config/Conexao.php';
 require_once '../../backend/models/User.php';
 
+$idUsuario = $_SESSION['usuario_id'];
+
 // --- BUSCA DADOS DO USUÁRIO PARA O HEADER ---
 $userModel = new User($pdo);
-$usuario = $userModel->buscarPorId($_SESSION['usuario_id']);
-$urlBaseSupabase = "https://yplpxzmwtkencrrtxmof.supabase.co/storage/v1/object/public/fotos/";
+$usuario = $userModel->buscarPorId($idUsuario);
+
+// Define SB_URL
+if (!defined('SB_URL')) define('SB_URL', 'https://yplpxzmwtkencrrtxmof.supabase.co'); 
+$urlBaseSupabase = SB_URL . "/storage/v1/object/public/fotos/";
+
+// --- NOVA REGRA: CONTAGEM DE SERVIÇOS (Para o aviso e para o limite) ---
+$stmtCheck = $pdo->prepare("SELECT COUNT(*) FROM servicos WHERE prestador_id = :id");
+$stmtCheck->execute([':id' => $idUsuario]);
+$totalServicos = (int)$stmtCheck->fetchColumn();
 
 $erro = '';
 
+// 3. PROCESSAMENTO DO FORMULÁRIO
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $titulo    = trim($_POST['titulo']    ?? '');
     $categoria = trim($_POST['categoria'] ?? '');
@@ -27,35 +42,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif ($valor !== '' && (!is_numeric($valor) || $valor < 0)) {
         $erro = 'Informe um valor numérico válido.';
     } else {
-        // --- NOVA REGRA: VERIFICA LIMITE DE 3 SERVIÇOS ---
-        $stmtCheck = $pdo->prepare("SELECT COUNT(*) FROM servicos WHERE prestador_id = :id");
-        $stmtCheck->execute([':id' => $_SESSION['usuario_id']]);
-        $totalServicos = $stmtCheck->fetchColumn();
-
-        if ($totalServicos >= 3) {
-            $erro = 'Você já atingiu o limite máximo de 3 serviços cadastrados.';
-        } else {
-            // Se estiver abaixo do limite, procede com o cadastro
-            $stmt = $pdo->prepare("
-                INSERT INTO servicos (prestador_id, titulo, categoria_nome, valor_base, descricao_curta)
-                VALUES (:prestador_id, :titulo, :categoria, :valor, :descricao)
-            ");
-
-            $ok = $stmt->execute([
-                ':prestador_id' => $_SESSION['usuario_id'],
-                ':titulo'       => $titulo,
-                ':categoria'    => $categoria,
-                ':valor'        => $valor !== '' ? (float)$valor : null,
-                ':descricao'    => $descricao ?: null,
-            ]);
-
-            if ($ok) {
-                $novoServicoId = $pdo->lastInsertId();
-                header("Location: /PI-2026.1/frontend/Pages/portfolio.php?selecionar=" . $novoServicoId);
-                exit;
+        try {
+            if ($totalServicos >= 3) {
+                $erro = 'Você já atingiu o limite máximo de 3 serviços cadastrados.';
             } else {
-                $erro = 'Erro ao salvar o serviço. Tente novamente.';
+                $stmt = $pdo->prepare("
+                    INSERT INTO servicos (prestador_id, titulo, categoria_nome, valor_base, descricao_curta)
+                    VALUES (:prestador_id, :titulo, :categoria, :valor, :descricao)
+                ");
+
+                $ok = $stmt->execute([
+                    ':prestador_id' => $idUsuario,
+                    ':titulo'       => $titulo,
+                    ':categoria'    => $categoria,
+                    ':valor'        => $valor !== '' ? (float)$valor : null,
+                    ':descricao'    => $descricao ?: null,
+                ]);
+
+                if ($ok) {
+                    $novoServicoId = $pdo->lastInsertId();
+                    echo "<script>window.location.href='/PI-2026.1/frontend/Pages/portfolio.php?selecionar=" . $novoServicoId . "';</script>";
+                    exit;
+                } else {
+                    $erro = 'Erro ao salvar o serviço. Tente novamente.';
+                }
             }
+        } catch (Exception $e) {
+            $erro = 'Erro técnico: ' . $e->getMessage();
         }
     }
 }
@@ -121,6 +134,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     <div class="flex-1 overflow-y-auto px-8 py-10 custom-scroll">
       <div class="max-w-4xl mx-auto">
+        
+        <?php if ($totalServicos === 0): ?>
+          <div class="mb-8 p-6 bg-orange/5 border-2 border-orange/10 rounded-3xl flex items-center gap-6">
+            <div class="w-14 h-14 bg-orange text-white rounded-2xl flex items-center justify-center flex-shrink-0 shadow-lg shadow-orange/20">
+              <svg class="w-8 h-8" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M12 4v16m8-8H4"/></svg>
+            </div>
+            <div>
+              <h3 class="font-black text-slate-900 uppercase text-xs tracking-widest mb-1">Seja um Prestador</h3>
+              <p class="text-slate-600 text-sm">Você ainda não possui serviços cadastrados. Cadastre seu primeiro serviço agora para começar a atuar como prestador na plataforma!</p>
+            </div>
+          </div>
+        <?php endif; ?>
+
         <span class="inline-block px-3 py-1 bg-slate-100 text-slate-500 text-[10px] font-bold uppercase tracking-widest rounded-full mb-4">Área do Prestador</span>
         <h1 class="text-4xl font-extrabold text-slate-900 tracking-tight mb-2">Novo Serviço</h1>
         <p class="text-gray-500 mb-10">Preencha os dados abaixo. Use a categoria para classificar o serviço e o título para os detalhes.</p>
@@ -155,36 +181,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                   oninput="gerenciarDatalist(this)"
                   class="w-full bg-white border border-gray-200 rounded-2xl px-6 py-4 text-base focus:outline-none focus:border-orange focus:ring-4 focus:ring-orange/5 transition-all shadow-sm"
                 >
-                
                 <datalist id="categorias-list">
                   <option value="Alvenaria e Construção">
-                  <option value="Demolição e Entulho">
-                  <option value="Drywall e Gesso">
-                  <option value="Telhados e Coberturas">
-                  <option value="Impermeabilização">
                   <option value="Elétrica">
                   <option value="Hidráulica">
-                  <option value="Gás e Aquecedores">
-                  <option value="Climatização e Ar Condicionado">
-                  <option value="Energia Solar">
-                  <option value="Redes e Wi-Fi">
-                  <option value="Infraestrutura de TI">
-                  <option value="Segurança Eletrônica">
-                  <option value="Automação Residencial">
-                  <option value="Pisos e Revestimentos">
                   <option value="Pintura e Textura">
                   <option value="Marcenaria e Planejados">
-                  <option value="Serralheria e Vidraçaria">
-                  <option value="Jardinagem e Paisagismo">
-                  <option value="Limpeza e Conservação">
-                  <option value="Montagem de Móveis">
-                  <option value="Reparos">
-                  <option value="Reformas">
-                  <option value="Piscinas">
-                  <option value="Arquitetura e Projetos">
-                  <option value="Design de Interiores">
-                </datalist>
-
+                  </datalist>
                 <div class="absolute right-6 top-1/2 -translate-y-1/2 pointer-events-none text-gray-300">
                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
                 </div>
@@ -227,6 +230,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   </main>
 
   <script>
+    // Seus scripts de prévia permanecem idênticos
     const inputTitulo = document.querySelector('input[name="titulo"]');
     const inputCat    = document.getElementById('input-categoria');
     const inputValor  = document.querySelector('input[name="valor"]');

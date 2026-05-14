@@ -3,11 +3,23 @@ require_once '../../backend/config/auth.php';
 require_once '../../backend/config/Conexao.php';
 require_once '../../backend/models/User.php';
 
-$user    = new User($pdo);
-$usuario = $user->buscarPorId($_SESSION['usuario_id']);
+$idUsuarioLogado = $_SESSION['usuario_id'];
+$userModel = new User($pdo);
+$usuario   = $userModel->buscarPorId($idUsuarioLogado);
+
+// TRAVA DE SEGURANÇA: Se o usuário limpou o banco e a sessão sobrou
+if (!$usuario) {
+    session_destroy();
+    header("Location: login.php");
+    exit;
+}
+
+// VERIFICAÇÃO PARA A SIDEBAR: Se o usuário já cadastrou algum serviço
+$stmtCheck = $pdo->prepare("SELECT COUNT(*) FROM servicos WHERE prestador_id = :id");
+$stmtCheck->execute([':id' => $idUsuarioLogado]);
+$temServico = $stmtCheck->fetchColumn() > 0;
 
 // --- CONFIGURAÇÃO SUPABASE ---
-// URL base para as fotos públicas (ajuste conforme o seu projeto se necessário)
 $urlBaseSupabase = "https://yplpxzmwtkencrrtxmof.supabase.co/storage/v1/object/public/fotos/";
 
 // Captura de Filtros
@@ -28,7 +40,7 @@ if (isset($_GET['ajax_cidades'])) {
 
 // Construção da Query SQL
 $where  = ['s.prestador_id != :usuario_id'];
-$params = [':usuario_id' => $_SESSION['usuario_id']];
+$params = [':usuario_id' => $idUsuarioLogado];
 
 if ($categoriaAtiva !== 'Todos') {
     $where[] = 'LOWER(s.categoria_nome) = LOWER(:categoria)';
@@ -104,7 +116,8 @@ $categoriasGerais = ["Reformas", "Pintura e Textura", "Elétrica", "Hidráulica"
   <div id="sidebar-container" class="w-60 bg-sidebar flex-shrink-0 h-screen"></div>
   <script type="module">
     import { renderSidebar } from '../src/components/sidebar.js';
-    renderSidebar('sidebar-container', 'inicio');
+    // Passamos o status 'temServico' (true ou false) para o componente
+    renderSidebar('sidebar-container', 'inicio', <?= $temServico ? 'true' : 'false' ?>);
   </script>
 
   <main class="flex-1 flex flex-col overflow-hidden">
@@ -162,53 +175,67 @@ $categoriasGerais = ["Reformas", "Pintura e Textura", "Elétrica", "Hidráulica"
         </div>
       </form>
 
-      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pb-10">
-        <?php foreach ($servicos as $i => $s): ?>
-          <div class="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 card-reveal flex flex-col gap-4" style="animation-delay:<?= $i * 50 ?>ms">
-            
-            <div class="flex items-center justify-between">
-              <div class="flex items-center gap-3">
-                <div class="w-11 h-11 rounded-full bg-gray-100 flex-shrink-0 overflow-hidden border border-gray-200">
-                  <?php if($s['prestador_foto'] && $s['prestador_foto'] !== 'default.png'): ?>
-                    <img src="<?= $urlBaseSupabase . $s['prestador_foto'] ?>" class="w-full h-full object-cover">
-                  <?php else: ?>
-                    <div class="w-full h-full flex items-center justify-center bg-orange/10 text-orange font-bold text-xs">
-                      <?= strtoupper(substr($s['prestador_nome'], 0, 1)) ?>
+      <?php if (empty($servicos)): ?>
+        <div class="flex flex-col items-center justify-center py-20 bg-white rounded-3xl border border-dashed border-gray-200 card-reveal w-full">
+            <div class="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center text-gray-300 mb-4">
+                <svg class="w-10 h-10" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+                </svg>
+            </div>
+            <h3 class="text-lg font-bold text-gray-900">Nenhum serviço encontrado</h3>
+            <p class="text-sm text-gray-400 mt-1 max-w-xs text-center leading-relaxed">
+                Não encontramos resultados para os filtros aplicados. Tente mudar a categoria ou limpar a busca.
+            </p>
+        </div>
+      <?php else: ?>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pb-10">
+            <?php foreach ($servicos as $i => $s): ?>
+              <div class="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 card-reveal flex flex-col gap-4" style="animation-delay:<?= $i * 50 ?>ms">
+                
+                <div class="flex items-center justify-between">
+                  <div class="flex items-center gap-3">
+                    <div class="w-11 h-11 rounded-full bg-gray-100 flex-shrink-0 overflow-hidden border border-gray-200">
+                      <?php if($s['prestador_foto'] && $s['prestador_foto'] !== 'default.png'): ?>
+                        <img src="<?= $urlBaseSupabase . $s['prestador_foto'] ?>" class="w-full h-full object-cover">
+                      <?php else: ?>
+                        <div class="w-full h-full flex items-center justify-center bg-orange/10 text-orange font-bold text-xs">
+                          <?= strtoupper(substr($s['prestador_nome'], 0, 1)) ?>
+                        </div>
+                      <?php endif; ?>
                     </div>
-                  <?php endif; ?>
+                    <div>
+                      <h4 class="text-sm font-bold text-gray-900 leading-tight"><?= htmlspecialchars($s['prestador_nome']) ?></h4>
+                      <p class="text-[10px] text-gray-400 font-medium"><?= htmlspecialchars(explode(' - ', $s['cidade'])[0]) ?></p>
+                    </div>
+                  </div>
+                  
+                  <div class="flex items-center gap-1 bg-orange/5 px-2 py-1 rounded-lg">
+                    <svg class="w-3.5 h-3.5 fill-orange" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                    <span class="text-xs font-bold text-gray-700"><?= $s['media_nota'] > 0 ? number_format($s['media_nota'], 1) : 'Novo' ?></span>
+                  </div>
                 </div>
-                <div>
-                  <h4 class="text-sm font-bold text-gray-900 leading-tight"><?= htmlspecialchars($s['prestador_nome']) ?></h4>
-                  <p class="text-[10px] text-gray-400 font-medium"><?= htmlspecialchars(explode(' - ', $s['cidade'])[0]) ?></p>
+
+                <div class="space-y-1">
+                  <span class="text-[9px] font-extrabold text-orange uppercase tracking-wider"><?= htmlspecialchars($s['categoria_nome']) ?></span>
+                  <h3 class="font-bold text-gray-900 text-base line-clamp-1 h-6"><?= htmlspecialchars($s['titulo']) ?></h3>
+                  <p class="text-xs text-gray-400 line-clamp-2 h-8 leading-relaxed italic">"<?= htmlspecialchars($s['descricao_curta']) ?>"</p>
+                </div>
+
+                <div class="flex items-center justify-between pt-4 border-t border-gray-50 mt-auto">
+                  <div>
+                    <p class="text-[9px] text-gray-400 font-bold uppercase tracking-tight">Valor Base</p>
+                    <span class="text-base font-black text-gray-900">
+                        <?= $s['valor_base'] ? 'R$ ' . number_format($s['valor_base'], 0, ',', '.') : 'A combinar' ?>
+                    </span>
+                  </div>
+                  <a href="detalhes.php?id=<?= $s['id'] ?>" class="bg-gray-50 hover:bg-orange hover:text-white text-orange p-2.5 rounded-xl transition-all shadow-sm">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg>
+                  </a>
                 </div>
               </div>
-              
-              <div class="flex items-center gap-1 bg-orange/5 px-2 py-1 rounded-lg">
-                <svg class="w-3.5 h-3.5 fill-orange" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
-                <span class="text-xs font-bold text-gray-700"><?= $s['media_nota'] > 0 ? number_format($s['media_nota'], 1) : 'Novo' ?></span>
-              </div>
-            </div>
-
-            <div class="space-y-1">
-              <span class="text-[9px] font-extrabold text-orange uppercase tracking-wider"><?= htmlspecialchars($s['categoria_nome']) ?></span>
-              <h3 class="font-bold text-gray-900 text-base line-clamp-1 h-6"><?= htmlspecialchars($s['titulo']) ?></h3>
-              <p class="text-xs text-gray-400 line-clamp-2 h-8 leading-relaxed italic">"<?= htmlspecialchars($s['descricao_curta']) ?>"</p>
-            </div>
-
-            <div class="flex items-center justify-between pt-4 border-t border-gray-50 mt-auto">
-              <div>
-                <p class="text-[9px] text-gray-400 font-bold uppercase tracking-tight">Valor Base</p>
-                <span class="text-base font-black text-gray-900">
-                    <?= $s['valor_base'] ? 'R$ ' . number_format($s['valor_base'], 0, ',', '.') : 'A combinar' ?>
-                </span>
-              </div>
-              <a href="detalhes.php?id=<?= $s['id'] ?>" class="bg-gray-50 hover:bg-orange hover:text-white text-orange p-2.5 rounded-xl transition-all shadow-sm">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg>
-              </a>
-            </div>
-          </div>
-        <?php endforeach; ?>
-      </div>
+            <?php endforeach; ?>
+        </div>
+      <?php endif; ?>
     </div>
   </main>
 

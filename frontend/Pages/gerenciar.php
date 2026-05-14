@@ -1,64 +1,76 @@
 ﻿<?php
 header('Content-Type: text/html; charset=UTF-8');
-require_once '../../backend/config/auth.php';
-require_once '../../backend/config/Conexao.php';
-require_once '../../backend/models/User.php';
 
-$usuarioId = (int)($_SESSION['usuario_id'] ?? 0);
-$mensagem = '';
-$erro = '';
-$urlBaseSupabase = "https://yplpxzmwtkencrrtxmof.supabase.co/storage/v1/object/public/fotos/";
+// 1. PROTEÇÃO DE SESSÃO
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 
-if ($usuarioId <= 0) {
+if (empty($_SESSION['usuario_id'])) {
     header('Location: /PI-2026.1/frontend/Pages/login.php');
     exit;
 }
 
-// 1. BUSCA DADOS DO PRESTADOR PARA O HEADER
-$stmtBio = $pdo->prepare("SELECT bio FROM prestadores_detalhes WHERE usuario_id = :id");
-$stmtBio->execute([':id' => $usuarioId]);
-$dadosPrestador = $stmtBio->fetch(PDO::FETCH_ASSOC);
-$bioAtual = $dadosPrestador['bio'] ?? 'Nenhuma bio cadastrada.';
+require_once '../../backend/config/auth.php';
+require_once '../../backend/config/Conexao.php';
+require_once '../../backend/models/User.php';
 
-$userModel = new User($pdo);
-$usuarioLogado = $userModel->buscarPorId($usuarioId);
+$idUsuario = (int)$_SESSION['usuario_id'];
+$mensagem = '';
+$erro = '';
 
-// 2. LÓGICA DE PROCESSAMENTO (POST)
+// Define a URL do Supabase caso não esteja no config
+if (!defined('SB_URL')) define('SB_URL', 'https://yplpxzmwtkencrrtxmof.supabase.co');
+$urlBaseSupabase = SB_URL . "/storage/v1/object/public/fotos/";
+
+// 2. BUSCA DADOS DO PRESTADOR PARA O HEADER E BIO
+try {
+    $stmtBio = $pdo->prepare("SELECT bio FROM prestadores_detalhes WHERE usuario_id = :id");
+    $stmtBio->execute([':id' => $idUsuario]);
+    $dadosPrestador = $stmtBio->fetch(PDO::FETCH_ASSOC);
+    $bioAtual = $dadosPrestador['bio'] ?? 'Nenhuma bio cadastrada.';
+
+    $userModel = new User($pdo);
+    $usuarioLogado = $userModel->buscarPorId($idUsuario);
+} catch (Exception $e) {
+    $erro = "Erro ao carregar dados: " . $e->getMessage();
+}
+
+// 3. LÓGICA DE PROCESSAMENTO (POST)
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $acao = $_POST['acao'] ?? '';
 
-    // --- LÓGICA DE EXCLUSÃO COM SUPABASE ---
+    // --- LÓGICA DE EXCLUSÃO ---
     if ($acao === 'excluir') {
         $idServico = filter_input(INPUT_POST, 'servico_id', FILTER_VALIDATE_INT);
         
         if ($idServico) {
-            // A. Busca o título do serviço para identificar as fotos relacionadas
             $stmtRef = $pdo->prepare("SELECT titulo FROM servicos WHERE id = :id AND prestador_id = :prestador_id");
-            $stmtRef->execute([':id' => $idServico, ':prestador_id' => $usuarioId]);
+            $stmtRef->execute([':id' => $idServico, ':prestador_id' => $idUsuario]);
             $servicoParaExcluir = $stmtRef->fetch(PDO::FETCH_ASSOC);
 
             if ($servicoParaExcluir) {
                 $tituloProjeto = $servicoParaExcluir['titulo'];
 
-                // B. Busca as URLs das imagens no portfólio para apagar do Supabase
+                // Deleta fotos do Supabase
                 $stmtFotos = $pdo->prepare("SELECT url_imagem FROM portfolio_imagens WHERE titulo_projeto = :titulo AND usuario_id = :u_id");
-                $stmtFotos->execute([':titulo' => $tituloProjeto, ':u_id' => $usuarioId]);
+                $stmtFotos->execute([':titulo' => $tituloProjeto, ':u_id' => $idUsuario]);
                 $fotos = $stmtFotos->fetchAll(PDO::FETCH_ASSOC);
 
                 foreach ($fotos as $f) {
-                    // Chama a função global do seu Conexao.php para deletar o arquivo físico
-                    apagarArquivoSupabase($f['url_imagem']);
+                    if (function_exists('apagarArquivoSupabase')) {
+                        apagarArquivoSupabase($f['url_imagem']);
+                    }
                 }
 
-                // C. Deleta as referências das fotos no banco de dados
+                // Deleta referências no banco
                 $pdo->prepare("DELETE FROM portfolio_imagens WHERE titulo_projeto = :titulo AND usuario_id = :u_id")
-                    ->execute([':titulo' => $tituloProjeto, ':u_id' => $usuarioId]);
+                    ->execute([':titulo' => $tituloProjeto, ':u_id' => $idUsuario]);
 
-                // D. Por fim, deleta o serviço (e avaliações se houver CASCADE)
                 $stmt = $pdo->prepare('DELETE FROM servicos WHERE id = :id AND prestador_id = :prestador_id');
-                $stmt->execute([':id' => $idServico, ':prestador_id' => $usuarioId]);
+                $stmt->execute([':id' => $idServico, ':prestador_id' => $idUsuario]);
 
-                header('Location: gerenciar.php?ok=excluido'); 
+                echo "<script>window.location.href='gerenciar.php?ok=excluido';</script>";
                 exit;
             }
         }
@@ -84,9 +96,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 ':valor'     => $valor !== '' ? (float)$valor : null,
                 ':descricao' => $descricao ?: null,
                 ':id'        => $idServico,
-                ':prestador_id' => $usuarioId,
+                ':prestador_id' => $idUsuario,
             ]);
-            header('Location: gerenciar.php?ok=editado'); 
+            echo "<script>window.location.href='gerenciar.php?ok=editado';</script>";
             exit;
         }
     }
@@ -97,7 +109,7 @@ $sucesso = $_GET['ok'] ?? '';
 if ($sucesso === 'editado') $mensagem = 'Serviço atualizado com sucesso.';
 if ($sucesso === 'excluido') $mensagem = 'Serviço e fotos removidos do sistema.';
 
-// 3. BUSCA LISTA DE SERVIÇOS ATUALIZADA
+// 4. BUSCA LISTA DE SERVIÇOS
 $stmtServicos = $pdo->prepare(
     'SELECT s.id, s.titulo, s.categoria_nome, s.valor_base, s.descricao_curta,
             COALESCE(ROUND(AVG(a.nota)::NUMERIC, 1), 0) AS media_nota
@@ -107,7 +119,7 @@ $stmtServicos = $pdo->prepare(
      GROUP BY s.id
      ORDER BY s.id DESC'
 );
-$stmtServicos->execute([':id' => $usuarioId]);
+$stmtServicos->execute([':id' => $idUsuario]);
 $servicos = $stmtServicos->fetchAll(PDO::FETCH_ASSOC);
 ?>
 <!DOCTYPE html>
@@ -217,25 +229,25 @@ $servicos = $stmtServicos->fetchAll(PDO::FETCH_ASSOC);
 
   <div id="modal-editar" class="hidden fixed inset-0 z-50 bg-black/45 flex items-center justify-center p-4 backdrop-blur-sm">
     <div class="w-full max-w-lg bg-white rounded-3xl shadow-2xl p-8">
-       <div class="flex justify-between items-center mb-6">
-         <h3 class="text-2xl font-black text-slate-900 uppercase tracking-tighter">Editar Serviço</h3>
-         <button onclick="fecharModalEditar()" class="text-gray-400 hover:text-slate-900 transition-colors"><svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12"/></svg></button>
-       </div>
-       <form method="POST" class="space-y-4">
-         <input type="hidden" name="acao" value="editar"><input type="hidden" id="edit-id" name="servico_id">
-         <div><label class="block text-[10px] font-black text-gray-400 mb-1 uppercase tracking-widest">Título do Serviço</label><input type="text" id="edit-titulo" name="titulo" required class="w-full border-gray-200 border rounded-xl px-4 py-3 text-sm font-bold outline-none focus:border-orange"></div>
-         <div class="grid grid-cols-2 gap-4">
-            <div><label class="block text-[10px] font-black text-gray-400 mb-1 uppercase tracking-widest">Categoria</label><input type="text" id="edit-categoria" name="categoria" required class="w-full border-gray-200 border rounded-xl px-4 py-3 text-sm font-bold outline-none focus:border-orange"></div>
-            <div><label class="block text-[10px] font-black text-gray-400 mb-1 uppercase tracking-widest">Valor Base (R$)</label><input type="number" id="edit-valor" name="valor" step="0.01" class="w-full border-gray-200 border rounded-xl px-4 py-3 text-sm font-bold outline-none focus:border-orange"></div>
-         </div>
-         <div><label class="block text-[10px] font-black text-gray-400 mb-1 uppercase tracking-widest">Descrição do Serviço</label><textarea id="edit-descricao" name="descricao" rows="3" class="w-full border-gray-200 border rounded-xl px-4 py-3 text-sm font-bold outline-none focus:border-orange resize-none"></textarea></div>
-         <div class="pt-4 flex gap-3"><button type="button" onclick="fecharModalEditar()" class="flex-1 py-3.5 text-sm font-bold text-gray-400 uppercase tracking-widest">Cancelar</button><button type="submit" class="flex-1 bg-orange text-white py-3.5 rounded-2xl text-sm font-black shadow-lg shadow-orange/20 uppercase tracking-widest">Salvar Alterações</button></div>
-       </form>
+        <div class="flex justify-between items-center mb-6">
+          <h3 class="text-2xl font-black text-slate-900 uppercase tracking-tighter">Editar Serviço</h3>
+          <button onclick="fecharModalEditar()" class="text-gray-400 hover:text-slate-900 transition-colors"><svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12"/></svg></button>
+        </div>
+        <form method="POST" class="space-y-4">
+          <input type="hidden" name="acao" value="editar"><input type="hidden" id="edit-id" name="servico_id">
+          <div><label class="block text-[10px] font-black text-gray-400 mb-1 uppercase tracking-widest">Título do Serviço</label><input type="text" id="edit-titulo" name="titulo" required class="w-full bg-gray-50 border-gray-200 border rounded-xl px-4 py-3 text-sm font-bold outline-none focus:border-orange"></div>
+          <div class="grid grid-cols-2 gap-4">
+            <div><label class="block text-[10px] font-black text-gray-400 mb-1 uppercase tracking-widest">Categoria</label><input type="text" id="edit-categoria" name="categoria" required class="w-full bg-gray-50 border-gray-200 border rounded-xl px-4 py-3 text-sm font-bold outline-none focus:border-orange"></div>
+            <div><label class="block text-[10px] font-black text-gray-400 mb-1 uppercase tracking-widest">Valor Base (R$)</label><input type="number" id="edit-valor" name="valor" step="0.01" class="w-full bg-gray-50 border-gray-200 border rounded-xl px-4 py-3 text-sm font-bold outline-none focus:border-orange"></div>
+          </div>
+          <div><label class="block text-[10px] font-black text-gray-400 mb-1 uppercase tracking-widest">Descrição do Serviço</label><textarea id="edit-descricao" name="descricao" rows="3" class="w-full bg-gray-50 border-gray-200 border rounded-xl px-4 py-3 text-sm font-bold outline-none focus:border-orange resize-none"></textarea></div>
+          <div class="pt-4 flex gap-3"><button type="button" onclick="fecharModalEditar()" class="flex-1 py-3.5 text-sm font-bold text-gray-400 uppercase tracking-widest">Cancelar</button><button type="submit" class="flex-1 bg-orange text-white py-3.5 rounded-2xl text-sm font-black shadow-lg shadow-orange/20 uppercase tracking-widest">Salvar Alterações</button></div>
+        </form>
     </div>
   </div>
 
   <script>
-    // Lógica Modal Editar
+    // JS do Modal Editar
     const modalEditar = document.getElementById('modal-editar');
     const inputId = document.getElementById('edit-id');
     const inputTit = document.getElementById('edit-titulo');
@@ -257,7 +269,7 @@ $servicos = $stmtServicos->fetchAll(PDO::FETCH_ASSOC);
 
     const fecharModalEditar = () => modalEditar.classList.add('hidden');
 
-    // Lógica Modal Excluir
+    // JS do Modal Excluir
     const modalExcluir = document.getElementById('modal-excluir');
     const inputExcluirId = document.getElementById('excluir-id');
 
@@ -272,7 +284,6 @@ $servicos = $stmtServicos->fetchAll(PDO::FETCH_ASSOC);
         modalExcluir.classList.remove('flex');
     }
 
-    // Fechar ao clicar fora
     window.onclick = (e) => {
         if (e.target == modalEditar) fecharModalEditar();
         if (e.target == modalExcluir) fecharModalExcluir();
