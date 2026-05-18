@@ -243,20 +243,28 @@ try {
         <div class="w-full lg:w-80">
           <div class="sticky top-6 bg-white rounded-2xl border border-gray-100 shadow-sm p-5 space-y-6">
             <div class="flex items-center gap-4">
-              <div class="relative">
-                <div class="w-14 h-14 rounded-2xl bg-orange/10 flex items-center justify-center text-orange font-bold text-xl overflow-hidden border border-gray-100">
+              
+              <a href="ver-perfil.php?id=<?= $servico['prestador_id'] ?>" 
+                 class="relative block group cursor-pointer" 
+                 title="Ver perfil completo de <?= htmlspecialchars($servico['prestador_nome']) ?>">
+                <div class="w-14 h-14 rounded-2xl bg-orange/10 flex items-center justify-center text-orange font-bold text-xl overflow-hidden border border-gray-100 group-hover:border-orange/40 transition-all shadow-sm">
                   <?php if($servico['prestador_foto'] && $servico['prestador_foto'] !== 'default.png'): ?>
-                    <img src="<?= $urlBaseSupabase . $servico['prestador_foto'] ?>" class="w-full h-full object-cover">
+                    <img src="<?= $urlBaseSupabase . $servico['prestador_foto'] ?>" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300">
                   <?php else: ?>
                     <?= strtoupper(mb_substr($servico['prestador_nome'] ?? 'U', 0, 2)) ?>
                   <?php endif; ?>
                 </div>
                 <div class="verified-dot absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-emerald-400 rounded-full border-2 border-white"></div>
-              </div>
+              </a>
+
               <div>
-                <p class="font-bold text-gray-900 text-sm"><?= htmlspecialchars($servico['prestador_nome']) ?></p>
+                <a href="ver_perfil.php?id=<?= $servico['prestador_id'] ?>" 
+                   class="font-bold text-gray-900 text-sm hover:text-orange transition-colors block">
+                  <?= htmlspecialchars($servico['prestador_nome']) ?>
+                </a>
                 <p class="text-xs text-gray-400"><?= htmlspecialchars($servico['cidade'] ?: 'Brasil') ?></p>
               </div>
+
             </div>
 
             <div class="space-y-2">

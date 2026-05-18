@@ -115,14 +115,23 @@ $categoriasGerais = ["Reformas", "Pintura e Textura", "Elétrica", "Hidráulica"
 
   <div id="sidebar-container" class="w-60 bg-sidebar flex-shrink-0 h-screen"></div>
   <script type="module">
-  import { renderSidebar } from '../src/components/sidebar.js';
-  
-  // Se ele já tem serviços (temServico), libera Gerenciar e Portfólio. 
-  // Caso contrário, ele verá apenas Início, Perfil e Novo Serviço.
-  const isPro = <?= ($temServico || (isset($totalServicos) && $totalServicos > 0)) ? 'true' : 'false' ?>;
-  
-  renderSidebar('sidebar-container', '<?= $pagina_ativa ?? "inicio" ?>', isPro);
-</script>
+    import { renderSidebar } from '../src/components/sidebar.js';
+
+    // Captura se o usuário tem serviço ativo do seu PHP
+    const temServico = <?= $temServico ? 'true' : 'false' ?>;
+    
+    // Captura se o usuário logado é administrador (verifica a coluna tipo_usuario do seu banco)
+    const isAdmin = <?= (isset($dados['tipo_usuario']) && $dados['tipo_usuario'] === 'admin') ? 'true' : 'false' ?>;
+
+    // Inicializa os contadores vazios por enquanto (ou passe os valores reais se já tiver)
+    const badges = {
+      badgeMensagens: 0,
+      badgeAgendamentos: 0
+    };
+
+    // Renderiza passando todos os dados corretamente
+    renderSidebar('sidebar-container', 'inicio', temServico, isAdmin, badges);
+  </script>
 
   <main class="flex-1 flex flex-col overflow-hidden">
     <header class="flex items-center justify-between px-8 py-5 border-b border-gray-200 bg-white flex-shrink-0">

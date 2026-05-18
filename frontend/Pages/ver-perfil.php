@@ -9,7 +9,7 @@ $userModel = new User($pdo);
 // Captura o ID do perfil que está sendo visitado. Se não houver, mostra o do usuário logado.
 $idPerfilVisitado = isset($_GET['id']) ? intval($_GET['id']) : $idUsuarioLogado;
 
-// 1. BUSCA DADOS BÁSICOS DO USUÁRIO VISITADO (Seja ele Cliente ou Prestador)
+// 1. BUSCA DADOS BÁSICOS DO USUÁRIO VISITADO
 $stmtUser = $pdo->prepare("SELECT nome, email, telefone, cidade, foto_perfil FROM usuarios WHERE id = :id");
 $stmtUser->execute([':id' => $idPerfilVisitado]);
 $perfil = $stmtUser->fetch(PDO::FETCH_ASSOC);
@@ -19,48 +19,43 @@ if (!$perfil) {
     exit;
 }
 
-// 2. VERIFICAÇÃO PARA A SIDEBAR DO USUÁRIO LOGADO (Se ele tem serviço cadastrado)
+// 2. VERIFICAÇÃO PARA A SIDEBAR DO USUÁRIO LOGADO
 $stmtCheck = $pdo->prepare("SELECT COUNT(*) FROM servicos WHERE prestador_id = :id");
 $stmtCheck->execute([':id' => $idUsuarioLogado]);
 $temServicoLogado = $stmtCheck->fetchColumn() > 0;
 
-// 3. BUSCA DETALHES PROFISSIONAIS DO PERFIL VISITADO
+// 3. BUSCA DETALHES PROFISSIONAIS (Para checar se é prestador)
 $stmtDetails = $pdo->prepare("SELECT bio, nicho, experiencia_anos FROM prestadores_detalhes WHERE usuario_id = :id");
 $stmtDetails->execute([':id' => $idPerfilVisitado]);
 $detalhesProfissionais = $stmtDetails->fetch(PDO::FETCH_ASSOC);
 
-// Define se o perfil visitado pertence a um prestador de serviços
 $isPrestador = !empty($detalhesProfissionais);
 
-// 4. SE FOR PRESTADOR, COLETA APENAS OS SERVIÇOS E AS AVALIAÇÕES (Portfólio removido)
+// 4. BUSCA DE SERVIÇOS (Apenas se for Prestador)
 $servicos = [];
-$avaliacoes = [];
-$mediaNota = 0;
-
 if ($isPrestador) {
-    // Serviços ofertados
     $stmtServ = $pdo->prepare("SELECT id, titulo, categoria_nome, valor_base, descricao_curta FROM servicos WHERE prestador_id = :id ORDER BY id DESC");
     $stmtServ->execute([':id' => $idPerfilVisitado]);
     $servicos = $stmtServ->fetchAll(PDO::FETCH_ASSOC);
-
-    // Avaliações recebidas
-    $stmtAval = $pdo->prepare("
-        SELECT a.nota, a.comentario, a.data_avaliacao, u.nome AS cliente_nome, u.foto_perfil AS cliente_foto 
-        FROM avaliacoes a
-        JOIN usuarios u ON u.id = a.cliente_id
-        WHERE a.prestador_id = :id 
-        ORDER BY a.data_avaliacao DESC
-    ");
-    $stmtAval->execute([':id' => $idPerfilVisitado]);
-    $avaliacoes = $stmtAval->fetchAll(PDO::FETCH_ASSOC);
-
-    // Cálculo da média de estrelas
-    $stmtMedia = $pdo->prepare("SELECT COALESCE(ROUND(AVG(nota)::NUMERIC, 1), 0) FROM avaliacoes WHERE prestador_id = :id");
-    $stmtMedia->execute([':id' => $idPerfilVisitado]);
-    $mediaNota = $stmtMedia->fetchColumn();
 }
 
-// Configuração do seu bucket Supabase para as fotos
+// 5. SISTEMA DE AVALIAÇÃO UNIFICADO (Busca avaliações onde o visitado recebeu a nota)
+// Nota: Ajuste os campos 'prestador_id' ou 'cliente_id' conforme o destino da nota no seu banco
+$stmtAval = $pdo->prepare("
+    SELECT a.nota, a.comentario, a.data_avaliacao, u.nome AS avaliador_nome, u.foto_perfil AS avaliador_foto 
+    FROM avaliacoes a
+    JOIN usuarios u ON u.id = a.cliente_id
+    WHERE a.prestador_id = :id 
+    ORDER BY a.data_avaliacao DESC
+");
+$stmtAval->execute([':id' => $idPerfilVisitado]);
+$avaliacoes = $stmtAval->fetchAll(PDO::FETCH_ASSOC);
+
+// Cálculo da média de estrelas recebidas por este perfil (seja cliente ou prestador)
+$stmtMedia = $pdo->prepare("SELECT COALESCE(ROUND(AVG(nota)::NUMERIC, 1), 0) FROM avaliacoes WHERE prestador_id = :id");
+$stmtMedia->execute([':id' => $idPerfilVisitado]);
+$mediaNota = $stmtMedia->fetchColumn();
+
 $urlBaseSupabase = "https://yplpxzmwtkencrrtxmof.supabase.co/storage/v1/object/public/fotos/";
 ?>
 
@@ -94,7 +89,7 @@ $urlBaseSupabase = "https://yplpxzmwtkencrrtxmof.supabase.co/storage/v1/object/p
   <script type="module">
     import { renderSidebar } from '../src/components/sidebar.js';
     const temServico = <?= $temServicoLogado ? 'true' : 'false' ?>;
-    renderSidebar('sidebar-container', '', temServico, false, { badgeMensagens: 0, badgeAgendamentos: 0 });
+    renderSidebar('sidebar-container', 'perfil', temServico, false, { badgeMensagens: 0, badgeAgendamentos: 0 });
   </script>
 
   <main class="flex-1 flex flex-col overflow-hidden">
@@ -114,6 +109,7 @@ $urlBaseSupabase = "https://yplpxzmwtkencrrtxmof.supabase.co/storage/v1/object/p
       
       <div class="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm flex flex-col md:flex-row items-center justify-between gap-6">
         <div class="flex flex-col md:flex-row items-center gap-5 text-center md:text-left">
+          
           <div class="w-24 h-24 rounded-full bg-orange flex items-center justify-center text-white font-bold text-3xl overflow-hidden border-4 border-gray-100 flex-shrink-0 shadow-sm">
             <?php if($perfil['foto_perfil'] && $perfil['foto_perfil'] !== 'default.png'): ?>
               <img src="<?= $urlBaseSupabase . $perfil['foto_perfil'] ?>" class="w-full h-full object-cover">
@@ -128,7 +124,7 @@ $urlBaseSupabase = "https://yplpxzmwtkencrrtxmof.supabase.co/storage/v1/object/p
               <?php if($isPrestador): ?>
                 <span class="bg-orange/10 text-orange text-[10px] font-extrabold px-2 py-0.5 rounded-md uppercase border border-orange/10"><?= htmlspecialchars($detalhesProfissionais['nicho']) ?></span>
               <?php else: ?>
-                <span class="bg-gray-100 text-gray-500 text-[10px] font-extrabold px-2 py-0.5 rounded-md uppercase">Cliente</span>
+                <span class="bg-blue-50 text-blue-600 text-[10px] font-extrabold px-2 py-0.5 rounded-md uppercase border border-blue-100">Cliente / Comprador</span>
               <?php endif; ?>
             </div>
             
@@ -143,30 +139,23 @@ $urlBaseSupabase = "https://yplpxzmwtkencrrtxmof.supabase.co/storage/v1/object/p
           </div>
         </div>
 
-        <?php if($isPrestador): ?>
-          <div class="flex flex-col items-center md:items-end gap-3 border-t md:border-t-0 pt-4 md:pt-0 w-full md:w-auto border-gray-100">
-            <div class="flex items-center gap-2 bg-orange/5 border border-orange/10 px-4 py-2 rounded-xl">
-              <svg class="w-5 h-5 fill-orange" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
-              <div class="text-left">
-                <p class="text-xs font-bold text-gray-800 leading-none"><?= $mediaNota > 0 ? number_format($mediaNota, 1) . ' / 5.0' : 'Novo Prestador' ?></p>
-                <p class="text-[10px] text-gray-400 font-medium mt-0.5"><?= count($avaliacoes) ?> avaliações</p>
-              </div>
+        <div class="flex flex-col items-center md:items-end gap-3 border-t md:border-t-0 pt-4 md:pt-0 w-full md:w-auto border-gray-100">
+          <div class="flex items-center gap-2 bg-orange/5 border border-orange/10 px-4 py-2 rounded-xl">
+            <svg class="w-5 h-5 fill-orange" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+            <div class="text-left">
+              <p class="text-xs font-bold text-gray-800 leading-none"><?= $mediaNota > 0 ? number_format($mediaNota, 1) . ' / 5.0' : 'Sem Notas' ?></p>
+              <p class="text-[10px] text-gray-400 font-medium mt-0.5"><?= count($avaliacoes) ?> avaliações</p>
             </div>
-            <?php if($idPerfilVisitado !== $idUsuarioLogado): ?>
-              <a href="chat.php?com_usuario_id=<?= $idPerfilVisitado ?>" class="bg-orange hover:bg-orange-dark text-white text-xs font-bold px-5 py-2.5 rounded-xl transition-all shadow-md shadow-orange/10 text-center w-full md:w-auto">Conversar no Chat</a>
-            <?php endif; ?>
           </div>
-        <?php else: ?>
           <?php if($idPerfilVisitado !== $idUsuarioLogado): ?>
-            <div class="flex flex-col items-center md:items-end w-full md:w-auto">
-              <a href="chat.php?com_usuario_id=<?= $idPerfilVisitado ?>" class="bg-orange hover:bg-orange-dark text-white text-xs font-bold px-5 py-2.5 rounded-xl transition-all shadow-md shadow-orange/10 text-center w-full md:w-auto">Abrir Chat com Cliente</a>
-            </div>
+            <a href="chat.php?com_usuario_id=<?= $idPerfilVisitado ?>" class="bg-orange hover:bg-orange-dark text-white text-xs font-bold px-5 py-2.5 rounded-xl transition-all shadow-md shadow-orange/10 text-center w-full md:w-auto">
+              <?= $isPrestador ? 'Contratar Prestador' : 'Conversar com Cliente' ?>
+            </a>
           <?php endif; ?>
-        <?php endif; ?>
+        </div>
       </div>
 
       <?php if($isPrestador): ?>
-        
         <div class="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm space-y-3">
           <div class="flex items-center justify-between border-b border-gray-50 pb-2">
             <h3 class="text-sm font-bold text-gray-900 uppercase tracking-wide">Sobre o Profissional</h3>
@@ -198,55 +187,45 @@ $urlBaseSupabase = "https://yplpxzmwtkencrrtxmof.supabase.co/storage/v1/object/p
                 </div>
               </div>
             <?php endforeach; ?>
-            <?php if(empty($servicos)): ?>
-              <p class="text-xs text-gray-400 italic pl-1">Nenhum serviço anunciado no momento.</p>
-            <?php endif; ?>
           </div>
-        </div>
-
-        <div class="space-y-3">
-          <h3 class="text-xs font-extrabold text-gray-400 uppercase tracking-wider pl-1">Avaliações dos Clientes</h3>
-          <div class="bg-white rounded-2xl border border-gray-200 shadow-sm divide-y divide-gray-100">
-            <?php foreach($avaliacoes as $a): ?>
-              <div class="p-4 flex gap-3 items-start">
-                <div class="w-8 h-8 rounded-full bg-gray-200 flex-shrink-0 overflow-hidden border">
-                  <?php if($a['cliente_foto'] && $a['cliente_foto'] !== 'default.png'): ?>
-                    <img src="<?= $urlBaseSupabase . $a['cliente_foto'] ?>" class="w-full h-full object-cover">
-                  <?php else: ?>
-                    <div class="w-full h-full bg-orange/10 text-orange font-bold text-xs flex items-center justify-center">
-                      <?= strtoupper(substr($a['cliente_nome'], 0, 1)) ?>
-                    </div>
-                  <?php endif; ?>
-                </div>
-                <div class="flex-1 space-y-1">
-                  <div class="flex items-center justify-between">
-                    <h5 class="text-xs font-bold text-gray-900"><?= htmlspecialchars($a['cliente_nome']) ?></h5>
-                    <span class="text-[10px] text-gray-400"><?= date('d/m/Y', strtotime($a['data_avaliacao'])) ?></span>
-                  </div>
-                  <div class="flex items-center gap-0.5">
-                    <?php for($i=1; $i<=5; $i++): ?>
-                      <svg class="w-3 h-3 <?= $i <= $a['nota'] ? 'fill-orange text-orange' : 'text-gray-200' ?>" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
-                    <?php endfor; ?>
-                  </div>
-                  <p class="text-xs text-gray-500 pt-0.5 leading-relaxed">"<?= htmlspecialchars($a['comentario']) ?>"</p>
-                </div>
-              </div>
-            <?php endforeach; ?>
-            <?php if(empty($avaliacoes)): ?>
-              <p class="text-xs text-gray-400 p-4 italic">Este profissional ainda não recebeu avaliações.</p>
-            <?php endif; ?>
-          </div>
-        </div>
-
-      <?php else: ?>
-        <div class="bg-white rounded-2xl p-8 border border-dashed border-gray-200 flex flex-col items-center justify-center text-center">
-          <div class="w-14 h-14 bg-orange/5 text-orange text-2xl rounded-2xl flex items-center justify-center mb-3 border border-orange/10">👤</div>
-          <h3 class="font-bold text-base text-gray-900">Perfil de Cliente</h3>
-          <p class="text-xs text-gray-400 mt-1 max-w-sm leading-relaxed">
-            Este usuário está cadastrado na plataforma como contratante. Você pode utilizar o botão acima para retornar à sala de chat e dar andamento às negociações de serviços.
-          </p>
         </div>
       <?php endif; ?>
+
+      <div class="space-y-3">
+        <h3 class="text-xs font-extrabold text-gray-400 uppercase tracking-wider pl-1">
+          <?= $isPrestador ? 'Histórico de Avaliações Profissionais' : 'Reputação como Cliente / Comprador' ?>
+        </h3>
+        <div class="bg-white rounded-2xl border border-gray-200 shadow-sm divide-y divide-gray-100">
+          <?php foreach($avaliacoes as $a): ?>
+            <div class="p-4 flex gap-3 items-start">
+              <div class="w-8 h-8 rounded-full bg-gray-200 flex-shrink-0 overflow-hidden border">
+                <?php if($a['avaliador_foto'] && $a['avaliador_foto'] !== 'default.png'): ?>
+                  <img src="<?= $urlBaseSupabase . $a['avaliador_foto'] ?>" class="w-full h-full object-cover">
+                <?php else: ?>
+                  <div class="w-full h-full bg-orange/10 text-orange font-bold text-xs flex items-center justify-center">
+                    <?= strtoupper(substr($a['avaliador_nome'], 0, 1)) ?>
+                  </div>
+                <?php endif; ?>
+              </div>
+              <div class="flex-1 space-y-1">
+                <div class="flex items-center justify-between">
+                  <h5 class="text-xs font-bold text-gray-900"><?= htmlspecialchars($a['avaliador_nome']) ?></h5>
+                  <span class="text-[10px] text-gray-400"><?= date('d/m/Y', strtotime($a['data_avaliacao'])) ?></span>
+                </div>
+                <div class="flex items-center gap-0.5">
+                  <?php for($i=1; $i<=5; $i++): ?>
+                    <svg class="w-3 h-3 <?= $i <= $a['nota'] ? 'fill-orange text-orange' : 'text-gray-200' ?>" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                  <?php endfor; ?>
+                </div>
+                <p class="text-xs text-gray-500 pt-0.5 leading-relaxed">"<?= htmlspecialchars($a['comentario']) ?>"</p>
+              </div>
+            </div>
+          <?php endforeach; ?>
+          <?php if(empty($avaliacoes)): ?>
+            <p class="text-xs text-gray-400 p-4 italic">Este perfil ainda não recebeu pontuações ou comentários na plataforma.</p>
+          <?php endif; ?>
+        </div>
+      </div>
 
     </div>
   </main>
