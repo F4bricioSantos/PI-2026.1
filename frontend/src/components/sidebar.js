@@ -152,7 +152,7 @@ export function renderSidebar(containerId, activePage = '', isPro = false, isAdm
     </nav>
 
     <div class="p-3 border-t border-white/5 bg-black/10">
-      <a href="logout.php" 
+      <a href="/PI-2026.1/backend/controllers/AuthController.php?action=logout"
          class="flex items-center gap-3 px-4 py-2.5 rounded-xl text-white/60 hover:text-white hover:bg-red-500/10 transition-all text-sm group">
         <svg class="w-4 h-4 text-white/40 group-hover:text-red-400 transition-colors" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
           <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"/>

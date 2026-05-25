@@ -1,7 +1,6 @@
 <?php
 header('Content-Type: text/html; charset=UTF-8');
 
-// 1. PROTEÇÃO DE SESSÃO
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
@@ -9,7 +8,6 @@ if (session_status() === PHP_SESSION_NONE) {
 require_once '../../backend/config/auth.php';
 require_once '../../backend/config/Conexao.php';
 
-// 2. CAPTURA E VALIDA O ID
 $idServico = filter_input(INPUT_GET, 'id', FILTER_VALIDATE_INT);
 $idUsuarioLogado = $_SESSION['usuario_id'] ?? 0;
 
@@ -18,17 +16,14 @@ if (!$idServico) {
     exit;
 }
 
-// Define a URL base do Supabase (Centralizado)
 if (!defined('SB_URL')) define('SB_URL', 'https://yplpxzmwtkencrrtxmof.supabase.co');
 $urlBaseSupabase = SB_URL . "/storage/v1/object/public/fotos/";
 
 try {
-    // --- VERIFICAÇÃO PARA A SIDEBAR (Se o usuário logado é prestador) ---
     $stmtCheck = $pdo->prepare("SELECT COUNT(*) FROM servicos WHERE prestador_id = :id");
     $stmtCheck->execute([':id' => $idUsuarioLogado]);
     $temServico = $stmtCheck->fetchColumn() > 0;
 
-    // 3. BUSCA DETALHES DO SERVIÇO E PRESTADOR
     $sqlServico = "
         SELECT 
             s.*, 
@@ -61,9 +56,8 @@ try {
              </div>");
     }
 
-    // 4. BUSCA AVALIAÇÕES DETALHADAS
     $sqlAvaliacoes = "
-        SELECT a.*, u.nome AS cliente_nome 
+        SELECT a.*, u.nome AS cliente_nome, u.foto_perfil AS cliente_foto 
         FROM avaliacoes a
         JOIN usuarios u ON u.id = a.cliente_id
         WHERE a.prestador_id = :prestador_id
@@ -73,7 +67,6 @@ try {
     $stmtAval->execute([':prestador_id' => $servico['prestador_id']]);
     $avaliacoes = $stmtAval->fetchAll(PDO::FETCH_ASSOC);
 
-    // 5. BUSCA IMAGENS DO PORTFÓLIO
     $sqlPortfolio = "SELECT * FROM portfolio_imagens WHERE usuario_id = :prestador_id AND titulo_projeto = :titulo ORDER BY data_upload DESC";
     $stmtPort = $pdo->prepare($sqlPortfolio);
     $stmtPort->execute([
@@ -123,10 +116,8 @@ try {
   <script type="module">
     import { renderSidebar } from '../src/components/sidebar.js';
     
-    // Verifica se o usuário logado tem serviços para liberar as abas PRO na sidebar
     const hasServices = <?= $temServico ? 'true' : 'false' ?>;
     
-    // Renderiza a sidebar (id do container, id da página ativa, booleano se é pro)
     renderSidebar('sidebar-container', 'inicio', hasServices);
   </script>
 
@@ -223,16 +214,28 @@ try {
                 <p class="text-gray-400 text-xs italic">Ainda não há avaliações para este prestador.</p>
               <?php else: ?>
                 <?php foreach($avaliacoes as $aval): ?>
-                  <div class="p-5 rounded-2xl bg-gray-50/70 border border-gray-100">
-                    <div class="flex justify-between items-center mb-3">
-                      <span class="text-sm font-bold text-gray-900"><?= htmlspecialchars($aval['cliente_nome']) ?></span>
-                      <div class="flex items-center gap-0.5">
-                        <?php for($i=1; $i<=5; $i++): ?>
-                          <svg class="w-3.5 h-3.5 <?= $i <= $aval['nota'] ? 'fill-orange' : 'fill-gray-300' ?>" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
-                        <?php endfor; ?>
-                      </div>
+                  <div class="p-5 rounded-2xl bg-gray-50/70 border border-gray-100 flex items-start gap-4">
+                    
+                    <div class="w-10 h-10 rounded-xl bg-orange/10 flex-shrink-0 flex items-center justify-center text-orange font-bold text-xs overflow-hidden border border-gray-100 shadow-sm">
+                      <?php if(!empty($aval['cliente_foto']) && $aval['cliente_foto'] !== 'default.png'): ?>
+                        <img src="<?= $urlBaseSupabase . htmlspecialchars($aval['cliente_foto']) ?>" class="w-full h-full object-cover">
+                      <?php else: ?>
+                        <?= strtoupper(mb_substr($aval['cliente_nome'] ?? 'U', 0, 2)) ?>
+                      <?php endif; ?>
                     </div>
-                    <p class="text-xs text-gray-500 leading-relaxed"><?= htmlspecialchars($aval['comentario']) ?></p>
+
+                    <div class="flex-1 min-w-0">
+                      <div class="flex justify-between items-center mb-1">
+                        <span class="text-sm font-bold text-gray-900 truncate"><?= htmlspecialchars($aval['cliente_nome']) ?></span>
+                        <div class="flex items-center gap-0.5 flex-shrink-0">
+                          <?php for($i=1; $i<=5; $i++): ?>
+                            <svg class="w-3.5 h-3.5 <?= $i <= $aval['nota'] ? 'fill-orange' : 'fill-gray-300' ?>" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                          <?php endfor; ?>
+                        </div>
+                      </div>
+                      <p class="text-xs text-gray-500 leading-relaxed break-words"><?= nl2br(htmlspecialchars($aval['comentario'])) ?></p>
+                    </div>
+
                   </div>
                 <?php endforeach; ?>
               <?php endif; ?>
