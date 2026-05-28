@@ -2,6 +2,7 @@
 require_once '../../backend/config/auth.php';
 require_once '../../backend/config/Conexao.php';
 require_once '../../backend/models/User.php';
+require_once '../../backend/models/Contrato.php';
 
 $idUsuarioLogado = $_SESSION['usuario_id'];
 $userModel = new User($pdo);
@@ -35,6 +36,25 @@ if ($idDestinatario > 0) {
             : '';
     }
 }
+
+$contratoModel = new Contrato($pdo);
+
+$contratoAtivo         = null;
+$outraPessoaTemServico = false;
+$contratoParaAvaliar   = null;
+
+if ($idDestinatario > 0) {
+    $contratoAtivo         = $contratoModel->buscarContratoAtivo($idUsuarioLogado, $idDestinatario);
+    $outraPessoaTemServico = $contratoModel->checarSeTemServico($idDestinatario);
+
+    if (!$contratoAtivo) {
+        $contratoParaAvaliar = $contratoModel->buscarContratoParaAvaliar($idUsuarioLogado, $idDestinatario);
+    }
+}
+
+$listaServicosDisponiveis = $outraPessoaTemServico
+    ? $contratoModel->listarServicosPrestador($idDestinatario)
+    : [];
 ?>
 <!DOCTYPE html>
 <html lang="pt-BR">
@@ -77,6 +97,7 @@ if ($idDestinatario > 0) {
 
   <main class="flex-1 flex overflow-hidden p-0 md:p-6 md:gap-6 w-full relative">
 
+    <!-- Lista de contatos -->
     <section class="w-full md:w-80 bg-white md:rounded-2xl border-r md:border border-gray-200 shadow-sm flex-col h-full flex-shrink-0 overflow-hidden <?= ($idDestinatario > 0) ? 'hidden md:flex' : 'flex' ?>">
       <div class="p-4 border-b border-gray-100 flex flex-col gap-3">
         <div class="flex items-center gap-3">
@@ -91,6 +112,7 @@ if ($idDestinatario > 0) {
       <div id="lista-contatos" class="flex-1 overflow-y-auto p-2 space-y-1 custom-scroll"></div>
     </section>
 
+    <!-- Área do chat -->
     <section class="flex-1 bg-white md:rounded-2xl md:border border-gray-200 shadow-sm flex-col h-full overflow-hidden relative <?= ($idDestinatario > 0) ? 'flex' : 'hidden md:flex' ?>">
 
       <?php if ($idDestinatario > 0): ?>
@@ -98,7 +120,7 @@ if ($idDestinatario > 0) {
       <!-- Cabeçalho com nome e avatar -->
       <div class="bg-gray-50 border-b border-gray-200 px-4 md:px-5 py-3 flex items-center gap-3 flex-shrink-0">
         <a href="chat.php" class="md:hidden p-2 -ml-2 text-gray-500 hover:bg-gray-200 rounded-lg transition-colors">
-           <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
         </a>
         <div id="topo-avatar"></div>
         <div>
@@ -107,24 +129,85 @@ if ($idDestinatario > 0) {
         </div>
       </div>
 
-      <!-- Barra de contrato ativo (estática por enquanto) -->
-      <div class="bg-gray-50 border-b border-gray-200 px-4 md:px-5 py-3 flex flex-col sm:flex-row sm:items-center justify-between flex-shrink-0 relative gap-3 sm:gap-0">
-        <div class="absolute left-0 top-0 bottom-0 w-1 bg-green-500"></div>
-        <div class="flex items-start sm:items-center gap-2 pl-2 sm:pl-1">
-          <span class="w-2 h-2 rounded-full bg-green-500 inline-block animate-pulse mt-1 sm:mt-0"></span>
-          <div class="leading-tight flex-1">
-            <span class="text-[10px] md:text-xs font-bold text-gray-900 uppercase tracking-wide">
-              CONTRATO ATIVO COM <?= strtoupper($nomeDestinatario) ?>
-            </span>
-            <p class="text-[10px] md:text-[11px] text-gray-500 font-medium truncate max-w-[200px] md:max-w-none">Pintura de Parede • Data Pactuada: 24/05/2026</p>
-          </div>
-        </div>
-        <div class="flex items-center gap-2 pl-4 sm:pl-0">
-          <span class="bg-green-50 border border-green-200 text-green-600 px-2 py-1 rounded text-[10px] font-bold mr-0 md:mr-2">Em Andamento</span>
-          <button class="bg-orange hover:bg-orange-dark text-white font-bold px-3 md:px-4 py-2 rounded-xl text-[10px] md:text-xs transition-all cursor-pointer shadow-md shadow-orange/10">
-            Concluir
-          </button>
-        </div>
+      <!-- Barra de contrato -->
+      <div class="bg-gray-50 border-b border-gray-200 px-4 md:px-5 py-3 flex flex-col sm:flex-row sm:items-center justify-between flex-shrink-0 relative gap-2 sm:gap-0">
+        <?php if ($contratoAtivo):
+            $status       = $contratoAtivo['status'];
+            $souPrestador = ($contratoAtivo['prestador_id'] == $idUsuarioLogado);
+            $corStatus    = $status === 'aceito' ? 'bg-green-500' : 'bg-yellow-500';
+            if ($contratoAtivo['finalizado_prestador_em'] !== null) $corStatus = 'bg-blue-500';
+            $dataFormatada = date('d/m/Y', strtotime($contratoAtivo['data_pactuada']));
+        ?>
+            <div class="absolute left-0 top-0 bottom-0 w-1 <?= $corStatus ?>"></div>
+            <div class="flex items-center gap-2 pl-2">
+              <div class="leading-tight">
+                <span class="text-[10px] md:text-xs font-bold text-gray-900 uppercase tracking-wide">
+                  CONTRATO: <?= htmlspecialchars($contratoAtivo['nome_servico']) ?>
+                </span>
+                <p class="text-[10px] md:text-[11px] text-gray-500 font-medium">Data combinada: <?= $dataFormatada ?></p>
+              </div>
+            </div>
+
+            <div class="flex flex-wrap items-center gap-2 pl-2 sm:pl-0">
+              <?php if ($status === 'pendente'): ?>
+                  <?php if ($souPrestador): ?>
+                      <button onclick="alterarStatusContrato(<?= $contratoAtivo['id'] ?>, 'aceito')" class="bg-green-600 hover:bg-green-700 text-white font-bold px-3 py-1.5 rounded-xl text-xs cursor-pointer transition-all">Aceitar Proposta</button>
+                      <button onclick="alterarStatusContrato(<?= $contratoAtivo['id'] ?>, 'cancelado')" class="bg-white border text-gray-500 font-bold px-3 py-1.5 rounded-xl text-xs cursor-pointer">Recusar</button>
+                  <?php else: ?>
+                      <span class="bg-yellow-100 text-yellow-700 px-2 py-1 rounded text-[10px] font-bold">Aguardando Aceite do Prestador</span>
+                      <button onclick="alterarStatusContrato(<?= $contratoAtivo['id'] ?>, 'cancelado')" class="bg-white border text-gray-500 font-bold px-3 py-1.5 rounded-xl text-xs cursor-pointer">Cancelar Proposta</button>
+                  <?php endif; ?>
+              <?php endif; ?>
+
+              <?php if ($status === 'aceito'): ?>
+                  <?php if ($contratoAtivo['finalizado_prestador_em'] === null): ?>
+                      <?php if ($souPrestador): ?>
+                          <button onclick="alterarStatusContrato(<?= $contratoAtivo['id'] ?>, 'concluido')" class="bg-orange hover:bg-orange-dark text-white font-bold px-3 py-1.5 rounded-xl text-xs cursor-pointer shadow-md">Concluir Serviço</button>
+                      <?php else: ?>
+                          <span class="bg-green-100 text-green-700 px-2 py-1 rounded text-[10px] font-bold">Serviço em Andamento</span>
+                          <button onclick="alterarStatusContrato(<?= $contratoAtivo['id'] ?>, 'concluido')" class="bg-orange text-white font-bold px-3 py-1.5 rounded-xl text-xs cursor-pointer">Confirmar Conclusão</button>
+                      <?php endif; ?>
+                  <?php else: ?>
+                      <?php if ($souPrestador): ?>
+                          <span class="bg-blue-100 text-blue-700 px-2 py-1 rounded text-[10px] font-bold">Aguardando confirmação do cliente (Prazo de até 15d)</span>
+                      <?php else: ?>
+                          <span class="bg-blue-100 text-blue-700 px-2 py-1 rounded text-[10px] font-bold animate-pulse">O prestador marcou como finalizado!</span>
+                          <button onclick="alterarStatusContrato(<?= $contratoAtivo['id'] ?>, 'concluido')" class="bg-green-600 text-white font-bold px-3 py-1.5 rounded-xl text-xs cursor-pointer">Marcar como finalizado</button>
+                      <?php endif; ?>
+                  <?php endif; ?>
+                  <button onclick="alterarStatusContrato(<?= $contratoAtivo['id'] ?>, 'cancelado')" class="bg-white hover:bg-gray-100 border border-gray-200 text-gray-500 font-bold px-3 py-1.5 rounded-xl text-xs transition-all cursor-pointer">Cancelar</button>
+              <?php endif; ?>
+            </div>
+
+        <?php else: ?>
+            <div class="absolute left-0 top-0 bottom-0 w-1 bg-gray-300"></div>
+            <div class="flex items-center justify-between w-full pl-2">
+                <?php if ($outraPessoaTemServico): ?>
+                    <p class="text-xs text-gray-500 font-medium">Combine os detalhes por aqui e feche um serviço!</p>
+                    <div class="flex items-center gap-2">
+                        <?php if ($contratoParaAvaliar): ?>
+                            <a href="./avaliar-prestador.php?contrato_id=<?= $contratoParaAvaliar['id'] ?>&com=<?= $idDestinatario ?>"
+                               class="flex items-center gap-1.5 bg-yellow-400 hover:bg-yellow-500 text-white font-bold px-3 py-1.5 rounded-xl text-xs transition-all cursor-pointer shadow-md">
+                                <svg class="w-3.5 h-3.5 fill-white" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                                Avaliar Serviço
+                            </a>
+                        <?php endif; ?>
+                        <button onclick="abrirModalContrato()" class="bg-orange hover:bg-orange-dark text-white font-bold px-4 py-2 rounded-xl text-xs transition-all cursor-pointer shadow-md">
+                            Enviar Contrato
+                        </button>
+                    </div>
+                <?php elseif ($contratoParaAvaliar): ?>
+                    <p class="text-xs text-gray-500 font-medium">Serviço concluído — deixe sua avaliação!</p>
+                    <a href="./avaliar-prestador.php?contrato_id=<?= $contratoParaAvaliar['id'] ?>&com=<?= $idDestinatario ?>"
+                       class="flex items-center gap-1.5 bg-yellow-400 hover:bg-yellow-500 text-white font-bold px-3 py-1.5 rounded-xl text-xs transition-all cursor-pointer shadow-md">
+                        <svg class="w-3.5 h-3.5 fill-white" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                        Avaliar Serviço
+                    </a>
+                <?php else: ?>
+                    <p class="text-xs text-gray-400 italic">Nenhum vínculo de serviço ativo ou disponível para este usuário.</p>
+                <?php endif; ?>
+            </div>
+        <?php endif; ?>
       </div>
 
       <!-- Mensagens -->
@@ -133,7 +216,6 @@ if ($idDestinatario > 0) {
       <!-- Input de envio -->
       <div class="border-t border-gray-200 bg-white flex flex-col flex-shrink-0">
 
-        <!-- Preview de imagem selecionada -->
         <div id="preview-container" class="hidden p-4 bg-gray-50 border-b border-gray-100 items-center gap-4 relative">
           <div class="relative inline-block">
             <img id="img-preview" src="#" alt="Preview"
@@ -148,8 +230,6 @@ if ($idDestinatario > 0) {
         </div>
 
         <form id="form-chat" class="p-4 flex items-center gap-2" onsubmit="processarEnvioChat(event)">
-
-          <!-- Botão de anexar imagem -->
           <button type="button" onclick="document.getElementById('input-file').click()"
                   class="p-2 text-gray-400 hover:text-orange transition-colors cursor-pointer rounded-lg hover:bg-gray-50">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
@@ -171,7 +251,6 @@ if ($idDestinatario > 0) {
               <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
             </svg>
           </button>
-
         </form>
       </div>
 
@@ -184,6 +263,7 @@ if ($idDestinatario > 0) {
     </section>
   </main>
 
+  <!-- Modal Editar -->
   <div id="modal-editar" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
     <div class="absolute inset-0 bg-black/40 backdrop-blur-sm" onclick="fecharModalEditar()"></div>
     <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 flex flex-col gap-4">
@@ -202,18 +282,13 @@ if ($idDestinatario > 0) {
         class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-xs text-gray-700 outline-none focus:border-orange transition-all resize-none custom-scroll"
         placeholder="Digite a nova mensagem..."></textarea>
       <div class="flex gap-2 justify-end">
-        <button onclick="fecharModalEditar()"
-          class="px-4 py-2 rounded-xl text-xs font-bold text-gray-500 bg-gray-100 hover:bg-gray-200 transition-all cursor-pointer">
-          Cancelar
-        </button>
-        <button onclick="confirmarEdicao()"
-          class="px-4 py-2 rounded-xl text-xs font-bold text-white bg-orange hover:bg-orange-dark transition-all cursor-pointer shadow-md shadow-orange/20">
-          Salvar alteração
-        </button>
+        <button onclick="fecharModalEditar()" class="px-4 py-2 rounded-xl text-xs font-bold text-gray-500 bg-gray-100 hover:bg-gray-200 transition-all cursor-pointer">Cancelar</button>
+        <button onclick="confirmarEdicao()" class="px-4 py-2 rounded-xl text-xs font-bold text-white bg-orange hover:bg-orange-dark transition-all cursor-pointer shadow-md shadow-orange/20">Salvar alteração</button>
       </div>
     </div>
   </div>
 
+  <!-- Modal Deletar -->
   <div id="modal-deletar" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
     <div class="absolute inset-0 bg-black/40 backdrop-blur-sm" onclick="fecharModalDeletar()"></div>
     <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 flex flex-col gap-4">
@@ -229,14 +304,8 @@ if ($idDestinatario > 0) {
         </div>
       </div>
       <div class="flex gap-2 justify-end">
-        <button onclick="fecharModalDeletar()"
-          class="px-4 py-2 rounded-xl text-xs font-bold text-gray-500 bg-gray-100 hover:bg-gray-200 transition-all cursor-pointer">
-          Cancelar
-        </button>
-        <button onclick="confirmarDelecao()"
-          class="px-4 py-2 rounded-xl text-xs font-bold text-white bg-red-500 hover:bg-red-600 transition-all cursor-pointer shadow-md shadow-red-500/20">
-          Sim, apagar
-        </button>
+        <button onclick="fecharModalDeletar()" class="px-4 py-2 rounded-xl text-xs font-bold text-gray-500 bg-gray-100 hover:bg-gray-200 transition-all cursor-pointer">Cancelar</button>
+        <button onclick="confirmarDelecao()" class="px-4 py-2 rounded-xl text-xs font-bold text-white bg-red-500 hover:bg-red-600 transition-all cursor-pointer shadow-md shadow-red-500/20">Sim, apagar</button>
       </div>
     </div>
   </div>
@@ -252,15 +321,16 @@ if ($idDestinatario > 0) {
   const btnEnviar          = document.getElementById('btn-enviar');
   const inputFile          = document.getElementById('input-file');
 
-  const idUsuarioLogado   = <?= (int)$idUsuarioLogado ?>;
-  const urlBaseSupabase   = "<?= $urlBaseSupabase ?>";
+  const idUsuarioLogado    = <?= (int)$idUsuarioLogado ?>;
+  const urlBaseSupabase    = "<?= $urlBaseSupabase ?>";
   const urlBaseChatImagens = "<?= $urlBaseChatImagens ?>";
-  const comQuemId         = new URLSearchParams(window.location.search).get('com');
+  const comQuemId          = new URLSearchParams(window.location.search).get('com');
 
   const urlApiBase      = '../../backend/controllers/RoteadorChat.php';
   const urlApiMensagens = comQuemId ? `${urlApiBase}?com=${comQuemId}` : null;
   const urlApiContatos  = `${urlApiBase}?acao=listar_contatos`;
   const urlApiUpload    = `${urlApiBase}?acao=upload`;
+  const servicosPrestadorJS = <?= json_encode($listaServicosDisponiveis) ?>;
 
   let imagemNaMensagemFila = null;
 
@@ -290,14 +360,11 @@ if ($idDestinatario > 0) {
       const resp = await fetch(urlApiContatos);
       if (!resp.ok) return;
       const contatos = await resp.json();
-
       listaContatos.innerHTML = '';
-
       if (!contatos || contatos.length === 0) {
         listaContatos.innerHTML = '<p class="text-xs text-gray-400 text-center p-4">Nenhuma conversa ativa.</p>';
         return;
       }
-
       contatos.forEach(c => {
         const selecionado = parseInt(comQuemId) === parseInt(c.id);
         const box = document.createElement('div');
@@ -313,29 +380,20 @@ if ($idDestinatario > 0) {
         `;
         listaContatos.appendChild(box);
       });
-    } catch (e) {
-      console.error('Erro ao carregar contatos:', e);
-    }
+    } catch (e) { console.error('Erro ao carregar contatos:', e); }
   }
 
   async function carregarMensagens() {
     if (!urlApiMensagens || !chatContainer) return;
-
     try {
       const resp = await fetch(urlApiMensagens);
       if (!resp.ok) return;
-
       const textoPuro = await resp.text();
-      if (!textoPuro.trim().startsWith('[') && !textoPuro.trim().startsWith('{')) {
-        console.warn('Backend retornou formato inesperado:', textoPuro);
-        return;
-      }
-
+      if (!textoPuro.trim().startsWith('[') && !textoPuro.trim().startsWith('{')) return;
       const mensagens = JSON.parse(textoPuro);
       if (!mensagens || mensagens.erro) return;
 
       const estavaNoBaixo = chatContainer.scrollHeight - chatContainer.scrollTop - chatContainer.clientHeight < 60;
-
       chatContainer.innerHTML = '';
 
       if (mensagens.length === 0) {
@@ -344,36 +402,26 @@ if ($idDestinatario > 0) {
       }
 
       const agora = Date.now();
-
       mensagens.forEach(msg => {
         const souEu      = parseInt(msg.remetente_id) === idUsuarioLogado;
         const foiDeletado = parseInt(msg.deletado || 0) === 1;
-
-        const dataISO      = msg.criado_em.replace(' ', 'T') + 'Z';
+        const dataISO    = msg.criado_em.replace(' ', 'T') + 'Z';
         const tempoCriacao = new Date(dataISO);
-        const horaLabel    = tempoCriacao.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-
-        const minPassados  = (agora - tempoCriacao.getTime()) / 60000;
-        const dentroPrazo  = minPassados <= 5;
+        const horaLabel  = tempoCriacao.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+        const minPassados = (agora - tempoCriacao.getTime()) / 60000;
+        const dentroPrazo = minPassados <= 5;
 
         let botoesAcao = '';
         if (souEu && !foiDeletado && dentroPrazo) {
           const btnEditar = !msg.url_imagem
-            ? `<button onclick="dispararEdicao(${msg.id}, '${encodeURIComponent(msg.mensagem)}')"
-                       title="Editar" class="hover:text-orange p-0.5 cursor-pointer">
-                 <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                   <path d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10"></path>
-                 </svg>
-               </button>`
-            : '';
-
+            ? `<button onclick="dispararEdicao(${msg.id}, '${encodeURIComponent(msg.mensagem)}')" title="Editar" class="hover:text-orange p-0.5 cursor-pointer">
+                 <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10"></path></svg>
+               </button>` : '';
           botoesAcao = `
             <div class="msg-actions hidden gap-1 mr-1 text-gray-400 bg-white border border-gray-100 rounded shadow-sm p-1 z-10 self-center">
               ${btnEditar}
               <button onclick="deletarMensagem(${msg.id})" title="Apagar" class="hover:text-red-500 p-0.5 cursor-pointer">
-                <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                  <path d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0"></path>
-                </svg>
+                <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0"></path></svg>
               </button>
             </div>`;
         }
@@ -382,19 +430,13 @@ if ($idDestinatario > 0) {
         if (msg.url_imagem && !foiDeletado) {
           const nomeSemPrefixo = msg.url_imagem.replace(/^chat\//, '');
           const urlImg = `${urlBaseChatImagens}${nomeSemPrefixo}`;
-          conteudo += `<img src="${urlImg}"
-                            class="max-w-xs rounded-xl border border-gray-200 max-h-48 object-cover mb-1 block cursor-pointer hover:opacity-90"
-                            onclick="window.open('${urlImg}','_blank')"
-                            onerror="this.style.display='none'">`;
+          conteudo += `<img src="${urlImg}" class="max-w-xs rounded-xl border border-gray-200 max-h-48 object-cover mb-1 block cursor-pointer hover:opacity-90" onclick="window.open('${urlImg}','_blank')" onerror="this.style.display='none'">`;
         }
         if (msg.mensagem && msg.mensagem.trim() !== '') {
           conteudo += `<div class="font-medium text-sm leading-relaxed">${msg.mensagem}</div>`;
         }
 
-        const editadaLabel = (msg.atualizado_em && !foiDeletado)
-          ? `<span class="italic opacity-60"> · editada</span>`
-          : '';
-
+        const editadaLabel = (msg.atualizado_em && !foiDeletado) ? `<span class="italic opacity-60"> · editada</span>` : '';
         const classeBalao = souEu
           ? `bg-orange text-white rounded-2xl rounded-tr-none py-2 px-4 text-xs shadow-sm max-w-full break-words ${foiDeletado ? 'opacity-60 bg-gray-300 !text-gray-700 italic' : ''}`
           : `bg-white text-gray-800 rounded-2xl rounded-tl-none py-2 px-4 text-xs shadow-sm max-w-full break-words border border-gray-100 ${foiDeletado ? 'italic text-gray-400' : ''}`;
@@ -404,40 +446,24 @@ if ($idDestinatario > 0) {
 
         const divBalao = document.createElement('div');
         divBalao.className = classeBalao;
-        divBalao.innerHTML = `
-          ${conteudo}
-          <span class="block text-[9px] text-right mt-1 select-none opacity-75 ${souEu ? 'text-orange-100' : 'text-gray-400'}">
-            ${horaLabel}${editadaLabel}
-          </span>`;
+        divBalao.innerHTML = `${conteudo}<span class="block text-[9px] text-right mt-1 select-none opacity-75 ${souEu ? 'text-orange-100' : 'text-gray-400'}">${horaLabel}${editadaLabel}</span>`;
 
-        if (souEu) {
-          divAlinhamento.appendChild(divBalao);
-          if (botoesAcao) {
-            divAlinhamento.insertAdjacentHTML('beforeend', botoesAcao);
-          }
-        } else {
-          divAlinhamento.appendChild(divBalao);
-        }
-
+        divAlinhamento.appendChild(divBalao);
+        if (souEu && botoesAcao) divAlinhamento.insertAdjacentHTML('beforeend', botoesAcao);
         chatContainer.appendChild(divAlinhamento);
       });
 
       if (estavaNoBaixo) chatContainer.scrollTop = chatContainer.scrollHeight;
-
-    } catch (err) {
-      console.error('Erro ao carregar mensagens:', err);
-    }
+    } catch (err) { console.error('Erro ao carregar mensagens:', err); }
   }
 
   function capturarPreviewImagem(input) {
     if (!input.files || input.files.length === 0) return;
     const arquivo = input.files[0];
-
-    imagemNaMensagemFila        = arquivo;
+    imagemNaMensagemFila = arquivo;
     nomeArquivoPreview.textContent = arquivo.name;
-
-    const leitor    = new FileReader();
-    leitor.onload   = e => {
+    const leitor = new FileReader();
+    leitor.onload = e => {
       imgPreview.src = e.target.result;
       previewContainer.classList.remove('hidden');
       previewContainer.classList.add('flex');
@@ -448,152 +474,95 @@ if ($idDestinatario > 0) {
 
   function limparPreview() {
     imagemNaMensagemFila = null;
-    inputFile.value      = '';
-    imgPreview.src       = '#';
+    inputFile.value = '';
+    imgPreview.src = '#';
     previewContainer.classList.remove('flex');
     previewContainer.classList.add('hidden');
   }
 
   async function processarEnvioChat(e) {
     if (e) { e.preventDefault(); e.stopPropagation(); }
-
     const texto = inputMensagem.value.trim();
     if (!texto && !imagemNaMensagemFila) return;
     if (!urlApiMensagens) return;
-
     btnEnviar.disabled = true;
     let pathParaSalvarNoBanco = null;
-
     try {
       if (imagemNaMensagemFila) {
         nomeArquivoPreview.textContent = 'Enviando imagem...';
-
         const formData = new FormData();
         formData.append('imagem', imagemNaMensagemFila);
-
         let uploadResp;
         try {
           uploadResp = await fetch(urlApiUpload, { method: 'POST', body: formData });
         } catch (errRede) {
-          console.error('Erro de rede ao chamar o upload PHP:', errRede);
           mostrarToast('Não foi possível conectar ao servidor.');
           btnEnviar.disabled = false;
           return;
         }
-
         const uploadTexto = await uploadResp.text();
-        console.log('Resposta do upload:', uploadTexto);
-
         let uploadJson;
-        try {
-          uploadJson = JSON.parse(uploadTexto);
-        } catch (_) {
-          console.error('PHP retornou formato inválido:', uploadTexto);
-          mostrarToast('Erro no servidor ao enviar imagem. Veja o console (F12).');
+        try { uploadJson = JSON.parse(uploadTexto); } catch (_) {
+          mostrarToast('Erro no servidor ao enviar imagem.');
           btnEnviar.disabled = false;
           return;
         }
-
-        if (uploadJson.erro) {
-          console.error('Erro do ChatController:', uploadJson);
-          mostrarToast('Erro ao enviar imagem: ' + uploadJson.erro);
-          btnEnviar.disabled = false;
-          return;
-        }
-
-        if (!uploadJson.path) {
-          console.error('Resposta sem campo path:', uploadJson);
-          mostrarToast('Resposta inesperada do servidor. Veja o console (F12).');
-          btnEnviar.disabled = false;
-          return;
-        }
-
+        if (uploadJson.erro) { mostrarToast('Erro ao enviar imagem: ' + uploadJson.erro); btnEnviar.disabled = false; return; }
+        if (!uploadJson.path) { mostrarToast('Resposta inesperada do servidor.'); btnEnviar.disabled = false; return; }
         pathParaSalvarNoBanco = uploadJson.path;
-        console.log('Upload concluído, path:', pathParaSalvarNoBanco);
       }
-
       await fetch(urlApiMensagens, {
-        method:  'POST',
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ mensagem: texto, url_imagem: pathParaSalvarNoBanco }),
+        body: JSON.stringify({ mensagem: texto, url_imagem: pathParaSalvarNoBanco }),
       });
-
       inputMensagem.value = '';
       limparPreview();
       carregarMensagens();
-
-    } catch (err) {
-      console.error('Falha no fluxo de envio:', err);
-    } finally {
-      btnEnviar.disabled = false;
-    }
+    } catch (err) { console.error('Falha no fluxo de envio:', err); }
+    finally { btnEnviar.disabled = false; }
   }
 
-  let _editarId          = null;
-  let _editarTextoOriginal = '';
-  let _deletarId         = null;
+  let _editarId = null, _editarTextoOriginal = '', _deletarId = null;
 
   function dispararEdicao(id, textoEncoded) {
-    _editarId            = id;
+    _editarId = id;
     _editarTextoOriginal = decodeURIComponent(textoEncoded);
-    const input          = document.getElementById('modal-editar-input');
-    input.value          = _editarTextoOriginal;
+    const input = document.getElementById('modal-editar-input');
+    input.value = _editarTextoOriginal;
     document.getElementById('modal-editar').classList.remove('hidden');
     setTimeout(() => { input.focus(); input.setSelectionRange(input.value.length, input.value.length); }, 50);
   }
 
-  function fecharModalEditar() {
-    document.getElementById('modal-editar').classList.add('hidden');
-    _editarId = null;
-  }
+  function fecharModalEditar() { document.getElementById('modal-editar').classList.add('hidden'); _editarId = null; }
 
   async function confirmarEdicao() {
     const novoTexto = document.getElementById('modal-editar-input').value.trim();
     if (!novoTexto || novoTexto === _editarTextoOriginal) { fecharModalEditar(); return; }
-
     try {
-      const resp = await fetch(urlApiMensagens, {
-        method:  'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ id: _editarId, message: novoTexto }),
-      });
+      const resp = await fetch(urlApiMensagens, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: _editarId, message: novoTexto }) });
       const json = await resp.json();
       fecharModalEditar();
-      if (json.erro) {
-        console.error('Erro ao editar:', json.erro);
-        mostrarToast(json.erro, 'erro');
-        return;
-      }
+      if (json.erro) { mostrarToast(json.erro, 'erro'); return; }
       carregarMensagens();
     } catch (e) { console.error(e); }
   }
 
-  function deletarMensagem(id) {
-    _deletarId = id;
-    document.getElementById('modal-deletar').classList.remove('hidden');
-  }
-
-  function fecharModalDeletar() {
-    document.getElementById('modal-deletar').classList.add('hidden');
-    _deletarId = null;
-  }
+  function deletarMensagem(id) { _deletarId = id; document.getElementById('modal-deletar').classList.remove('hidden'); }
+  function fecharModalDeletar() { document.getElementById('modal-deletar').classList.add('hidden'); _deletarId = null; }
 
   async function confirmarDelecao() {
     if (!_deletarId) return;
     try {
-      await fetch(urlApiMensagens, {
-        method:  'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ id: _deletarId }),
-      });
+      await fetch(urlApiMensagens, { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: _deletarId }) });
       fecharModalDeletar();
       carregarMensagens();
     } catch (e) { console.error(e); }
   }
 
   function mostrarToast(msg, tipo = 'erro') {
-    const cor  = tipo === 'erro' ? 'bg-red-500' : 'bg-green-500';
-    const t    = document.createElement('div');
+    const cor = tipo === 'erro' ? 'bg-red-500' : 'bg-green-500';
+    const t = document.createElement('div');
     t.className = `fixed bottom-6 right-6 z-[999] ${cor} text-white text-xs font-bold px-4 py-3 rounded-xl shadow-lg transition-all`;
     t.textContent = msg;
     document.body.appendChild(t);
@@ -611,22 +580,22 @@ if ($idDestinatario > 0) {
   window.processarEnvioChat    = processarEnvioChat;
 
   document.addEventListener('keydown', e => {
-    if (e.key === 'Escape') {
-      fecharModalEditar();
-      fecharModalDeletar();
-    }
+    if (e.key === 'Escape') { fecharModalEditar(); fecharModalDeletar(); }
     if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
-      const modalEditar = document.getElementById('modal-editar');
-      if (!modalEditar.classList.contains('hidden')) confirmarEdicao();
+      if (!document.getElementById('modal-editar').classList.contains('hidden')) confirmarEdicao();
     }
   });
 
   carregarContatos();
   carregarMensagens();
-
-  if (comQuemId) {
-    setInterval(carregarMensagens, 4000);
-  }
+  if (comQuemId) setInterval(carregarMensagens, 4000);
+</script>
+<script type="module">
+  import { abrirModalContrato, fecharModalContrato, enviarPropostaContrato, alterarStatusContrato } from '../src/js/contrato.js';
+  window.abrirModalContrato      = abrirModalContrato;
+  window.fecharModalContrato     = fecharModalContrato;
+  window.enviarPropostaContrato  = enviarPropostaContrato;
+  window.alterarStatusContrato   = alterarStatusContrato;
 </script>
 </body>
 </html>
