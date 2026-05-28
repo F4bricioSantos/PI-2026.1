@@ -66,3 +66,12 @@ CREATE TABLE avaliacoes (
         FOREIGN KEY (prestador_id)
         REFERENCES usuarios(id)
 );
+
+-- Chat de mensagens
+CREATE TABLE mensagens_chat (
+    id SERIAL PRIMARY KEY,
+    remetente_id INT NOT NULL,
+    destinatario_id INT NOT NULL,
+    mensagem TEXT NOT NULL,
+    criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);

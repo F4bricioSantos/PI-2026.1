@@ -152,7 +152,7 @@ try {
               </div>
               <span class="text-gray-400 text-sm"><?= htmlspecialchars($servico['cidade'] ?: 'Cidade não informada') ?></span>
               <span class="text-gray-300">|</span>
-              <span class="text-sm font-medium text-gray-500"><?= htmlspecialchars($servico['categoria_nome']) ?></span>
+              <span class="text-sm font-medium text-gray-500"><?= htmlspecialchars($servico['categoria_nome'] ?? 'Geral') ?></span>
             </div>
           </div>
 
@@ -261,7 +261,7 @@ try {
               </a>
 
               <div>
-                <a href="ver_perfil.php?id=<?= $servico['prestador_id'] ?>" 
+                <a href="ver-perfil.php?id=<?= $servico['prestador_id'] ?>" 
                    class="font-bold text-gray-900 text-sm hover:text-orange transition-colors block">
                   <?= htmlspecialchars($servico['prestador_nome']) ?>
                 </a>
@@ -282,12 +282,14 @@ try {
             </div>
 
             <div class="space-y-2.5">
-              <?php $linkWa = !empty($servico['telefone']) ? "https://wa.me/" . preg_replace('/\D/', '', $servico['telefone']) : "#"; ?>
-              <a href="<?= $linkWa ?>" target="_blank" class="w-full bg-orange hover:bg-orange-600 text-white font-bold py-3 rounded-xl text-xs flex items-center justify-center gap-2 transition-all">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
+              <a href="chat.php?com=<?= (int)$servico['prestador_id'] ?>" class="w-full bg-orange hover:bg-orange-600 text-white font-bold py-3 rounded-xl text-xs flex items-center justify-center gap-2 transition-all">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                  <path d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
+                </svg>
                 ENTRAR EM CONTATO
               </a>
             </div>
+            
           </div>
         </div>
       </div>
