@@ -106,7 +106,7 @@ $fotoExibicao = ($dados['foto_perfil'] == 'default.png' || empty($dados['foto_pe
 </head>
 <body class="font-sans bg-bg text-gray-800 flex h-screen overflow-hidden">
 
-  <div id="sidebar-container" class="w-60 bg-sidebar flex-shrink-0 h-screen"></div>
+  <div id="sidebar-container" class="fixed inset-y-0 left-0 z-50 w-60 bg-sidebar flex flex-col h-screen transform -translate-x-full md:relative md:translate-x-0 transition-transform duration-300 ease-in-out"></div>
 
   <script type="module">
     import { renderSidebar } from '../src/components/sidebar.js';
@@ -117,9 +117,14 @@ $fotoExibicao = ($dados['foto_perfil'] == 'default.png' || empty($dados['foto_pe
     // Renderiza definindo 'perfil' como a página ativa
     renderSidebar('sidebar-container', 'perfil', isPro);
 </script>
-  <main class="flex-1 flex flex-col overflow-hidden">
-    <header class="flex items-center justify-between px-8 py-5 border-b border-gray-200 bg-white">
-      <h1 class="text-gray-800 font-bold text-lg tracking-tight">Meu Perfil</h1>
+  <main class="flex-1 flex flex-col overflow-hidden w-full relative">
+    <header class="flex items-center justify-between px-4 md:px-8 py-4 md:py-5 border-b border-gray-200 bg-white">
+      <div class="flex items-center gap-3">
+        <button onclick="window.toggleSidebar && window.toggleSidebar()" class="md:hidden p-2 -ml-2 rounded-lg text-gray-500 hover:bg-gray-100 focus:outline-none transition-colors">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/></svg>
+        </button>
+        <h1 class="text-gray-800 font-bold text-lg tracking-tight">Meu Perfil</h1>
+      </div>
       <div class="flex gap-3">
         <?php if(isset($_GET['sucesso']) && empty($mensagem)): ?>
             <span class="text-xs font-bold text-emerald-600 bg-emerald-50 px-3 py-1 rounded-lg border border-emerald-100">Alterações salvas!</span>
@@ -130,7 +135,7 @@ $fotoExibicao = ($dados['foto_perfil'] == 'default.png' || empty($dados['foto_pe
       </div>
     </header>
 
-    <div class="flex-1 overflow-y-auto px-8 py-8">
+    <div class="flex-1 overflow-y-auto px-4 md:px-8 py-6 md:py-8">
       <form method="POST" enctype="multipart/form-data" class="grid grid-cols-1 lg:grid-cols-12 gap-8 max-w-6xl mx-auto">
         
         <div class="lg:col-span-4">
@@ -221,7 +226,7 @@ $fotoExibicao = ($dados['foto_perfil'] == 'default.png' || empty($dados['foto_pe
               </div>
 
               <div class="flex justify-end pt-8">
-                <button type="submit" class="bg-orange hover:bg-orange-600 text-white px-12 py-3.5 rounded-xl font-black text-sm shadow-lg transition-transform active:scale-95">SALVAR ALTERAÇÕES</button>
+                <button type="submit" class="w-full md:w-auto bg-orange hover:bg-orange-600 text-white px-12 py-4 md:py-3.5 rounded-xl font-black text-sm shadow-lg transition-transform active:scale-95">SALVAR ALTERAÇÕES</button>
               </div>
           </div>
         </div>

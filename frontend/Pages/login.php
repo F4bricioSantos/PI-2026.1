@@ -80,7 +80,7 @@
   <div class="w-full max-w-[440px]">
 
     <!-- Card -->
-    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 px-10 py-10">
+    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 px-6 py-8 sm:px-10 sm:py-10">
 
       <!-- Cabeçalho (centralizado) -->
       <div class="mb-8 text-center">

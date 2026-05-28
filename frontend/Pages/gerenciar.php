@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 header('Content-Type: text/html; charset=UTF-8');
 
 // 1. PROTEÇÃO DE SESSÃO
@@ -154,12 +154,15 @@ $temServico = count($servicos) > 0;
     </div>
   </div>
 
-  <div id="sidebar-container" class="w-60 bg-sidebar flex-shrink-0 h-screen"></div>
+  <div id="sidebar-container" class="fixed inset-y-0 left-0 z-50 w-60 bg-sidebar flex flex-col h-screen transform -translate-x-full md:relative md:translate-x-0 transition-transform duration-300 ease-in-out"></div>
 
-  <main class="flex-1 flex flex-col overflow-hidden">
-    <header class="flex items-center justify-between px-8 py-5 border-b border-gray-200 bg-white flex-shrink-0">
+  <main class="flex-1 flex flex-col overflow-hidden w-full relative">
+    <header class="flex items-center justify-between px-4 md:px-8 py-4 md:py-5 border-b border-gray-200 bg-white flex-shrink-0">
         <div class="flex items-center gap-2 text-gray-400">
-          <button onclick="history.back()" class="hover:text-gray-600 p-1 -ml-1 rounded-lg hover:bg-gray-100">
+          <button onclick="window.toggleSidebar && window.toggleSidebar()" class="md:hidden p-2 -ml-2 rounded-lg text-gray-500 hover:bg-gray-100 focus:outline-none transition-colors">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/></svg>
+          </button>
+          <button onclick="history.back()" class="hover:text-gray-600 p-1 md:-ml-1 rounded-lg hover:bg-gray-100 hidden md:block">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
           </button>
           <a href="./dashboard.php" class="text-gray-400 text-sm hover:text-orange transition-colors">Início</a>
@@ -175,7 +178,7 @@ $temServico = count($servicos) > 0;
         </div>
     </header>
 
-    <div class="flex-1 overflow-y-auto px-8 py-6">
+    <div class="flex-1 overflow-y-auto px-4 md:px-8 py-6 custom-scroll">
       <h2 class="text-4xl font-extrabold text-slate-900 mb-6 tracking-tight">Seus Serviços</h2>
 
       <?php if ($mensagem): ?>
@@ -185,34 +188,38 @@ $temServico = count($servicos) > 0;
       <?php endif; ?>
 
       <section class="bg-white border rounded-2xl overflow-hidden shadow-sm">
-        <div class="grid grid-cols-12 bg-gray-50 border-b font-bold text-gray-700 uppercase text-[10px] tracking-widest">
-          <div class="col-span-4 px-5 py-4">Serviço</div>
-          <div class="col-span-2 px-5 py-4 text-center">Categoria</div>
-          <div class="col-span-2 px-5 py-4 text-center">Base</div>
-          <div class="col-span-4 px-5 py-4 text-right">Opções</div>
-        </div>
+        <div class="overflow-x-auto custom-scroll">
+          <div class="min-w-[600px]">
+            <div class="grid grid-cols-12 bg-gray-50 border-b font-bold text-gray-700 uppercase text-[10px] tracking-widest">
+              <div class="col-span-4 px-5 py-4">Serviço</div>
+              <div class="col-span-3 px-5 py-4 text-center">Categoria</div>
+              <div class="col-span-2 px-5 py-4 text-center">Base</div>
+              <div class="col-span-3 px-5 py-4 text-right">Opções</div>
+            </div>
 
-        <?php if(empty($servicos)): ?>
-            <div class="p-10 text-center text-gray-400 text-sm italic">Nenhum serviço cadastrado.</div>
-        <?php else: ?>
-            <?php foreach ($servicos as $s): ?>
-              <div class="grid grid-cols-12 border-b last:border-b-0 items-center hover:bg-gray-50/50 transition-colors">
-                <div class="col-span-4 px-5 py-4 text-sm font-bold text-slate-800 uppercase"><?= htmlspecialchars($s['titulo']) ?></div>
-                <div class="col-span-2 px-5 py-4 text-center"><span class="bg-gray-100 px-3 py-1 rounded-full text-[10px] font-black text-gray-500 uppercase"><?= htmlspecialchars($s['categoria_nome']) ?></span></div>
-                <div class="col-span-2 px-5 py-4 text-center text-sm font-bold text-slate-600">R$ <?= number_format((float)$s['valor_base'], 2, ',', '.') ?></div>
-                <div class="col-span-4 px-5 py-4 flex justify-end gap-2">
-                  <button type="button" class="bg-white border border-gray-200 text-slate-700 px-4 py-2 rounded-xl text-xs font-bold hover:border-orange hover:text-orange transition-all"
-                    data-editar 
-                    data-id="<?= $s['id'] ?>"
-                    data-titulo="<?= htmlspecialchars($s['titulo']) ?>"
-                    data-categoria="<?= htmlspecialchars($s['categoria_nome']) ?>"
-                    data-valor="<?= $s['valor_base'] ?>"
-                    data-descricao="<?= htmlspecialchars($s['descricao_curta'] ?? '') ?>">Editar</button>
-                  <button type="button" onclick="abrirModalExcluir(<?= $s['id'] ?>)" class="bg-white border border-gray-200 text-red-400 px-4 py-2 rounded-xl text-xs font-bold hover:bg-red-50 hover:text-red-500 transition-all">Excluir</button>
-                </div>
-              </div>
-            <?php endforeach; ?>
-        <?php endif; ?>
+            <?php if(empty($servicos)): ?>
+                <div class="p-10 text-center text-gray-400 text-sm italic">Nenhum serviço cadastrado.</div>
+            <?php else: ?>
+                <?php foreach ($servicos as $s): ?>
+                  <div class="grid grid-cols-12 border-b last:border-b-0 items-center hover:bg-gray-50/50 transition-colors">
+                    <div class="col-span-4 px-5 py-4 text-sm font-bold text-slate-800 uppercase truncate"><?= htmlspecialchars($s['titulo']) ?></div>
+                    <div class="col-span-3 px-5 py-4 text-center"><span class="bg-gray-100 px-3 py-1 rounded-full text-[10px] font-black text-gray-500 uppercase truncate inline-block max-w-full"><?= htmlspecialchars($s['categoria_nome']) ?></span></div>
+                    <div class="col-span-2 px-5 py-4 text-center text-sm font-bold text-slate-600">R$ <?= number_format((float)$s['valor_base'], 2, ',', '.') ?></div>
+                    <div class="col-span-3 px-5 py-4 flex justify-end gap-2">
+                      <button type="button" class="bg-white border border-gray-200 text-slate-700 px-3 py-2 rounded-xl text-xs font-bold hover:border-orange hover:text-orange transition-all"
+                        data-editar 
+                        data-id="<?= $s['id'] ?>"
+                        data-titulo="<?= htmlspecialchars($s['titulo']) ?>"
+                        data-categoria="<?= htmlspecialchars($s['categoria_nome']) ?>"
+                        data-valor="<?= $s['valor_base'] ?>"
+                        data-descricao="<?= htmlspecialchars($s['descricao_curta'] ?? '') ?>">Editar</button>
+                      <button type="button" onclick="abrirModalExcluir(<?= $s['id'] ?>)" class="bg-white border border-gray-200 text-red-400 px-3 py-2 rounded-xl text-xs font-bold hover:bg-red-50 hover:text-red-500 transition-all">Excluir</button>
+                    </div>
+                  </div>
+                <?php endforeach; ?>
+            <?php endif; ?>
+          </div>
+        </div>
       </section>
     </div>
   </main>

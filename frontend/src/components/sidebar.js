@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Componente Sidebar Inteligente - ReformAí
  */
 
@@ -90,7 +90,8 @@ export function renderSidebar(containerId, activePage = '', isPro = false, isAdm
 
   const seguroBadges = badges || {};
 
-  container.className = "w-60 bg-sidebar flex flex-col flex-shrink-0 h-screen border-r border-white/5 z-40";
+  container.className = "fixed inset-y-0 left-0 z-50 w-60 bg-sidebar flex flex-col h-screen border-r border-white/5 transition-transform duration-300 ease-in-out transform -translate-x-full md:relative md:translate-x-0";
+
 
   const mainNav = NAV_ITEMS
     .map((item) => buildNavLink(item, item.id === activePage))
@@ -159,6 +160,36 @@ export function renderSidebar(containerId, activePage = '', isPro = false, isAdm
         </svg>
         <span class="font-medium group-hover:text-red-400 transition-colors">Sair da Conta</span>
       </a>
+      </a>
     </div>
   `;
+
+  if (!window.toggleSidebar) {
+    window.toggleSidebar = function() {
+      const sidebar = document.getElementById(containerId);
+      let overlay = document.getElementById('sidebar-overlay');
+      
+      if (!overlay) {
+        overlay = document.createElement('div');
+        overlay.id = 'sidebar-overlay';
+        overlay.className = 'fixed inset-0 bg-black/50 z-40 hidden md:hidden backdrop-blur-sm transition-opacity duration-300 opacity-0';
+        overlay.onclick = window.toggleSidebar;
+        document.body.appendChild(overlay);
+      }
+      
+      const isClosed = sidebar.classList.contains('-translate-x-full');
+      if (isClosed) {
+        sidebar.classList.remove('-translate-x-full');
+        overlay.classList.remove('hidden');
+        void overlay.offsetWidth; // trigger reflow
+        overlay.classList.remove('opacity-0');
+        overlay.classList.add('opacity-100');
+      } else {
+        sidebar.classList.add('-translate-x-full');
+        overlay.classList.remove('opacity-100');
+        overlay.classList.add('opacity-0');
+        setTimeout(() => overlay.classList.add('hidden'), 300);
+      }
+    };
+  }
 }

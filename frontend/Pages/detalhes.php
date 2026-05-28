@@ -111,7 +111,7 @@ try {
 </head>
 <body class="font-sans bg-bg text-gray-800 flex h-screen overflow-hidden">
 
-  <div id="sidebar-container" class="w-60 bg-sidebar flex-shrink-0 h-screen"></div>
+  <div id="sidebar-container" class="fixed inset-y-0 left-0 z-50 w-60 bg-sidebar flex flex-col h-screen transform -translate-x-full md:relative md:translate-x-0 transition-transform duration-300 ease-in-out"></div>
 
   <script type="module">
     import { renderSidebar } from '../src/components/sidebar.js';
@@ -121,26 +121,29 @@ try {
     renderSidebar('sidebar-container', 'inicio', hasServices);
   </script>
 
-  <main class="flex-1 flex flex-col overflow-hidden">
-    <header class="flex items-center justify-between px-8 py-5 border-b border-gray-200 bg-white flex-shrink-0">
+  <main class="flex-1 flex flex-col overflow-hidden w-full relative">
+    <header class="flex items-center justify-between px-4 md:px-8 py-4 md:py-5 border-b border-gray-200 bg-white flex-shrink-0">
       <div class="flex items-center gap-2 text-gray-400">
-        <button onclick="history.back()" class="hover:text-gray-600 transition-colors p-1 -ml-1 rounded-lg hover:bg-gray-100">
+        <button onclick="window.toggleSidebar && window.toggleSidebar()" class="md:hidden p-2 -ml-2 rounded-lg text-gray-500 hover:bg-gray-100 focus:outline-none transition-colors">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/></svg>
+        </button>
+        <button onclick="history.back()" class="hover:text-gray-600 transition-colors p-1 md:-ml-1 rounded-lg hover:bg-gray-100 hidden md:block">
           <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
         </button>
-        <a href="dashboard.php" class="text-gray-400 text-sm hover:text-orange transition-colors ml-2">Início</a>
+        <a href="dashboard.php" class="text-gray-400 text-sm hover:text-orange transition-colors md:ml-2">Início</a>
         <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
         <span class="text-gray-800 font-bold text-lg tracking-tight">Detalhes</span>
       </div>
     </header>
 
-    <div class="flex-1 overflow-y-auto px-8 py-8 custom-scroll">
+    <div class="flex-1 overflow-y-auto px-4 md:px-8 py-6 md:py-8 custom-scroll">
       <div class="flex flex-col lg:flex-row gap-8 max-w-6xl mx-auto">
         
         <div class="flex-1 space-y-8">
           
           <div class="space-y-2">
-            <div class="flex justify-between items-start gap-4">
-              <h1 class="text-2xl font-extrabold text-gray-900"><?= htmlspecialchars($servico['titulo']) ?></h1>
+            <div class="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2 sm:gap-4">
+              <h1 class="text-2xl font-extrabold text-gray-900 leading-tight"><?= htmlspecialchars($servico['titulo']) ?></h1>
               <p class="text-2xl font-extrabold text-orange whitespace-nowrap">
                 <?= $servico['valor_base'] > 0 ? 'R$ ' . number_format($servico['valor_base'], 2, ',', '.') : 'A combinar' ?>
               </p>
@@ -168,7 +171,7 @@ try {
                     <div class="mt-6 pt-6 border-t border-gray-50">
                         <strong class="text-gray-800 block mb-2 font-bold uppercase text-[11px] tracking-wider">Perfil do Prestador</strong>
                         <?php if(!empty($servico['bio'])): ?><p class="italic mb-4 text-gray-500">"<?= nl2br(htmlspecialchars($servico['bio'])) ?>"</p><?php endif; ?>
-                        <div class="grid grid-cols-2 gap-4 bg-gray-50 p-4 rounded-xl">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-gray-50 p-4 rounded-xl">
                             <?php if(!empty($servico['nicho'])): ?>
                                 <div><span class="block text-[10px] font-bold text-gray-400 uppercase">Especialidade</span><span class="text-xs font-bold text-gray-700"><?= htmlspecialchars($servico['nicho']) ?></span></div>
                             <?php endif; ?>

@@ -113,7 +113,7 @@ $categoriasGerais = ["Reformas", "Pintura e Textura", "Elétrica", "Hidráulica"
 </head>
 <body class="font-sans bg-bg text-gray-800 flex h-screen overflow-hidden">
 
-  <div id="sidebar-container" class="w-60 bg-sidebar flex-shrink-0 h-screen"></div>
+  <div id="sidebar-container" class="fixed inset-y-0 left-0 z-50 w-60 bg-sidebar flex flex-col h-screen transform -translate-x-full md:relative md:translate-x-0 transition-transform duration-300 ease-in-out"></div>
   <script type="module">
     import { renderSidebar } from '../src/components/sidebar.js';
 
@@ -133,10 +133,13 @@ $categoriasGerais = ["Reformas", "Pintura e Textura", "Elétrica", "Hidráulica"
     renderSidebar('sidebar-container', 'inicio', temServico, isAdmin, badges);
   </script>
 
-  <main class="flex-1 flex flex-col overflow-hidden">
-    <header class="flex items-center justify-between px-8 py-5 border-b border-gray-200 bg-white flex-shrink-0">
-      <div class="flex items-center gap-2 text-gray-800">
-        <div class="w-8 h-8 bg-orange/10 rounded-lg flex items-center justify-center text-orange">
+  <main class="flex-1 flex flex-col overflow-hidden w-full relative">
+    <header class="flex items-center justify-between px-4 md:px-8 py-4 md:py-5 border-b border-gray-200 bg-white flex-shrink-0">
+      <div class="flex items-center gap-3 text-gray-800">
+        <button onclick="window.toggleSidebar && window.toggleSidebar()" class="md:hidden p-2 -ml-2 rounded-lg text-gray-500 hover:bg-gray-100 focus:outline-none transition-colors">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/></svg>
+        </button>
+        <div class="w-8 h-8 bg-orange/10 rounded-lg hidden md:flex items-center justify-center text-orange flex-shrink-0">
           <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
             <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/>
             <polyline points="9 22 9 12 15 12 15 22"/>
@@ -156,24 +159,24 @@ $categoriasGerais = ["Reformas", "Pintura e Textura", "Elétrica", "Hidráulica"
       </a>
     </header>
 
-    <div class="flex-1 overflow-y-auto px-8 py-6 custom-scroll">
+    <div class="flex-1 overflow-y-auto px-4 md:px-8 py-4 md:py-6 custom-scroll">
       
-      <form id="filtroForm" method="GET" action="" class="space-y-4 mb-8">
-        <div class="flex gap-3">
-          <input type="text" name="busca" value="<?= htmlspecialchars($busca) ?>" placeholder="O que você precisa?" class="flex-1 bg-white border border-gray-200 rounded-2xl px-5 py-3.5 text-sm focus:border-orange outline-none shadow-sm transition-all">
+      <form id="filtroForm" method="GET" action="" class="space-y-4 mb-6 md:mb-8">
+        <div class="flex flex-col md:flex-row gap-3">
+          <input type="text" name="busca" value="<?= htmlspecialchars($busca) ?>" placeholder="O que você precisa?" class="flex-1 bg-white border border-gray-200 rounded-2xl px-5 py-3.5 text-sm focus:border-orange outline-none shadow-sm transition-all w-full">
           
-          <div class="relative w-60">
+          <div class="relative w-full md:w-60">
             <input type="text" id="inputCidade" name="cidade" autocomplete="off" value="<?= htmlspecialchars($cidade) ?>" placeholder="Cidade" class="w-full bg-white border border-gray-200 rounded-2xl px-5 py-3.5 text-sm focus:border-orange outline-none shadow-sm transition-all">
             <div id="listaCidades" class="hidden absolute top-full left-0 w-full bg-white border border-gray-100 rounded-xl mt-1 shadow-xl z-50 max-h-48 overflow-y-auto"></div>
           </div>
 
-          <div class="flex items-center bg-white border border-gray-200 rounded-2xl px-4 shadow-sm focus-within:border-orange transition-all">
-            <input type="number" name="preco_min" value="<?= htmlspecialchars($precoMin) ?>" placeholder="Min" class="w-16 py-3.5 text-sm outline-none bg-transparent">
+          <div class="flex items-center bg-white border border-gray-200 rounded-2xl px-4 shadow-sm focus-within:border-orange transition-all w-full md:w-auto">
+            <input type="number" name="preco_min" value="<?= htmlspecialchars($precoMin) ?>" placeholder="Min" class="w-full md:w-16 py-3.5 text-sm outline-none bg-transparent">
             <span class="text-gray-300 mx-2">|</span>
-            <input type="number" name="preco_max" value="<?= htmlspecialchars($precoMax) ?>" placeholder="Max" class="w-16 py-3.5 text-sm outline-none bg-transparent">
+            <input type="number" name="preco_max" value="<?= htmlspecialchars($precoMax) ?>" placeholder="Max" class="w-full md:w-16 py-3.5 text-sm outline-none bg-transparent">
           </div>
 
-          <button type="submit" class="bg-orange text-white px-8 rounded-2xl font-bold text-sm hover:bg-orange-dark shadow-md shadow-orange/20 transition-all">Achar</button>
+          <button type="submit" class="bg-orange text-white px-8 py-3.5 md:py-0 rounded-2xl font-bold text-sm hover:bg-orange-dark shadow-md shadow-orange/20 transition-all w-full md:w-auto">Achar</button>
         </div>
 
         <div class="flex items-center gap-2 flex-wrap">

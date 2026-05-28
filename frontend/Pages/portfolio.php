@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 header('Content-Type: text/html; charset=UTF-8');
 
 // 1. PROTEÇÃO DE SESSÃO E INCLUDES ORIGINAIS
@@ -180,16 +180,19 @@ foreach ($stmtP->fetchAll(PDO::FETCH_ASSOC) as $item) {
     </div>
   </div>
 
-  <div id="sidebar-container" class="w-60 bg-sidebar flex-shrink-0 h-screen"></div>
+  <div id="sidebar-container" class="fixed inset-y-0 left-0 z-50 w-60 bg-sidebar flex flex-col h-screen transform -translate-x-full md:relative md:translate-x-0 transition-transform duration-300 ease-in-out"></div>
   <script type="module">
     import { renderSidebar } from '../src/components/sidebar.js';
     renderSidebar('sidebar-container', 'portfolio', <?= $temServico ? 'true' : 'false' ?>);
   </script>
 
-  <main class="flex-1 flex flex-col overflow-hidden">
-    <header class="flex items-center justify-between px-8 py-5 border-b border-gray-200 bg-white flex-shrink-0">
+  <main class="flex-1 flex flex-col overflow-hidden w-full relative">
+    <header class="flex items-center justify-between px-4 md:px-8 py-4 md:py-5 border-b border-gray-200 bg-white flex-shrink-0">
         <div class="flex items-center gap-2 text-gray-400">
-          <button onclick="history.back()" class="hover:text-gray-600 p-1 rounded-lg hover:bg-gray-100"><svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg></button>
+          <button onclick="window.toggleSidebar && window.toggleSidebar()" class="md:hidden p-2 -ml-2 rounded-lg text-gray-500 hover:bg-gray-100 focus:outline-none transition-colors">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/></svg>
+          </button>
+          <button onclick="history.back()" class="hover:text-gray-600 p-1 md:-ml-1 rounded-lg hover:bg-gray-100 hidden md:block"><svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg></button>
           <a href="./dashboard.php" class="text-gray-400 text-sm hover:text-orange transition-colors">Início</a>
           <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
           <span class="text-gray-800 font-bold text-lg tracking-tight">Portfólio</span>
@@ -206,7 +209,7 @@ foreach ($stmtP->fetchAll(PDO::FETCH_ASSOC) as $item) {
         </a>
     </header>
 
-    <div class="flex-1 overflow-y-auto px-8 py-6">
+    <div class="flex-1 overflow-y-auto px-4 md:px-8 py-6 custom-scroll">
       <div class="mb-6">
         <h2 class="text-4xl font-extrabold text-slate-900 tracking-tight">Meus Trabalhos</h2>
         <p class="text-sm text-gray-500 mt-1">Gerencie seu histórico visual de serviços.</p>
@@ -252,7 +255,7 @@ foreach ($stmtP->fetchAll(PDO::FETCH_ASSOC) as $item) {
               foreach($servicos as $s) { if($s['titulo'] === $titulo) { $tag = strtoupper($s['categoria_nome'] ?: 'PROJETO'); break; } }
             ?>
             <div class="bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm group">
-              <div class="px-6 py-4 border-b border-gray-50 flex justify-between items-center bg-gray-50/30">
+              <div class="px-4 md:px-6 py-4 border-b border-gray-50 flex flex-col sm:flex-row sm:justify-between sm:items-center bg-gray-50/30 gap-3 sm:gap-0">
                 <div>
                   <p class="text-[10px] font-black text-orange uppercase tracking-widest mb-1"><?= $tag ?></p>
                   <h4 class="text-base font-black text-slate-800 uppercase leading-none"><?= htmlspecialchars($titulo) ?></h4>

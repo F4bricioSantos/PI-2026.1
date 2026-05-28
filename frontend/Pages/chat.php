@@ -66,7 +66,7 @@ if ($idDestinatario > 0) {
 </head>
 <body class="font-sans bg-bg text-gray-800 flex h-screen overflow-hidden">
 
-  <div id="sidebar-container" class="w-60 bg-sidebar flex-shrink-0 h-screen"></div>
+  <div id="sidebar-container" class="fixed inset-y-0 left-0 z-50 w-60 bg-sidebar flex flex-col h-screen transform -translate-x-full md:relative md:translate-x-0 transition-transform duration-300 ease-in-out"></div>
 
   <script type="module">
     import { renderSidebar } from '../src/components/sidebar.js';
@@ -75,49 +75,54 @@ if ($idDestinatario > 0) {
     renderSidebar('sidebar-container', 'chat', temServico, isAdmin, { badgeMensagens: 0, badgeAgendamentos: 0 });
   </script>
 
-  <main class="flex-1 flex overflow-hidden p-6 gap-6">
+  <main class="flex-1 flex overflow-hidden p-0 md:p-6 md:gap-6 w-full relative">
 
-    <section class="w-80 bg-white rounded-2xl border border-gray-200 shadow-sm flex flex-col h-full flex-shrink-0 overflow-hidden">
+    <section class="w-full md:w-80 bg-white md:rounded-2xl border-r md:border border-gray-200 shadow-sm flex-col h-full flex-shrink-0 overflow-hidden <?= ($idDestinatario > 0) ? 'hidden md:flex' : 'flex' ?>">
       <div class="p-4 border-b border-gray-100 flex flex-col gap-3">
-        <h1 class="text-base font-bold text-gray-900 tracking-tight">Mensagens</h1>
+        <div class="flex items-center gap-3">
+          <button onclick="window.toggleSidebar && window.toggleSidebar()" class="md:hidden p-2 -ml-2 rounded-lg text-gray-500 hover:bg-gray-100 focus:outline-none transition-colors">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/></svg>
+          </button>
+          <h1 class="text-base font-bold text-gray-900 tracking-tight">Mensagens</h1>
+        </div>
         <input type="text" id="input-busca-contato" placeholder="Buscar conversa..."
                class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2 text-xs focus:border-orange outline-none transition-all text-gray-700 placeholder-gray-400">
       </div>
       <div id="lista-contatos" class="flex-1 overflow-y-auto p-2 space-y-1 custom-scroll"></div>
     </section>
 
-    <section class="flex-1 bg-white rounded-2xl border border-gray-200 shadow-sm flex flex-col h-full overflow-hidden relative">
+    <section class="flex-1 bg-white md:rounded-2xl md:border border-gray-200 shadow-sm flex-col h-full overflow-hidden relative <?= ($idDestinatario > 0) ? 'flex' : 'hidden md:flex' ?>">
 
       <?php if ($idDestinatario > 0): ?>
 
       <!-- Cabeçalho com nome e avatar -->
-      <div class="bg-gray-50 border-b border-gray-200 px-5 py-3 flex items-center gap-3 flex-shrink-0">
+      <div class="bg-gray-50 border-b border-gray-200 px-4 md:px-5 py-3 flex items-center gap-3 flex-shrink-0">
+        <a href="chat.php" class="md:hidden p-2 -ml-2 text-gray-500 hover:bg-gray-200 rounded-lg transition-colors">
+           <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
+        </a>
         <div id="topo-avatar"></div>
         <div>
-          <h2 class="text-sm font-bold text-gray-900"><?= $nomeDestinatario ?></h2>
+          <h2 class="text-sm font-bold text-gray-900 truncate"><?= $nomeDestinatario ?></h2>
           <p class="text-[11px] text-gray-400">online</p>
         </div>
       </div>
 
       <!-- Barra de contrato ativo (estática por enquanto) -->
-      <div class="bg-gray-50 border-b border-gray-200 px-5 py-3 flex items-center justify-between flex-shrink-0 relative">
+      <div class="bg-gray-50 border-b border-gray-200 px-4 md:px-5 py-3 flex flex-col sm:flex-row sm:items-center justify-between flex-shrink-0 relative gap-3 sm:gap-0">
         <div class="absolute left-0 top-0 bottom-0 w-1 bg-green-500"></div>
-        <div class="flex items-center gap-2 pl-1">
-          <span class="w-2 h-2 rounded-full bg-green-500 inline-block animate-pulse"></span>
-          <div class="leading-tight">
-            <span class="text-xs font-bold text-gray-900 uppercase tracking-wide">
+        <div class="flex items-start sm:items-center gap-2 pl-2 sm:pl-1">
+          <span class="w-2 h-2 rounded-full bg-green-500 inline-block animate-pulse mt-1 sm:mt-0"></span>
+          <div class="leading-tight flex-1">
+            <span class="text-[10px] md:text-xs font-bold text-gray-900 uppercase tracking-wide">
               CONTRATO ATIVO COM <?= strtoupper($nomeDestinatario) ?>
             </span>
-            <p class="text-[11px] text-gray-500 font-medium">Pintura de Parede • Data Pactuada: 24/05/2026 (Manhã)</p>
+            <p class="text-[10px] md:text-[11px] text-gray-500 font-medium truncate max-w-[200px] md:max-w-none">Pintura de Parede • Data Pactuada: 24/05/2026</p>
           </div>
         </div>
-        <div class="flex items-center gap-2">
-          <span class="bg-green-50 border border-green-200 text-green-600 px-2 py-1 rounded text-[10px] font-bold mr-2">Em Andamento</span>
-          <button class="bg-orange hover:bg-orange-dark text-white font-bold px-4 py-2 rounded-xl text-xs transition-all cursor-pointer shadow-md shadow-orange/10">
-            Concluir Serviço
-          </button>
-          <button class="bg-white hover:bg-gray-100 border border-gray-200 text-gray-500 font-bold px-4 py-2 rounded-xl text-xs transition-all cursor-pointer">
-            Cancelar
+        <div class="flex items-center gap-2 pl-4 sm:pl-0">
+          <span class="bg-green-50 border border-green-200 text-green-600 px-2 py-1 rounded text-[10px] font-bold mr-0 md:mr-2">Em Andamento</span>
+          <button class="bg-orange hover:bg-orange-dark text-white font-bold px-3 md:px-4 py-2 rounded-xl text-[10px] md:text-xs transition-all cursor-pointer shadow-md shadow-orange/10">
+            Concluir
           </button>
         </div>
       </div>

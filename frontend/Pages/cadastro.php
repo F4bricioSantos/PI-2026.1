@@ -29,7 +29,7 @@
   <body class="min-h-screen bg-[#f0f0f0] flex items-center justify-center px-4 py-12 relative">
 
     <div class="w-full max-w-[440px]">
-      <div class="bg-white rounded-2xl shadow-sm border border-gray-100 px-10 py-10">
+      <div class="bg-white rounded-2xl shadow-sm border border-gray-100 px-6 py-8 sm:px-10 sm:py-10">
 
         <div class="mb-8 text-center">
           <h1 class="text-[28px] font-bold text-slate-900 leading-tight">Cadastro</h1>

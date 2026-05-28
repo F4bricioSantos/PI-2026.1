@@ -104,7 +104,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 </head>
 <body class="font-sans bg-bg text-gray-800 flex h-screen overflow-hidden">
 
-  <div id="sidebar-container" class="w-60 bg-sidebar flex-shrink-0 h-screen"></div>
+  <div id="sidebar-container" class="fixed inset-y-0 left-0 z-50 w-60 bg-sidebar flex flex-col h-screen transform -translate-x-full md:relative md:translate-x-0 transition-transform duration-300 ease-in-out"></div>
 
   <script type="module">
     import { renderSidebar } from '../src/components/sidebar.js';
@@ -116,10 +116,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     renderSidebar('sidebar-container', 'novo-servico', isPro);
 </script>
 
-  <main class="flex-1 flex flex-col overflow-hidden">
-    <header class="flex items-center justify-between px-8 py-5 border-b border-gray-200 bg-white flex-shrink-0">
+  <main class="flex-1 flex flex-col overflow-hidden w-full relative">
+    <header class="flex items-center justify-between px-4 md:px-8 py-4 md:py-5 border-b border-gray-200 bg-white flex-shrink-0">
       <div class="flex items-center gap-2 text-gray-400">
-        <button onclick="history.back()" class="hover:text-gray-600 transition-colors p-1 -ml-1 rounded-lg hover:bg-gray-100">
+        <button onclick="window.toggleSidebar && window.toggleSidebar()" class="md:hidden p-2 -ml-2 rounded-lg text-gray-500 hover:bg-gray-100 focus:outline-none transition-colors">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/></svg>
+        </button>
+        <button onclick="history.back()" class="hover:text-gray-600 transition-colors p-1 md:-ml-1 rounded-lg hover:bg-gray-100 hidden md:block">
           <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
         </button>
         <a href="./dashboard.php" class="text-gray-400 text-sm hover:text-orange transition-colors">Início</a>
@@ -138,7 +141,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       </a>
     </header>
 
-    <div class="flex-1 overflow-y-auto px-8 py-10 custom-scroll">
+    <div class="flex-1 overflow-y-auto px-4 md:px-8 py-6 md:py-10 custom-scroll">
       <div class="max-w-4xl mx-auto">
         
         <?php if ($totalServicos === 0): ?>
@@ -223,9 +226,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <p class="text-slate-400 text-sm">A prévia do seu anúncio aparecerá aqui conforme você digita.</p>
           </div>
 
-          <div class="flex items-center justify-end gap-6 pt-4">
-            <a href="dashboard.php" class="text-sm font-bold text-slate-500 hover:text-slate-800 transition-colors">Cancelar</a>
-            <button type="submit" class="bg-orange hover:bg-orange-600 text-white px-10 py-4 rounded-2xl font-bold text-base shadow-lg shadow-orange/20 transition-all hover:scale-[1.02] active:scale-95 flex items-center gap-3">
+          <div class="flex flex-col-reverse md:flex-row items-center justify-end gap-4 md:gap-6 pt-4">
+            <a href="dashboard.php" class="w-full md:w-auto text-center text-sm font-bold text-slate-500 hover:text-slate-800 transition-colors py-3 md:py-0">Cancelar</a>
+            <button type="submit" class="w-full md:w-auto bg-orange hover:bg-orange-600 text-white px-10 py-4 rounded-2xl font-bold text-base shadow-lg shadow-orange/20 transition-all hover:scale-[1.02] active:scale-95 flex items-center justify-center gap-3">
               <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
               Salvar Serviço
             </button>
