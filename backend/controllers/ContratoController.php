@@ -119,8 +119,59 @@ if ($acao === 'mudar_status' && $_SERVER['REQUEST_METHOD'] === 'POST') {
         echo json_encode(['erro' => 'Sem permissão para concluir este contrato.']);
         exit;
     }
+}
 
-    http_response_code(400);
-    echo json_encode(['erro' => 'Ação inválida.']);
+// Salvar avaliação
+if ($acao === 'salvar_avaliacao' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+    $data       = json_decode(file_get_contents('php://input'), true);
+    $contratoId = (int)($data['contrato_id'] ?? 0);
+    $nota       = (int)($data['nota']        ?? 0);
+    $comentario = trim($data['comentario']   ?? '');
+
+    if ($nota < 1 || $nota > 5) {
+        http_response_code(400);
+        echo json_encode(['erro' => 'Selecione uma nota de 1 a 5 estrelas.']);
+        exit;
+    }
+
+    $contrato = $contratoModel->buscarPorId($contratoId);
+    if (!$contrato) {
+        http_response_code(404);
+        echo json_encode(['erro' => 'Contrato inválido.']);
+        exit;
+    }
+
+    if ($contrato['cliente_id'] != $idUsuarioLogado) {
+        http_response_code(403);
+        echo json_encode(['erro' => 'Você não tem permissão para avaliar este contrato.']);
+        exit;
+    }
+
+    if ($contrato['status'] !== 'concluido') {
+        http_response_code(400);
+        echo json_encode(['erro' => 'Este contrato ainda não foi concluído.']);
+        exit;
+    }
+
+    if ($contrato['avaliado']) {
+        http_response_code(400);
+        echo json_encode(['erro' => 'Este contrato já foi avaliado.']);
+        exit;
+    }
+
+    $sucesso = $contratoModel->salvarAvaliacao(
+        $contratoId,
+        $contrato['cliente_id'],
+        $contrato['prestador_id'],
+        $contrato['servico_id'],
+        $nota,
+        $comentario
+    );
+
+    echo json_encode(['sucesso' => $sucesso]);
     exit;
 }
+
+http_response_code(400);
+echo json_encode(['erro' => 'Ação inválida.']);
+exit;

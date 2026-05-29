@@ -146,7 +146,7 @@
 
         <!-- Link: Esqueceu a senha (alinhado à direita) -->
         <div class="flex justify-end -mt-2">
-          <a href="#" id="forgot-link"
+          <a href="esqueci-senha.php" id="forgot-link"
             class="text-[13px] text-orange-500 font-medium hover:text-orange-600 hover:underline transition-colors">
             Esqueceu sua senha?
           </a>

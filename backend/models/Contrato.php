@@ -99,4 +99,34 @@ class Contrato {
               AND finalizado_prestador_em <= CURRENT_TIMESTAMP - INTERVAL '15 days'
         ");
     }
+
+    public function salvarAvaliacao($contratoId, $clienteId, $prestadorId, $servicoId, $nota, $comentario) {
+        $this->pdo->beginTransaction();
+        try {
+            // 1. Insere a avaliação
+            $stmt = $this->pdo->prepare("
+                INSERT INTO avaliacoes (cliente_id, prestador_id, servico_id, nota, comentario, data_avaliacao)
+                VALUES (:cliente_id, :prestador_id, :servico_id, :nota, :comentario, CURRENT_TIMESTAMP)
+            ");
+            $stmt->execute([
+                ':cliente_id'   => $clienteId,
+                ':prestador_id' => $prestadorId,
+                ':servico_id'   => $servicoId,
+                ':nota'         => $nota,
+                ':comentario'   => $comentario
+            ]);
+
+            // 2. Marca o contrato como avaliado
+            $stmtUpdate = $this->pdo->prepare("
+                UPDATE contratos SET avaliado = true WHERE id = :id
+            ");
+            $stmtUpdate->execute([':id' => $contratoId]);
+
+            $this->pdo->commit();
+            return true;
+        } catch (Exception $e) {
+            $this->pdo->rollBack();
+            return false;
+        }
+    }
 }

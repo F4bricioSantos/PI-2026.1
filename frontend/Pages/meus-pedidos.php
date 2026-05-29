@@ -289,7 +289,7 @@ try {
                         <button class="px-3 bg-gray-50 hover:bg-gray-100 text-gray-500 border border-gray-200 rounded-xl transition-colors text-xs">Favoritar</button>
                         
                         <?php if($pedido['status'] === 'concluido' && !$pedido['avaliado']): ?>
-                          <a href="avaliar.php?servico=<?= $pedido['contrato_id'] ?>" class="px-3 bg-orange/10 hover:bg-orange text-orange hover:text-white border border-transparent rounded-xl transition-colors text-xs font-bold flex items-center">Avaliar</a>
+                          <a href="avaliar-prestador.php?contrato_id=<?= $pedido['contrato_id'] ?>" class="px-3 bg-orange/10 hover:bg-orange text-orange hover:text-white border border-transparent rounded-xl transition-colors text-xs font-bold flex items-center">Avaliar</a>
                         <?php endif; ?>
                       </div>
                     </div>

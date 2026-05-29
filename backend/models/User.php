@@ -86,4 +86,18 @@ class User {
         session_unset();
         session_destroy();
     }
+
+    /**
+     * Atualiza a senha do usuário identificado pelo e-mail
+     */
+    public function atualizarSenha(string $email, string $novaSenha): bool
+    {
+        try {
+            $senhaHash = password_hash($novaSenha, PASSWORD_DEFAULT);
+            $stmt = $this->db->prepare("UPDATE usuarios SET senha = :senha WHERE email = :email");
+            return $stmt->execute([':senha' => $senhaHash, ':email' => $email]);
+        } catch (PDOException $e) {
+            return false;
+        }
+    }
 }

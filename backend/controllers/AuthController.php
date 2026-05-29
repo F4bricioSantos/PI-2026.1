@@ -18,6 +18,9 @@ match ($action) {
     'cadastrar'                 => cadastrar($pdo),
     'login'                     => login($pdo),
     'logout'                    => logout(),
+    'enviar_codigo_reset'       => enviarCodigoReset($pdo),
+    'verificar_codigo_reset'    => verificarCodigoReset(),
+    'redefinir_senha'           => redefinirSenha($pdo),
     default                     => responder(405, ['sucesso' => false, 'mensagem' => 'Ação não reconhecida.'])
 };
 
@@ -200,6 +203,135 @@ function logout(): void
     header('Location: /PI-2026.1/frontend/Pages/login.php');
     exit;
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// REDEFINIÇÃO DE SENHA
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Etapa 1 do reset: valida o e-mail e envia o código por e-mail.
+ */
+function enviarCodigoReset(PDO $pdo): void
+{
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST')
+        responder(405, ['sucesso' => false, 'mensagem' => 'Método não permitido.']);
+
+    $email = trim($_POST['email'] ?? '');
+
+    if (empty($email) || !filter_var($email, FILTER_VALIDATE_EMAIL))
+        responder(200, ['sucesso' => false, 'mensagem' => 'Insira um e-mail válido.']);
+
+    $user    = new User($pdo);
+    $usuario = $user->buscarPorEmail($email);
+
+    // Responde sempre com sucesso para não vazar informação de cadastro
+    if (!$usuario) {
+        responder(200, ['sucesso' => true, 'mensagem' => 'Se o e-mail estiver cadastrado, você receberá o código.']);
+    }
+
+    $codigoToken = (string)rand(100000, 999999);
+
+    $_SESSION['reset_token']        = $codigoToken;
+    $_SESSION['reset_email']        = $email;
+    $_SESSION['reset_token_expira'] = time() + (15 * 60); // 15 minutos
+    $_SESSION['reset_verificado']   = false;
+
+    $primeiroNome = explode(' ', $usuario['nome'])[0];
+    $assunto      = "Redefinição de senha — ReformAí";
+    $corpoHTML    = "
+        <div style='font-family: Arial, sans-serif; max-width: 460px; padding: 30px; border: 1px solid #e2e8f0; border-radius: 16px; margin: 0 auto; background-color: #ffffff;'>
+            <h2 style='color: #f97316; margin-top: 0; font-size: 22px;'>Olá, {$primeiroNome}!</h2>
+            <p style='color: #475569; font-size: 14px; line-height: 1.5;'>Recebemos uma solicitação para redefinir a senha da sua conta no <strong>ReformAí</strong>. Use o código abaixo para continuar:</p>
+            <div style='background-color: #fff7ed; border: 1px dashed #fdba74; padding: 18px; text-align: center; font-size: 26px; font-weight: bold; color: #ea580c; letter-spacing: 5px; margin: 24px 0; border-radius: 8px;'>
+                {$codigoToken}
+            </div>
+            <p style='color: #94a3b8; font-size: 12px; line-height: 1.4; border-top: 1px solid #f1f5f9; padding-top: 16px; margin-bottom: 0;'>
+                Este código expira em 15 minutos.<br>Se você não solicitou a redefinição, ignore este e-mail — sua senha permanece a mesma.
+            </p>
+        </div>
+    ";
+
+    $emailEnviado = EmailService::enviar($email, $usuario['nome'], $assunto, $corpoHTML);
+
+    if ($emailEnviado) {
+        responder(200, ['sucesso' => true, 'mensagem' => 'Código enviado com sucesso!']);
+    } else {
+        // Modo desenvolvimento: retorna o token no JSON
+        responder(200, [
+            'sucesso'              => true,
+            'token_desenvolvimento' => $codigoToken,
+            'mensagem'             => 'Código gerado localmente (SMTP instável): ' . $codigoToken,
+        ]);
+    }
+}
+
+/**
+ * Etapa 2 do reset: verifica o código sem ainda trocar a senha.
+ * Marca a sessão como verificada para que a etapa 3 possa prosseguir.
+ */
+function verificarCodigoReset(): void
+{
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST')
+        responder(405, ['sucesso' => false, 'mensagem' => 'Método não permitido.']);
+
+    $email  = trim($_POST['email']        ?? '');
+    $codigo = trim($_POST['codigo_token'] ?? '');
+
+    if (!isset($_SESSION['reset_token']) || time() > $_SESSION['reset_token_expira'])
+        responder(200, ['sucesso' => false, 'mensagem' => 'Código expirado. Solicite um novo.']);
+
+    if ($_SESSION['reset_email'] !== $email)
+        responder(200, ['sucesso' => false, 'mensagem' => 'Sessão inválida. Reinicie o processo.']);
+
+    if ($codigo !== $_SESSION['reset_token'])
+        responder(200, ['sucesso' => false, 'mensagem' => 'Código incorreto. Verifique sua caixa de entrada.']);
+
+    $_SESSION['reset_verificado'] = true;
+
+    responder(200, ['sucesso' => true]);
+}
+
+/**
+ * Etapa 3 do reset: troca a senha no banco (só se o código já foi verificado).
+ */
+function redefinirSenha(PDO $pdo): void
+{
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST')
+        responder(405, ['sucesso' => false, 'mensagem' => 'Método não permitido.']);
+
+    // Garante que o código foi verificado nesta sessão
+    if (empty($_SESSION['reset_verificado']) || $_SESSION['reset_verificado'] !== true)
+        responder(200, ['sucesso' => false, 'mensagem' => 'Verificação pendente. Confirme o código primeiro.']);
+
+    if (!isset($_SESSION['reset_token']) || time() > $_SESSION['reset_token_expira'])
+        responder(200, ['sucesso' => false, 'mensagem' => 'Sessão expirada. Reinicie o processo.']);
+
+    $email    = trim($_POST['email']          ?? '');
+    $nova     = $_POST['nova_senha']          ?? '';
+    $confirma = $_POST['confirmar_senha']     ?? '';
+
+    if ($_SESSION['reset_email'] !== $email)
+        responder(200, ['sucesso' => false, 'mensagem' => 'Sessão inválida. Reinicie o processo.']);
+
+    if (strlen($nova) < 8)
+        responder(200, ['sucesso' => false, 'mensagem' => 'A senha deve ter pelo menos 8 caracteres.']);
+
+    if ($nova !== $confirma)
+        responder(200, ['sucesso' => false, 'mensagem' => 'As senhas não coincidem.']);
+
+    $user = new User($pdo);
+    $ok   = $user->atualizarSenha($email, $nova);
+
+    if (!$ok)
+        responder(200, ['sucesso' => false, 'mensagem' => 'Não foi possível atualizar a senha. Tente novamente.']);
+
+    // Limpa os dados de reset da sessão
+    unset($_SESSION['reset_token'], $_SESSION['reset_token_expira'], $_SESSION['reset_email'], $_SESSION['reset_verificado']);
+
+    responder(200, ['sucesso' => true, 'mensagem' => 'Senha redefinida com sucesso!']);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 
 function responder(int $status, array $dados): never
 {
