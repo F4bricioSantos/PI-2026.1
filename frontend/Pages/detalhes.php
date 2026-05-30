@@ -75,6 +75,11 @@ try {
     ]);
     $portfolio = $stmtPort->fetchAll(PDO::FETCH_ASSOC);
 
+    // Verifica se este serviço está favoritado pelo usuário logado
+    $stmtFavCheck = $pdo->prepare("SELECT COUNT(*) FROM favoritos_servicos WHERE usuario_id = :uid AND servico_id = :sid");
+    $stmtFavCheck->execute([':uid' => $idUsuarioLogado, ':sid' => $idServico]);
+    $estaFavoritado = $stmtFavCheck->fetchColumn() > 0;
+
 } catch (PDOException $e) {
     die("Erro ao carregar dados: " . $e->getMessage());
 }
@@ -291,6 +296,12 @@ try {
                 </svg>
                 ENTRAR EM CONTATO
               </a>
+              <button onclick="toggleFavorito(<?= $servico['id'] ?>)" id="btn-favorito" class="w-full border font-bold py-3 rounded-xl text-xs flex items-center justify-center gap-2 transition-all shadow-sm <?= $estaFavoritado ? 'bg-orange/10 border-orange/20 text-orange' : 'bg-white border-gray-200 hover:border-orange/20 text-gray-700 hover:bg-orange/5 hover:text-orange' ?>">
+                <svg id="svg-favorito" class="w-4 h-4 <?= $estaFavoritado ? 'fill-orange text-orange' : 'fill-none text-current' ?>" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                  <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
+                </svg>
+                <span id="txt-favorito"><?= $estaFavoritado ? 'SALVO' : 'SALVAR NOS FAVORITOS' ?></span>
+              </button>
             </div>
             
           </div>
@@ -298,5 +309,41 @@ try {
       </div>
     </div>
   </main>
+  <script>
+    async function toggleFavorito(servicoId) {
+      const btn = document.getElementById('btn-favorito');
+      const svg = document.getElementById('svg-favorito');
+      const txt = document.getElementById('txt-favorito');
+      
+      try {
+        const response = await fetch('../../backend/controllers/FavoritoController.php?acao=toggle', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ servico_id: servicoId })
+        });
+        
+        const result = await response.json();
+        
+        if (result.sucesso) {
+          if (result.favoritado) {
+            btn.className = "w-full border font-bold py-3 rounded-xl text-xs flex items-center justify-center gap-2 transition-all shadow-sm bg-orange/10 border-orange/20 text-orange";
+            svg.setAttribute('class', 'w-4 h-4 fill-orange text-orange');
+            txt.innerText = "SALVO";
+          } else {
+            btn.className = "w-full border font-bold py-3 rounded-xl text-xs flex items-center justify-center gap-2 transition-all shadow-sm bg-white border-gray-200 hover:border-orange/20 text-gray-700 hover:bg-orange/5 hover:text-orange";
+            svg.setAttribute('class', 'w-4 h-4 fill-none text-current');
+            txt.innerText = "SALVAR NOS FAVORITOS";
+          }
+        } else {
+          alert(result.erro || 'Erro ao atualizar favorito.');
+        }
+      } catch (error) {
+        console.error('Erro ao favoritar:', error);
+        alert('Erro de conexão com o servidor.');
+      }
+    }
+  </script>
 </body>
 </html>

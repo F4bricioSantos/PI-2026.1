@@ -42,7 +42,10 @@ if (isset($_GET['ajax_cidades'])) {
 $where  = ['s.prestador_id != :usuario_id'];
 $params = [':usuario_id' => $idUsuarioLogado];
 
-if ($categoriaAtiva !== 'Todos') {
+if ($categoriaAtiva === 'Favoritos') {
+    $where[] = 's.id IN (SELECT servico_id FROM favoritos_servicos WHERE usuario_id = :usuario_id_fav)';
+    $params[':usuario_id_fav'] = $idUsuarioLogado;
+} elseif ($categoriaAtiva !== 'Todos') {
     $where[] = 'LOWER(s.categoria_nome) = LOWER(:categoria)';
     $params[':categoria'] = $categoriaAtiva;
 }
@@ -81,6 +84,14 @@ $sql = "
 $stmt = $pdo->prepare($sql);
 $stmt->execute($params);
 $servicos = $stmt->fetchAll();
+
+// Busca lista de ids dos serviços favoritos do usuário logado
+$stmtFavs = $pdo->prepare("SELECT servico_id FROM favoritos_servicos WHERE usuario_id = :uid");
+$stmtFavs->execute([':uid' => $idUsuarioLogado]);
+$favoritosIds = $stmtFavs->fetchAll(PDO::FETCH_COLUMN);
+if (!$favoritosIds) {
+    $favoritosIds = [];
+}
 
 $categoriasGerais = ["Reformas", "Pintura e Textura", "Elétrica", "Hidráulica", "Pisos e Revestimentos", "Alvenaria e Construção"];
 ?>
@@ -183,6 +194,11 @@ $categoriasGerais = ["Reformas", "Pintura e Textura", "Elétrica", "Hidráulica"
           <?php $urlParams = "&busca=".urlencode($busca)."&cidade=".urlencode($cidade)."&preco_min=".$precoMin."&preco_max=".$precoMax; ?>
           <a href="?categoria=Todos<?= $urlParams ?>" class="px-5 py-2 rounded-full text-[11px] font-bold transition-all <?= $categoriaAtiva === 'Todos' ? 'bg-orange text-white' : 'bg-white text-gray-500 border border-gray-200 hover:border-orange hover:text-orange' ?>">TODOS</a>
           
+          <a href="?categoria=Favoritos<?= $urlParams ?>" class="px-5 py-2 rounded-full text-[11px] font-bold transition-all flex items-center gap-1.5 <?= $categoriaAtiva === 'Favoritos' ? 'bg-orange text-white' : 'bg-white text-gray-500 border border-gray-200 hover:border-orange hover:text-orange' ?>">
+            <svg class="w-3 h-3 <?= $categoriaAtiva === 'Favoritos' ? 'fill-white text-white' : 'fill-none text-current' ?>" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+            FAVORITOS
+          </a>
+          
           <?php foreach ($categoriasGerais as $cat): ?>
             <a href="?categoria=<?=urlencode($cat).$urlParams?>" class="px-5 py-2 rounded-full text-[11px] font-bold transition-all <?= $categoriaAtiva === $cat ? 'bg-orange text-white' : 'bg-white text-gray-500 border border-gray-200 hover:border-orange hover:text-orange' ?>">
               <?= mb_strtoupper($cat) ?>
@@ -244,9 +260,19 @@ $categoriasGerais = ["Reformas", "Pintura e Textura", "Elétrica", "Hidráulica"
                         <?= $s['valor_base'] ? 'R$ ' . number_format($s['valor_base'], 0, ',', '.') : 'A combinar' ?>
                     </span>
                   </div>
-                  <a href="detalhes.php?id=<?= $s['id'] ?>" class="bg-gray-50 hover:bg-orange hover:text-white text-orange p-2.5 rounded-xl transition-all shadow-sm">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg>
-                  </a>
+                  <div class="flex items-center gap-2">
+                    <?php 
+                    $isFav = in_array($s['id'], $favoritosIds);
+                    ?>
+                    <button onclick="toggleFavorito(event, <?= $s['id'] ?>)" data-service-id="<?= $s['id'] ?>" class="fav-btn p-2.5 rounded-xl border transition-all shadow-sm flex items-center justify-center <?= $isFav ? 'bg-orange/10 border-orange/20 text-orange' : 'bg-gray-50 border-gray-100 text-gray-400 hover:text-orange hover:border-orange/20' ?>" title="<?= $isFav ? 'Remover dos Favoritos' : 'Salvar nos Favoritos' ?>">
+                      <svg class="w-4 h-4 <?= $isFav ? 'fill-orange' : 'fill-none' ?>" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                        <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
+                      </svg>
+                    </button>
+                    <a href="detalhes.php?id=<?= $s['id'] ?>" class="bg-gray-50 hover:bg-orange hover:text-white text-orange p-2.5 rounded-xl transition-all shadow-sm">
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg>
+                    </a>
+                  </div>
                 </div>
               </div>
             <?php endforeach; ?>
@@ -280,6 +306,67 @@ $categoriasGerais = ["Reformas", "Pintura e Textura", "Elétrica", "Hidráulica"
             listaCidades.classList.add('hidden');
         }
     });
+
+    async function toggleFavorito(event, servicoId) {
+        event.preventDefault();
+        event.stopPropagation();
+        
+        const btn = event.currentTarget;
+        const icon = btn.querySelector('svg');
+        
+        try {
+            const response = await fetch('../../backend/controllers/FavoritoController.php?acao=toggle', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ servico_id: servicoId })
+            });
+            
+            const result = await response.json();
+            
+            if (result.sucesso) {
+                // Sincroniza todos os botões com o mesmo servicoId na tela
+                const allButtons = document.querySelectorAll(`button[data-service-id="${servicoId}"]`);
+                allButtons.forEach(button => {
+                    const svg = button.querySelector('svg');
+                    if (result.favoritado) {
+                        button.className = "fav-btn p-2.5 rounded-xl border bg-orange/10 border-orange/20 text-orange transition-all shadow-sm flex items-center justify-center";
+                        svg.setAttribute('class', 'w-4 h-4 fill-orange');
+                        button.setAttribute('title', 'Remover dos Favoritos');
+                    } else {
+                        button.className = "fav-btn p-2.5 rounded-xl border bg-gray-50 border-gray-100 text-gray-400 hover:text-orange hover:border-orange/20 transition-all shadow-sm flex items-center justify-center";
+                        svg.setAttribute('class', 'w-4 h-4 fill-none');
+                        button.setAttribute('title', 'Salvar nos Favoritos');
+                    }
+                });
+
+                // Se a categoria ativa for "Favoritos" e o usuário desfavoritou, removemos o card correspondente com uma animação elegante
+                const urlParams = new URLSearchParams(window.location.search);
+                if (urlParams.get('categoria') === 'Favoritos' && !result.favoritado) {
+                    const card = btn.closest('.bg-white.rounded-2xl');
+                    if (card) {
+                        card.style.transition = 'all 0.3s ease';
+                        card.style.opacity = '0';
+                        card.style.transform = 'scale(0.95)';
+                        setTimeout(() => {
+                            card.remove();
+                            // Se não sobrar nenhum card, recarrega para exibir o aviso de lista vazia
+                            const grid = document.querySelector('.grid.grid-cols-1');
+                            if (grid && grid.children.length === 0) {
+                                window.location.reload();
+                            }
+                        }, 300);
+                    }
+                }
+            } else {
+                alert(result.erro || 'Erro ao atualizar favorito.');
+            }
+        } catch (error) {
+            console.error('Erro ao favoritar:', error);
+            alert('Erro de conexão com o servidor.');
+        }
+    }
   </script>
 </body>
 </html>

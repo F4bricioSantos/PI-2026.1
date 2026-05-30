@@ -32,6 +32,8 @@ try {
             c.data_pactuada AS data_agendamento,
             c.finalizado_prestador_em AS data_conclusao,
             c.avaliado,
+            c.favorito AS contrato_favorito,
+            s.id AS servico_id,
             s.titulo AS servico_titulo,
             u.id AS prestador_id,
             u.nome AS prestador_nome,
@@ -46,27 +48,41 @@ try {
     $stmtPedidos->execute([':cliente_id' => $idUsuarioLogado]);
     $pedidos = $stmtPedidos->fetchAll(PDO::FETCH_ASSOC);
 
-    // 3. Query de Favoritos (Garantindo exibição única por prestador com DISTINCT ON)
-    // Nota: Caso sua tabela de relacionamento se chame de outra forma, certifique-se que possui os campos usuario_id e prestador_id
+    // 3. Query de Favoritos (Garantindo exibição única de serviços favoritados)
     $sqlFavoritos = "
-        SELECT DISTINCT ON (u.id)
+        SELECT 
+            s.id AS servico_id,
+            s.titulo AS servico_titulo,
+            s.categoria_nome,
+            s.valor_base,
             u.id AS prestador_id,
             u.nome AS prestador_nome,
             u.foto_perfil AS prestador_foto,
             pd.nicho AS categoria_principal
-        FROM favoritos f
-        JOIN usuarios u ON u.id = f.prestador_id
+        FROM favoritos_servicos f
+        JOIN servicos s ON s.id = f.servico_id
+        JOIN usuarios u ON u.id = s.prestador_id
         LEFT JOIN prestadores_detalhes pd ON pd.usuario_id = u.id
         WHERE f.usuario_id = :usuario_id
+        ORDER BY f.criado_em DESC
     ";
     $stmtFav = $pdo->prepare($sqlFavoritos);
     $stmtFav->execute([':usuario_id' => $idUsuarioLogado]);
     $favoritos = $stmtFav->fetchAll(PDO::FETCH_ASSOC);
 
+    // 4. Lista dos IDs de todos os serviços favoritados pelo usuário (para coloração rápida dos botões)
+    $stmtFavsList = $pdo->prepare("SELECT servico_id FROM favoritos_servicos WHERE usuario_id = :uid");
+    $stmtFavsList->execute([':uid' => $idUsuarioLogado]);
+    $favoritosIds = $stmtFavsList->fetchAll(PDO::FETCH_COLUMN);
+    if (!$favoritosIds) {
+        $favoritosIds = [];
+    }
+
 } catch (PDOException $e) {
     // Fallback preventivo caso a tabela 'favoritos' ainda não esteja criada fisicamente
     $pedidos = isset($pedidos) ? $pedidos : [];
     $favoritos = [];
+    $favoritosIds = [];
 }
 ?>
 <!DOCTYPE html>
@@ -191,7 +207,15 @@ try {
                       <div class="mb-4"><span class="text-[11px] font-bold text-amber-600 uppercase tracking-wider">Status: PENDENTE</span></div>
                       <div class="flex gap-2 pt-2 border-t border-gray-100">
                         <a href="chat.php?com=<?= $pedido['prestador_id'] ?>" class="flex-1 bg-gray-50 hover:bg-gray-100 text-gray-700 border border-gray-200 text-center font-bold py-2 rounded-xl text-xs transition-colors">Abrir chat</a>
-                        <button class="px-4 bg-gray-50 hover:bg-gray-100 text-gray-500 border border-gray-200 rounded-xl transition-colors text-xs">Favoritar</button>
+                        <?php 
+                        $isFav = in_array($pedido['servico_id'], $favoritosIds);
+                        ?>
+                        <button onclick="toggleFavorito(event, <?= $pedido['servico_id'] ?>)" data-service-id="<?= $pedido['servico_id'] ?>" class="fav-btn px-4 rounded-xl border transition-all text-xs font-bold flex items-center gap-1 <?= $isFav ? 'bg-orange/10 border-orange/20 text-orange' : 'bg-gray-50 border-gray-200 text-gray-500 hover:text-orange hover:border-orange/20' ?>">
+                          <svg class="w-3.5 h-3.5 <?= $isFav ? 'fill-orange' : 'fill-none' ?>" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                            <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
+                          </svg>
+                          <span class="btn-text"><?= $isFav ? 'Salvo' : 'Favoritar' ?></span>
+                        </button>
                       </div>
                     </div>
                   </div>
@@ -234,7 +258,15 @@ try {
                       <div class="mb-4"><span class="text-[11px] font-bold text-blue-600 uppercase tracking-wider">Status: EM ANDAMENTO</span></div>
                       <div class="flex gap-2 pt-2 border-t border-gray-100">
                         <a href="chat.php?com=<?= $pedido['prestador_id'] ?>" class="flex-1 bg-gray-50 hover:bg-gray-100 text-gray-700 border border-gray-200 text-center font-bold py-2 rounded-xl text-xs transition-colors">Abrir chat</a>
-                        <button class="px-4 bg-gray-50 hover:bg-gray-100 text-gray-500 border border-gray-200 rounded-xl transition-colors text-xs">Favoritar</button>
+                        <?php 
+                        $isFav = in_array($pedido['servico_id'], $favoritosIds);
+                        ?>
+                        <button onclick="toggleFavorito(event, <?= $pedido['servico_id'] ?>)" data-service-id="<?= $pedido['servico_id'] ?>" class="fav-btn px-4 rounded-xl border transition-all text-xs font-bold flex items-center gap-1 <?= $isFav ? 'bg-orange/10 border-orange/20 text-orange' : 'bg-gray-50 border-gray-200 text-gray-500 hover:text-orange hover:border-orange/20' ?>">
+                          <svg class="w-3.5 h-3.5 <?= $isFav ? 'fill-orange' : 'fill-none' ?>" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                            <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
+                          </svg>
+                          <span class="btn-text"><?= $isFav ? 'Salvo' : 'Favoritar' ?></span>
+                        </button>
                       </div>
                     </div>
                   </div>
@@ -286,7 +318,15 @@ try {
                       </div>
                       <div class="flex gap-2 pt-2 border-t border-gray-100">
                         <a href="chat.php?com=<?= $pedido['prestador_id'] ?>" class="flex-1 bg-gray-50 hover:bg-gray-100 text-gray-700 border border-gray-200 text-center font-bold py-2 rounded-xl text-xs transition-colors">Abrir chat</a>
-                        <button class="px-3 bg-gray-50 hover:bg-gray-100 text-gray-500 border border-gray-200 rounded-xl transition-colors text-xs">Favoritar</button>
+                        <?php 
+                        $isFav = in_array($pedido['servico_id'], $favoritosIds);
+                        ?>
+                        <button onclick="toggleFavorito(event, <?= $pedido['servico_id'] ?>)" data-service-id="<?= $pedido['servico_id'] ?>" class="fav-btn px-3 rounded-xl border transition-all text-xs font-bold flex items-center gap-1 <?= $isFav ? 'bg-orange/10 border-orange/20 text-orange' : 'bg-gray-50 border-gray-200 text-gray-500 hover:text-orange hover:border-orange/20' ?>">
+                          <svg class="w-3.5 h-3.5 <?= $isFav ? 'fill-orange' : 'fill-none' ?>" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                            <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
+                          </svg>
+                          <span class="btn-text"><?= $isFav ? 'Salvo' : 'Favoritar' ?></span>
+                        </button>
                         
                         <?php if($pedido['status'] === 'concluido' && !$pedido['avaliado']): ?>
                           <a href="avaliar-prestador.php?contrato_id=<?= $pedido['contrato_id'] ?>" class="px-3 bg-orange/10 hover:bg-orange text-orange hover:text-white border border-transparent rounded-xl transition-colors text-xs font-bold flex items-center">Avaliar</a>
@@ -309,12 +349,12 @@ try {
           
           <?php if(empty($favoritos)): ?>
             <div class="text-center py-12 bg-white rounded-2xl border border-gray-100 shadow-sm">
-              <p class="text-gray-400 text-sm italic">Nenhum prestador na sua lista de favoritos.</p>
+              <p class="text-gray-400 text-sm italic">Nenhum serviço na sua lista de favoritos.</p>
             </div>
           <?php else: ?>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
               <?php foreach($favoritos as $fav): ?>
-                <div class="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm flex flex-col justify-between">
+                <div class="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm flex flex-col justify-between" data-fav-card-id="<?= $fav['servico_id'] ?>">
                   <div class="flex items-start gap-4 mb-4">
                     <div class="w-12 h-12 rounded-xl bg-gray-100 flex-shrink-0 flex items-center justify-center text-gray-600 font-bold text-sm overflow-hidden border border-gray-200">
                       <?php if(!empty($fav['prestador_foto']) && $fav['prestador_foto'] !== 'default.png'): ?>
@@ -323,16 +363,18 @@ try {
                         <?= strtoupper(mb_substr($fav['prestador_nome'] ?? 'P', 0, 2)) ?>
                       <?php endif; ?>
                     </div>
-                    <div class="min-w-0">
-                      <h3 class="font-extrabold text-gray-900 text-base tracking-tight truncate"><?= htmlspecialchars($fav['prestador_nome']) ?></h3>
-                      <p class="text-xs text-gray-400 truncate"><?= htmlspecialchars($fav['categoria_principal'] ?? 'Geral / Outros') ?></p>
+                    <div class="min-w-0 flex-1">
+                      <span class="text-[9px] font-extrabold text-orange uppercase tracking-wider block mb-0.5"><?= htmlspecialchars($fav['categoria_nome'] ?? 'Geral') ?></span>
+                      <h3 class="font-extrabold text-gray-900 text-sm tracking-tight truncate leading-snug"><?= htmlspecialchars($fav['servico_titulo']) ?></h3>
+                      <p class="text-xs text-gray-500 font-medium truncate mt-0.5"><?= htmlspecialchars($fav['prestador_nome']) ?></p>
+                      <p class="text-xs font-black text-gray-800 mt-1"><?= $fav['valor_base'] > 0 ? 'R$ ' . number_format($fav['valor_base'], 0, ',', '.') : 'A combinar' ?></p>
                     </div>
                   </div>
                   
-                  <div class="flex gap-2 pt-2 border-t border-gray-100">
-                    <a href="ver-perfil.php?id=<?= $fav['prestador_id'] ?>" class="flex-1 bg-gray-50 hover:bg-gray-100 text-gray-700 border border-gray-200 text-center font-bold py-2 rounded-xl text-xs transition-colors">Ver perfil</a>
+                  <div class="flex gap-2 pt-3 border-t border-gray-100 mt-auto">
+                    <a href="detalhes.php?id=<?= $fav['servico_id'] ?>" class="flex-1 bg-gray-50 hover:bg-gray-100 text-gray-700 border border-gray-200 text-center font-bold py-2 rounded-xl text-xs transition-colors">Detalhes</a>
                     <a href="chat.php?com=<?= $fav['prestador_id'] ?>" class="flex-1 bg-gray-50 hover:bg-gray-100 text-gray-700 border border-gray-200 text-center font-bold py-2 rounded-xl text-xs transition-colors">Abrir chat</a>
-                    <button class="px-3 bg-orange-light text-orange border border-transparent rounded-xl text-xs font-bold">Salvo</button>
+                    <button onclick="toggleFavorito(event, <?= $fav['servico_id'] ?>)" class="px-3 bg-orange/10 hover:bg-orange/20 text-orange border border-transparent rounded-xl text-xs font-bold transition-colors">Salvo</button>
                   </div>
                 </div>
               <?php endforeach; ?>
@@ -390,6 +432,64 @@ try {
           }
         }
       });
+    }
+
+    async function toggleFavorito(event, servicoId) {
+      event.preventDefault();
+      event.stopPropagation();
+      
+      const btn = event.currentTarget;
+      
+      try {
+        const response = await fetch('../../backend/controllers/FavoritoController.php?acao=toggle', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ servico_id: servicoId })
+        });
+        
+        const result = await response.json();
+        
+        if (result.sucesso) {
+          // 1. Sincroniza todos os botões com o mesmo servicoId na aba "Meus pedidos"
+          const allButtons = document.querySelectorAll(`button[data-service-id="${servicoId}"]`);
+          allButtons.forEach(button => {
+            const svg = button.querySelector('svg');
+            const span = button.querySelector('.btn-text');
+            if (result.favoritado) {
+              button.className = "fav-btn px-4 rounded-xl border bg-orange/10 border-orange/20 text-orange transition-all text-xs font-bold flex items-center gap-1";
+              if (svg) svg.setAttribute('class', 'w-3.5 h-3.5 fill-orange');
+              if (span) span.innerText = "Salvo";
+            } else {
+              button.className = "fav-btn px-4 rounded-xl border bg-gray-50 border-gray-200 text-gray-500 hover:text-orange hover:border-orange/20 transition-all text-xs font-bold flex items-center gap-1";
+              if (svg) svg.setAttribute('class', 'w-3.5 h-3.5 fill-none');
+              if (span) span.innerText = "Favoritar";
+            }
+          });
+
+          // 2. Se estiver na aba "Favoritos" e o usuário desfavoritou, removemos o card correspondente da lista de favoritos com uma animação suave
+          const card = document.querySelector(`[data-fav-card-id="${servicoId}"]`);
+          if (card && !result.favoritado) {
+            card.style.transition = 'all 0.3s ease';
+            card.style.opacity = '0';
+            card.style.transform = 'scale(0.95)';
+            setTimeout(() => {
+              card.remove();
+              // Se não sobrar nenhum favorito, recarrega para exibir a tela de lista vazia
+              const grid = document.querySelector('#content-favoritos .grid');
+              if (grid && grid.children.length === 0) {
+                window.location.reload();
+              }
+            }, 300);
+          }
+        } else {
+          alert(result.erro || 'Erro ao atualizar favorito.');
+        }
+      } catch (error) {
+        console.error('Erro ao favoritar:', error);
+        alert('Erro de conexão com o servidor.');
+      }
     }
   </script>
 </body>
