@@ -30,6 +30,7 @@ if (!defined('SB_URL')) define('SB_URL', 'https://yplpxzmwtkencrrtxmof.supabase.
 $urlBaseSupabase = SB_URL . "/storage/v1/object/public/fotos/";
 
 $contratoId = isset($_GET['contrato_id']) ? (int)$_GET['contrato_id'] : 0;
+$comId = isset($_GET['com']) ? (int)$_GET['com'] : 0;
 
 // Busca o contrato e valida
 $stmtContrato = $pdo->prepare("
@@ -40,39 +41,60 @@ $stmtContrato = $pdo->prepare("
         c.servico_id,
         c.status,
         c.avaliado,
+        c.avaliado_prestador,
         s.titulo AS servico_titulo,
-        u.nome AS prestador_nome,
-        u.foto_perfil AS prestador_foto,
+        uc.nome AS cliente_nome,
+        uc.foto_perfil AS cliente_foto,
+        up.nome AS prestador_nome,
+        up.foto_perfil AS prestador_foto,
         pd.nicho AS prestador_nicho
     FROM contratos c
     JOIN servicos s ON c.servico_id = s.id
-    JOIN usuarios u ON c.prestador_id = u.id
-    LEFT JOIN prestadores_detalhes pd ON pd.usuario_id = u.id
+    JOIN usuarios uc ON c.cliente_id = uc.id
+    JOIN usuarios up ON c.prestador_id = up.id
+    LEFT JOIN prestadores_detalhes pd ON pd.usuario_id = up.id
     WHERE c.id = :contrato_id
 ");
 $stmtContrato->execute([':contrato_id' => $contratoId]);
 $contrato = $stmtContrato->fetch(PDO::FETCH_ASSOC);
 
-// Segurança crítica solicitada pelo usuário:
-// Só poder acessar se tiver algum serviço/contrato concluído e vinculado, e se o usuário for o cliente
-if (!$contrato || 
-    $contrato['cliente_id'] != $idUsuarioLogado || 
-    $contrato['status'] !== 'concluido' || 
-    $contrato['avaliado']) {
-    
+if (!$contrato || $contrato['status'] !== 'concluido') {
     header("Location: meus-pedidos.php");
     exit;
 }
 
-$prestadorId = $contrato['prestador_id'];
+$souCliente   = ($idUsuarioLogado == $contrato['cliente_id']);
+$souPrestador = ($idUsuarioLogado == $contrato['prestador_id']);
 
-// Estatísticas reais do prestador
+if (!$souCliente && !$souPrestador) {
+    header("Location: meus-pedidos.php");
+    exit;
+}
+
+if ($souCliente && $contrato['avaliado']) {
+    header("Location: meus-pedidos.php");
+    exit;
+}
+
+if ($souPrestador && $contrato['avaliado_prestador']) {
+    header("Location: chat.php");
+    exit;
+}
+
+$alvoId = $souCliente ? $contrato['prestador_id'] : $contrato['cliente_id'];
+$nomeOutro = $souCliente ? $contrato['prestador_nome'] : $contrato['cliente_nome'];
+$fotoOutro = $souCliente ? $contrato['prestador_foto'] : $contrato['cliente_foto'];
+$papelOutro = $souCliente ? 'Prestador de Serviço' : 'Cliente';
+$subtituloOutro = $souCliente ? ($contrato['prestador_nicho'] ?? 'Geral') : 'Cliente / Comprador';
+
+// Estatísticas reais do alvo
 $stmtMedia = $pdo->prepare("
     SELECT AVG(nota) as media, COUNT(nota) as total
     FROM avaliacoes
-    WHERE prestador_id = :prestador_id
+    WHERE (prestador_id = :id AND avaliador_tipo = 'cliente')
+       OR (cliente_id = :id AND avaliador_tipo = 'prestador')
 ");
-$stmtMedia->execute([':prestador_id' => $prestadorId]);
+$stmtMedia->execute([':id' => $alvoId]);
 $mediaDados = $stmtMedia->fetch(PDO::FETCH_ASSOC);
 
 $mediaNota = $mediaDados['media'] ? round((float)$mediaDados['media'], 1) : 0;
@@ -83,10 +105,11 @@ if ($totalAvaliacoes > 0) {
     $stmtDist = $pdo->prepare("
         SELECT nota, COUNT(*) as qtd
         FROM avaliacoes
-        WHERE prestador_id = :prestador_id
+        WHERE (prestador_id = :id AND avaliador_tipo = 'cliente')
+           OR (cliente_id = :id AND avaliador_tipo = 'prestador')
         GROUP BY nota
     ");
-    $stmtDist->execute([':prestador_id' => $prestadorId]);
+    $stmtDist->execute([':id' => $alvoId]);
     $distDados = $stmtDist->fetchAll(PDO::FETCH_ASSOC);
     foreach ($distDados as $d) {
         $distribuicao[(int)$d['nota']] = (int)$d['qtd'];
@@ -98,7 +121,7 @@ if ($totalAvaliacoes > 0) {
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>ReformAí – Avaliar Prestador</title>
+  <title>ReformAí – Avaliar <?= ($souCliente) ? 'Prestador' : 'Cliente' ?></title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
   <script>
@@ -144,7 +167,7 @@ if ($totalAvaliacoes > 0) {
         </button>
         <a href="./dashboard.php" class="text-gray-400 text-sm hover:text-orange transition-colors">Início</a>
         <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
-        <span class="text-gray-800 font-bold text-lg tracking-tight">Avaliar Prestador</span>
+        <span class="text-gray-800 font-bold text-lg tracking-tight">Avaliar <?= ($souCliente) ? 'Prestador' : 'Cliente' ?></span>
       </div>
       <div class="flex items-center gap-4">
         <button aria-label="Notificações" class="text-gray-400 hover:text-gray-700 transition-colors p-2 rounded-xl hover:bg-gray-100">
@@ -158,19 +181,19 @@ if ($totalAvaliacoes > 0) {
       
       <div class="w-full max-w-2xl">
         
-        <!-- Card do Prestador -->
+        <!-- Card do Avaliado -->
         <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 mb-12 flex items-center gap-5">
           <div class="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center text-slate-300 overflow-hidden border border-gray-200">
-            <?php if (!empty($contrato['prestador_foto']) && $contrato['prestador_foto'] !== 'default.png'): ?>
-              <img src="<?= $urlBaseSupabase . htmlspecialchars($contrato['prestador_foto']) ?>" class="w-full h-full object-cover">
+            <?php if (!empty($fotoOutro) && $fotoOutro !== 'default.png'): ?>
+              <img src="<?= $urlBaseSupabase . htmlspecialchars($fotoOutro) ?>" class="w-full h-full object-cover">
             <?php else: ?>
               <svg class="w-8 h-8" fill="currentColor" viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
             <?php endif; ?>
           </div>
           <div>
-            <span class="text-[10px] font-bold text-orange uppercase tracking-wider block mb-0.5">Prestador de Serviço</span>
-            <h2 class="text-xl font-extrabold text-slate-900"><?= htmlspecialchars($contrato['prestador_nome']) ?></h2>
-            <p class="text-slate-400 text-sm"><?= htmlspecialchars($contrato['servico_titulo']) ?> (<?= htmlspecialchars($contrato['prestador_nicho'] ?? 'Geral') ?>)</p>
+            <span class="text-[10px] font-bold text-orange uppercase tracking-wider block mb-0.5"><?= $papelOutro ?></span>
+            <h2 class="text-xl font-extrabold text-slate-900"><?= htmlspecialchars($nomeOutro) ?></h2>
+            <p class="text-slate-400 text-sm"><?= htmlspecialchars($contrato['servico_titulo']) ?> (<?= htmlspecialchars($subtituloOutro) ?>)</p>
           </div>
         </div>
 
@@ -201,16 +224,16 @@ if ($totalAvaliacoes > 0) {
               Enviar avaliação
               <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M5 12h14m-7-7l7 7-7 7"/></svg>
             </button>
-            <button onclick="window.location.href='meus-pedidos.php'" class="w-full bg-slate-50 hover:bg-slate-100 text-slate-600 py-4 rounded-2xl font-bold text-sm transition-colors">
-              Voltar para meus pedidos
+            <button onclick="window.location.href='<?= $souCliente ? "meus-pedidos.php" : "chat.php?com=" . $comId ?>'" class="w-full bg-slate-50 hover:bg-slate-100 text-slate-600 py-4 rounded-2xl font-bold text-sm transition-colors">
+              Voltar
             </button>
           </div>
         </div>
 
-        <!-- Média do Profissional -->
+        <!-- Média do Alvo -->
         <div class="mt-20 pt-10 border-t border-gray-100">
           <div class="flex items-center justify-between mb-6">
-            <h4 class="text-sm font-bold text-slate-900">Média do profissional</h4>
+            <h4 class="text-sm font-bold text-slate-900">Média do <?= ($souCliente) ? 'profissional' : 'cliente' ?></h4>
             <div class="flex items-center gap-1.5 text-orange font-extrabold">
               <span><?= $mediaNota > 0 ? $mediaNota : 'Sem avaliações' ?></span>
               <svg class="w-4 h-4 fill-orange" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
@@ -291,6 +314,7 @@ if ($totalAvaliacoes > 0) {
     async function submeterAvaliacao() {
       const comentario = document.getElementById('comentario-text').value.trim();
       const contratoId = <?= (int)$contratoId ?>;
+      const comId = <?= (int)$comId ?>;
 
       try {
         const resp = await fetch('../../backend/controllers/ContratoController.php?acao=salvar_avaliacao', {
@@ -307,7 +331,11 @@ if ($totalAvaliacoes > 0) {
         if (resp.ok && res.sucesso) {
           mostrarToast('Avaliação enviada com sucesso!', 'sucesso');
           setTimeout(() => {
-            window.location.href = 'meus-pedidos.php';
+            if (comId > 0) {
+              window.location.href = 'chat.php?com=' + comId;
+            } else {
+              window.location.href = '<?= $souCliente ? "meus-pedidos.php" : "chat.php" ?>';
+            }
           }, 1500);
         } else {
           mostrarToast(res.erro || 'Erro ao enviar avaliação.', 'erro');
@@ -318,9 +346,9 @@ if ($totalAvaliacoes > 0) {
     }
 
     function mostrarToast(msg, tipo = 'erro') {
-      const cor = tipo === 'erro' ? 'bg-red-500' : 'bg-green-500';
+      const col = tipo === 'erro' ? 'bg-red-500' : 'bg-green-500';
       const t = document.createElement('div');
-      t.className = `fixed bottom-6 right-6 z-[999] ${cor} text-white text-xs font-bold px-4 py-3 rounded-xl shadow-lg transition-all`;
+      t.className = `fixed bottom-6 right-6 z-[999] ${col} text-white text-xs font-bold px-4 py-3 rounded-xl shadow-lg transition-all`;
       t.textContent = msg;
       document.body.appendChild(t);
       setTimeout(() => t.remove(), 3500);

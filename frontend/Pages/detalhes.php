@@ -80,6 +80,14 @@ try {
     $stmtFavCheck->execute([':uid' => $idUsuarioLogado, ':sid' => $idServico]);
     $estaFavoritado = $stmtFavCheck->fetchColumn() > 0;
 
+    // Busca a contagem global de mensagens não lidas para o usuário logado
+    $stmtUnreadMsgCount = $pdo->prepare("SELECT COUNT(*) FROM mensagens_chat WHERE destinatario_id = :uid AND lido_em IS NULL AND deletado = 0");
+    $stmtUnreadMsgCount->execute([':uid' => $idUsuarioLogado]);
+    $totalMensagensNaoLidas = (int)$stmtUnreadMsgCount->fetchColumn();
+
+    // Flag de admin (a tabela usuarios não possui coluna tipo_usuario)
+    $isAdmin = false;
+
 } catch (PDOException $e) {
     die("Erro ao carregar dados: " . $e->getMessage());
 }
@@ -122,8 +130,13 @@ try {
     import { renderSidebar } from '../src/components/sidebar.js';
     
     const hasServices = <?= $temServico ? 'true' : 'false' ?>;
+    const isAdmin = <?= $isAdmin ? 'true' : 'false' ?>;
+    const badges = {
+      badgeMensagens: <?= $totalMensagensNaoLidas ?>,
+      badgeAgendamentos: 0
+    };
     
-    renderSidebar('sidebar-container', 'inicio', hasServices);
+    renderSidebar('sidebar-container', 'inicio', hasServices, isAdmin, badges);
   </script>
 
   <main class="flex-1 flex flex-col overflow-hidden w-full relative">

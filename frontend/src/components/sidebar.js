@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Componente Sidebar Inteligente - ReformAí
  */
 
@@ -69,7 +69,7 @@ function buildNavLink(item, isActive, badgeCount = 0) {
   const defaultClasses = 'text-white/60 hover:text-white hover:bg-white/5 font-medium transition-all';
 
   const badgeHtml = badgeCount > 0 
-    ? `<span class="ml-auto bg-red-500 text-white text-[10px] font-black px-2 py-0.5 rounded-full">${badgeCount}</span>`
+    ? `<span class="sidebar-msg-badge ml-auto bg-red-500 text-white text-[10px] font-black px-2 py-0.5 rounded-full">${badgeCount}</span>`
     : '';
 
   return `
@@ -192,4 +192,39 @@ export function renderSidebar(containerId, activePage = '', isPro = false, isAdm
       }
     };
   }
+
+  // ─── Polling automático do badge de Mensagens na sidebar ───
+  window.updateSidebarBadge = function(newCount) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    // Encontra o link de Mensagens pela href
+    const chatLink = container.querySelector('a[href="chat.php"]');
+    if (!chatLink) return;
+    // Remove badge antigo se existir
+    const oldBadge = chatLink.querySelector('.sidebar-msg-badge');
+    if (oldBadge) oldBadge.remove();
+    // Adiciona novo badge se count > 0
+    if (newCount > 0) {
+      const badge = document.createElement('span');
+      badge.className = 'sidebar-msg-badge ml-auto bg-red-500 text-white text-[10px] font-black px-2 py-0.5 rounded-full animate-pulse';
+      badge.textContent = newCount;
+      chatLink.appendChild(badge);
+    }
+  };
+
+  // Inicia polling a cada 3 segundos para atualizar badge de mensagens
+  const API_UNREAD = '../../backend/controllers/RoteadorChat.php?acao=unread_count';
+  async function _pollUnreadCount() {
+    try {
+      const resp = await fetch(API_UNREAD);
+      if (!resp.ok) return;
+      const data = await resp.json();
+      if (typeof data.total === 'number') {
+        window.updateSidebarBadge(data.total);
+      }
+    } catch (e) { /* silencioso */ }
+  }
+  // Primeiro poll imediato (sem esperar o intervalo)
+  setTimeout(_pollUnreadCount, 500);
+  setInterval(_pollUnreadCount, 3000);
 }

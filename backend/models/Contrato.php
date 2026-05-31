@@ -73,19 +73,31 @@ class Contrato {
         return $stmt->execute([':status' => $status, ':id' => $id]);
     }
 
-    public function buscarContratoParaAvaliar($clienteId, $prestadorId) {
+    public function buscarContratoParaAvaliar($usuarioLogadoId, $outroUsuarioId) {
         $stmt = $this->pdo->prepare("
-            SELECT id
+            SELECT id, cliente_id, prestador_id, servico_id
             FROM contratos
-            WHERE cliente_id = :cliente_id
-              AND prestador_id = :prestador_id
-              AND status = 'concluido'
-              AND avaliado = false
+            WHERE (
+                (cliente_id = :uid AND prestador_id = :oid AND status = 'concluido' AND avaliado = false)
+                OR 
+                (prestador_id = :uid AND cliente_id = :oid AND status = 'concluido' AND avaliado_prestador = false)
+            )
             ORDER BY criado_em DESC
             LIMIT 1
         ");
-        $stmt->execute([':cliente_id' => $clienteId, ':prestador_id' => $prestadorId]);
+        $stmt->execute([':uid' => $usuarioLogadoId, ':oid' => $outroUsuarioId]);
         return $stmt->fetch(PDO::FETCH_ASSOC);
+    }
+
+    public function atualizarStatusParaConcluidoPeloCliente($id) {
+        $stmt = $this->pdo->prepare("
+            UPDATE contratos 
+            SET status = 'concluido', 
+                finalizado_prestador_em = COALESCE(finalizado_prestador_em, CURRENT_TIMESTAMP),
+                atualizado_em = CURRENT_TIMESTAMP
+            WHERE id = :id
+        ");
+        return $stmt->execute([':id' => $id]);
     }
 
     // Conclui automaticamente contratos onde o prestador entregou
@@ -100,26 +112,33 @@ class Contrato {
         ");
     }
 
-    public function salvarAvaliacao($contratoId, $clienteId, $prestadorId, $servicoId, $nota, $comentario) {
+    public function salvarAvaliacao($contratoId, $clienteId, $prestadorId, $servicoId, $nota, $comentario, $avaliadorTipo = 'cliente') {
         $this->pdo->beginTransaction();
         try {
             // 1. Insere a avaliação
             $stmt = $this->pdo->prepare("
-                INSERT INTO avaliacoes (cliente_id, prestador_id, servico_id, nota, comentario, data_avaliacao)
-                VALUES (:cliente_id, :prestador_id, :servico_id, :nota, :comentario, CURRENT_TIMESTAMP)
+                INSERT INTO avaliacoes (cliente_id, prestador_id, servico_id, nota, comentario, avaliador_tipo, data_avaliacao)
+                VALUES (:cliente_id, :prestador_id, :servico_id, :nota, :comentario, :avaliador_tipo, CURRENT_TIMESTAMP)
             ");
             $stmt->execute([
-                ':cliente_id'   => $clienteId,
-                ':prestador_id' => $prestadorId,
-                ':servico_id'   => $servicoId,
-                ':nota'         => $nota,
-                ':comentario'   => $comentario
+                ':cliente_id'    => $clienteId,
+                ':prestador_id'  => $prestadorId,
+                ':servico_id'    => $servicoId,
+                ':nota'          => $nota,
+                ':comentario'    => $comentario,
+                ':avaliador_tipo'=> $avaliadorTipo
             ]);
 
             // 2. Marca o contrato como avaliado
-            $stmtUpdate = $this->pdo->prepare("
-                UPDATE contratos SET avaliado = true WHERE id = :id
-            ");
+            if ($avaliadorTipo === 'cliente') {
+                $stmtUpdate = $this->pdo->prepare("
+                    UPDATE contratos SET avaliado = true WHERE id = :id
+                ");
+            } else {
+                $stmtUpdate = $this->pdo->prepare("
+                    UPDATE contratos SET avaliado_prestador = true WHERE id = :id
+                ");
+            }
             $stmtUpdate->execute([':id' => $contratoId]);
 
             $this->pdo->commit();

@@ -55,6 +55,11 @@ if ($idDestinatario > 0) {
 $listaServicosDisponiveis = $outraPessoaTemServico
     ? $contratoModel->listarServicosPrestador($idDestinatario)
     : [];
+
+// Busca a contagem global de mensagens não lidas para o usuário logado
+$stmtUnreadMsgCount = $pdo->prepare("SELECT COUNT(*) FROM mensagens_chat WHERE destinatario_id = :uid AND lido_em IS NULL AND deletado = 0");
+$stmtUnreadMsgCount->execute([':uid' => $idUsuarioLogado]);
+$totalMensagensNaoLidas = (int)$stmtUnreadMsgCount->fetchColumn();
 ?>
 <!DOCTYPE html>
 <html lang="pt-BR">
@@ -82,6 +87,9 @@ $listaServicosDisponiveis = $outraPessoaTemServico
     .custom-scroll::-webkit-scrollbar { width: 6px; }
     .custom-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 99px; }
     .msg-container:hover .msg-actions { display: flex !important; }
+    .check-enviado { color: rgba(255,255,255,0.45); font-weight: 500; }
+    .check-entregue { color: rgba(255,255,255,0.55); font-weight: 700; }
+    .check-lido { color: #34B7F1 !important; opacity: 1 !important; font-weight: 900; }
   </style>
 </head>
 <body class="font-sans bg-bg text-gray-800 flex h-screen overflow-hidden">
@@ -92,7 +100,7 @@ $listaServicosDisponiveis = $outraPessoaTemServico
     import { renderSidebar } from '../src/components/sidebar.js';
     const temServico = <?= $temServico ? 'true' : 'false' ?>;
     const isAdmin    = <?= (isset($usuario['tipo_usuario']) && $usuario['tipo_usuario'] === 'admin') ? 'true' : 'false' ?>;
-    renderSidebar('sidebar-container', 'chat', temServico, isAdmin, { badgeMensagens: 0, badgeAgendamentos: 0 });
+    renderSidebar('sidebar-container', 'chat', temServico, isAdmin, { badgeMensagens: <?= $totalMensagensNaoLidas ?>, badgeAgendamentos: 0 });
   </script>
 
   <main class="flex-1 flex overflow-hidden p-0 md:p-6 md:gap-6 w-full relative">
@@ -122,11 +130,13 @@ $listaServicosDisponiveis = $outraPessoaTemServico
         <a href="chat.php" class="md:hidden p-2 -ml-2 text-gray-500 hover:bg-gray-200 rounded-lg transition-colors">
           <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
         </a>
-        <div id="topo-avatar"></div>
-        <div>
-          <h2 class="text-sm font-bold text-gray-900 truncate"><?= $nomeDestinatario ?></h2>
-          <p class="text-[11px] text-gray-400">online</p>
-        </div>
+        <a href="ver-perfil.php?id=<?= $idDestinatario ?>" class="flex items-center gap-3 hover:opacity-80 transition-opacity">
+          <div id="topo-avatar"></div>
+          <div>
+            <h2 class="text-sm font-bold text-gray-900 truncate"><?= $nomeDestinatario ?></h2>
+            <p class="text-[11px] text-gray-400">online</p>
+          </div>
+        </a>
       </div>
 
       <!-- Barra de contrato -->
@@ -189,7 +199,7 @@ $listaServicosDisponiveis = $outraPessoaTemServico
                             <a href="./avaliar-prestador.php?contrato_id=<?= $contratoParaAvaliar['id'] ?>&com=<?= $idDestinatario ?>"
                                class="flex items-center gap-1.5 bg-yellow-400 hover:bg-yellow-500 text-white font-bold px-3 py-1.5 rounded-xl text-xs transition-all cursor-pointer shadow-md">
                                 <svg class="w-3.5 h-3.5 fill-white" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
-                                Avaliar Serviço
+                                <?= ($contratoParaAvaliar['cliente_id'] == $idUsuarioLogado) ? 'Avaliar Prestador' : 'Avaliar Cliente' ?>
                             </a>
                         <?php endif; ?>
                         <button onclick="abrirModalContrato()" class="bg-orange hover:bg-orange-dark text-white font-bold px-4 py-2 rounded-xl text-xs transition-all cursor-pointer shadow-md">
@@ -201,7 +211,7 @@ $listaServicosDisponiveis = $outraPessoaTemServico
                     <a href="./avaliar-prestador.php?contrato_id=<?= $contratoParaAvaliar['id'] ?>&com=<?= $idDestinatario ?>"
                        class="flex items-center gap-1.5 bg-yellow-400 hover:bg-yellow-500 text-white font-bold px-3 py-1.5 rounded-xl text-xs transition-all cursor-pointer shadow-md">
                         <svg class="w-3.5 h-3.5 fill-white" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
-                        Avaliar Serviço
+                                <?= ($contratoParaAvaliar['cliente_id'] == $idUsuarioLogado) ? 'Avaliar Prestador' : 'Avaliar Cliente' ?>
                     </a>
                 <?php else: ?>
                     <p class="text-xs text-gray-400 italic">Nenhum vínculo de serviço ativo ou disponível para este usuário.</p>
@@ -371,12 +381,18 @@ $listaServicosDisponiveis = $outraPessoaTemServico
         box.className = `flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all
           ${selecionado ? 'bg-orange/10 border border-orange/20 shadow-sm' : 'hover:bg-gray-50 border border-transparent'}`;
         box.onclick = () => { window.location.href = `chat.php?com=${c.id}`; };
+        
+        const countBadge = c.unread_count > 0 
+          ? `<span class="ml-auto bg-orange text-white text-[10px] font-black px-2 py-0.5 rounded-full animate-pulse flex-shrink-0">${c.unread_count}</span>` 
+          : '';
+          
         box.innerHTML = `
           <div class="flex-shrink-0">${gerarAvatarHtml(c.nome, c.foto_perfil)}</div>
           <div class="min-w-0 flex-1">
             <span class="font-bold text-xs text-gray-900 truncate block">${c.nome}</span>
             <p class="text-[11px] text-gray-400 truncate mt-0.5">Clique para ver mensagens</p>
           </div>
+          ${countBadge}
         `;
         listaContatos.appendChild(box);
       });
@@ -444,9 +460,26 @@ $listaServicosDisponiveis = $outraPessoaTemServico
         const divAlinhamento = document.createElement('div');
         divAlinhamento.className = `msg-container flex items-end gap-1 max-w-[85%] w-full ${souEu ? 'justify-end ml-auto' : 'justify-start'}`;
 
+        let checkmarkHtml = '';
+        if (souEu && !foiDeletado) {
+          const estaLida    = msg.lido_em !== null && msg.lido_em !== undefined;
+          const estaEntregue = msg.entregue_em !== null && msg.entregue_em !== undefined;
+          
+          if (estaLida) {
+            // Fase 3: Lida (abriu o chat) → ✓✓ azul
+            checkmarkHtml = `<span class="check-lido ml-1" title="Lida" style="font-size: 11px;">✓✓</span>`;
+          } else if (estaEntregue) {
+            // Fase 2: Entregue (online na plataforma, mas não abriu este chat) → ✓✓ cinza
+            checkmarkHtml = `<span class="check-entregue ml-1" title="Entregue" style="font-size: 11px;">✓✓</span>`;
+          } else {
+            // Fase 1: Enviada (destinatário offline) → ✓ cinza
+            checkmarkHtml = `<span class="check-enviado ml-1" title="Enviada" style="font-size: 11px;">✓</span>`;
+          }
+        }
+
         const divBalao = document.createElement('div');
         divBalao.className = classeBalao;
-        divBalao.innerHTML = `${conteudo}<span class="block text-[9px] text-right mt-1 select-none opacity-75 ${souEu ? 'text-orange-100' : 'text-gray-400'}">${horaLabel}${editadaLabel}</span>`;
+        divBalao.innerHTML = `${conteudo}<span class="block text-[9px] text-right mt-1 select-none opacity-75 ${souEu ? 'text-orange-100' : 'text-gray-400'}">${horaLabel}${editadaLabel}${checkmarkHtml}</span>`;
 
         divAlinhamento.appendChild(divBalao);
         if (souEu && botoesAcao) divAlinhamento.insertAdjacentHTML('beforeend', botoesAcao);
@@ -586,9 +619,57 @@ $listaServicosDisponiveis = $outraPessoaTemServico
     }
   });
 
+  // ─── Marcação de leitura ao abrir chat ───
+  async function marcarComoLidoNoServidor() {
+    if (!comQuemId) return;
+    try {
+      await fetch(`${urlApiBase}?acao=mark_read`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ remetente_id: parseInt(comQuemId) })
+      });
+    } catch (e) { /* silencioso */ }
+  }
+
   carregarContatos();
   carregarMensagens();
-  if (comQuemId) setInterval(carregarMensagens, 4000);
+  marcarComoLidoNoServidor();
+
+  if (comQuemId) {
+    // Polling de mensagens + marcar como lido a cada ciclo (quase instantâneo)
+    setInterval(() => {
+      carregarMensagens();
+      marcarComoLidoNoServidor();
+    }, 2000);
+  }
+
+  // Polling de contatos (atualiza badges sem F5)
+  setInterval(carregarContatos, 3000);
+
+  // ─── Polling de contrato (detecta mudanças e recarrega a barra) ───
+  const _contratoStatusInicial = <?= json_encode($contratoAtivo ? ['id' => $contratoAtivo['id'], 'status' => $contratoAtivo['status'], 'fp' => $contratoAtivo['finalizado_prestador_em']] : null) ?>;
+
+  async function _pollContratoStatus() {
+    if (!comQuemId) return;
+    try {
+      const resp = await fetch(`${urlApiBase}?acao=contract_status&com=${comQuemId}`);
+      if (!resp.ok) return;
+      const data = await resp.json();
+      const novoContrato = data.contrato;
+      // Compara estado atual com o que foi renderizado pelo PHP
+      const iniId     = _contratoStatusInicial ? _contratoStatusInicial.id : null;
+      const iniStatus = _contratoStatusInicial ? _contratoStatusInicial.status : null;
+      const iniFp     = _contratoStatusInicial ? _contratoStatusInicial.fp : null;
+      const novoId     = novoContrato ? novoContrato.id : null;
+      const novoStatus = novoContrato ? novoContrato.status : null;
+      const novoFp     = novoContrato ? novoContrato.finalizado_prestador_em : null;
+      // Se mudou qualquer coisa, recarrega a página para atualizar a barra de contrato
+      if (iniId !== novoId || iniStatus !== novoStatus || iniFp !== novoFp) {
+        window.location.reload();
+      }
+    } catch (e) { /* silencioso */ }
+  }
+  if (comQuemId) setInterval(_pollContratoStatus, 3000);
 </script>
 <script type="module">
   import { abrirModalContrato, fecharModalContrato, enviarPropostaContrato, alterarStatusContrato } from '../src/js/contrato.js';

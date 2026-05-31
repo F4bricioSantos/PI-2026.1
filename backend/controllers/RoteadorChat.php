@@ -13,6 +13,12 @@ if ($metodo === 'GET') {
     if ($acao === 'listar_contatos') {
         $controller->listarContatosConversas();
 
+    } elseif ($acao === 'unread_count') {
+        $controller->contarNaoLidas();
+
+    } elseif ($acao === 'contract_status') {
+        $controller->verificarStatusContrato();
+
     } else {
         $controller->listarMensagens();
     }
@@ -22,6 +28,12 @@ if ($metodo === 'GET') {
     // Upload de imagem: multipart/form-data com campo "imagem"
     if ($acao === 'upload') {
         $controller->uploadImagem();
+
+    // Marcar mensagens como lidas: JSON com { remetente_id }
+    } elseif ($acao === 'mark_read') {
+        $dados = json_decode(file_get_contents('php://input'), true) ?? [];
+        $remetenteId = (int)($dados['remetente_id'] ?? 0);
+        $controller->marcarComoLido($remetenteId);
 
     // Envio de mensagem: JSON com { mensagem, url_imagem }
     } else {

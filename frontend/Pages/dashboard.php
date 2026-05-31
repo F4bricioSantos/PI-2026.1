@@ -93,6 +93,11 @@ if (!$favoritosIds) {
     $favoritosIds = [];
 }
 
+// Busca a contagem global de mensagens não lidas para o usuário logado
+$stmtUnreadMsgCount = $pdo->prepare("SELECT COUNT(*) FROM mensagens_chat WHERE destinatario_id = :uid AND lido_em IS NULL AND deletado = 0");
+$stmtUnreadMsgCount->execute([':uid' => $idUsuarioLogado]);
+$totalMensagensNaoLidas = (int)$stmtUnreadMsgCount->fetchColumn();
+
 $categoriasGerais = ["Reformas", "Pintura e Textura", "Elétrica", "Hidráulica", "Pisos e Revestimentos", "Alvenaria e Construção"];
 ?>
 
@@ -132,11 +137,11 @@ $categoriasGerais = ["Reformas", "Pintura e Textura", "Elétrica", "Hidráulica"
     const temServico = <?= $temServico ? 'true' : 'false' ?>;
     
     // Captura se o usuário logado é administrador (verifica a coluna tipo_usuario do seu banco)
-    const isAdmin = <?= (isset($dados['tipo_usuario']) && $dados['tipo_usuario'] === 'admin') ? 'true' : 'false' ?>;
+    const isAdmin = <?= (isset($usuario['tipo_usuario']) && $usuario['tipo_usuario'] === 'admin') ? 'true' : 'false' ?>;
 
-    // Inicializa os contadores vazios por enquanto (ou passe os valores reais se já tiver)
+    // Inicializa os contadores com os valores reais
     const badges = {
-      badgeMensagens: 0,
+      badgeMensagens: <?= $totalMensagensNaoLidas ?>,
       badgeAgendamentos: 0
     };
 

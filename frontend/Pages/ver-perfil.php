@@ -40,19 +40,24 @@ if ($isPrestador) {
 }
 
 // 5. SISTEMA DE AVALIAÇÃO UNIFICADO (Busca avaliações onde o visitado recebeu a nota)
-// Nota: Ajuste os campos 'prestador_id' ou 'cliente_id' conforme o destino da nota no seu banco
 $stmtAval = $pdo->prepare("
-    SELECT a.nota, a.comentario, a.data_avaliacao, u.nome AS avaliador_nome, u.foto_perfil AS avaliador_foto 
+    SELECT a.nota, a.comentario, a.data_avaliacao, u.nome AS avaliador_nome, u.foto_perfil AS avaliador_foto, a.avaliador_tipo 
     FROM avaliacoes a
-    JOIN usuarios u ON u.id = a.cliente_id
-    WHERE a.prestador_id = :id 
+    JOIN usuarios u ON u.id = (CASE WHEN a.avaliador_tipo = 'prestador' THEN a.prestador_id ELSE a.cliente_id END)
+    WHERE (a.prestador_id = :id AND a.avaliador_tipo = 'cliente')
+       OR (a.cliente_id = :id AND a.avaliador_tipo = 'prestador')
     ORDER BY a.data_avaliacao DESC
 ");
 $stmtAval->execute([':id' => $idPerfilVisitado]);
 $avaliacoes = $stmtAval->fetchAll(PDO::FETCH_ASSOC);
 
 // Cálculo da média de estrelas recebidas por este perfil (seja cliente ou prestador)
-$stmtMedia = $pdo->prepare("SELECT COALESCE(ROUND(AVG(nota)::NUMERIC, 1), 0) FROM avaliacoes WHERE prestador_id = :id");
+$stmtMedia = $pdo->prepare("
+    SELECT COALESCE(ROUND(AVG(nota)::NUMERIC, 1), 0) 
+    FROM avaliacoes 
+    WHERE (prestador_id = :id AND avaliador_tipo = 'cliente')
+       OR (cliente_id = :id AND avaliador_tipo = 'prestador')
+");
 $stmtMedia->execute([':id' => $idPerfilVisitado]);
 $mediaNota = $stmtMedia->fetchColumn();
 
@@ -209,7 +214,12 @@ $urlBaseSupabase = "https://yplpxzmwtkencrrtxmof.supabase.co/storage/v1/object/p
               </div>
               <div class="flex-1 space-y-1">
                 <div class="flex items-center justify-between">
-                  <h5 class="text-xs font-bold text-gray-900"><?= htmlspecialchars($a['avaliador_nome']) ?></h5>
+                  <div class="flex items-center gap-2">
+                    <h5 class="text-xs font-bold text-gray-900"><?= htmlspecialchars($a['avaliador_nome']) ?></h5>
+                    <?= ($a['avaliador_tipo'] === 'prestador') 
+                        ? '<span class="text-[9px] bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded font-extrabold uppercase tracking-wide">Avaliação como Cliente</span>' 
+                        : '<span class="text-[9px] bg-orange/10 text-orange px-1.5 py-0.5 rounded font-extrabold uppercase tracking-wide">Avaliação como Prestador</span>' ?>
+                  </div>
                   <span class="text-[10px] text-gray-400"><?= date('d/m/Y', strtotime($a['data_avaliacao'])) ?></span>
                 </div>
                 <div class="flex items-center gap-0.5">

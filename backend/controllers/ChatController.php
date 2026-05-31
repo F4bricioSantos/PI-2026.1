@@ -27,9 +27,24 @@ class ChatController {
         }
 
         try {
+            // Marca todas as mensagens enviadas pelo destinatário atual para o usuário logado como lidas
+            try {
+                $upd = $this->pdo->prepare("
+                    UPDATE mensagens_chat
+                    SET lido_em = NOW()
+                    WHERE destinatario_id = :user AND remetente_id = :dest AND lido_em IS NULL
+                ");
+                $upd->execute([
+                    ':user' => $this->idUsuarioLogado,
+                    ':dest' => $this->idDestinatarioAtual,
+                ]);
+            } catch (PDOException $e) {
+                error_log("Erro ao marcar mensagens como lidas: " . $e->getMessage());
+            }
+
             $stmt = $this->pdo->prepare("
                 SELECT id, remetente_id, destinatario_id, mensagem,
-                       url_imagem, criado_em, atualizado_em, deletado
+                       url_imagem, criado_em, atualizado_em, deletado, lido_em, entregue_em
                 FROM mensagens_chat
                 WHERE (remetente_id = :user AND destinatario_id = :dest)
                    OR (remetente_id = :dest AND destinatario_id = :user)
@@ -212,12 +227,19 @@ class ChatController {
 
         try {
             $stmt = $this->pdo->prepare("
-                SELECT DISTINCT u.id, u.nome, u.foto_perfil
+                SELECT u.id, u.nome, u.foto_perfil,
+                       (SELECT COUNT(*)::INT 
+                        FROM mensagens_chat m2 
+                        WHERE m2.remetente_id = u.id 
+                          AND m2.destinatario_id = :user 
+                          AND m2.lido_em IS NULL 
+                          AND m2.deletado = 0) AS unread_count
                 FROM usuarios u
                 JOIN mensagens_chat m
                   ON (m.remetente_id = u.id OR m.destinatario_id = u.id)
                 WHERE (m.remetente_id = :user OR m.destinatario_id = :user)
                   AND u.id != :user
+                GROUP BY u.id, u.nome, u.foto_perfil
             ");
             $stmt->execute([':user' => $this->idUsuarioLogado]);
             echo json_encode($stmt->fetchAll(PDO::FETCH_ASSOC));
@@ -313,6 +335,120 @@ class ChatController {
                 'detalhe'  => json_decode($resposta, true),
                 'curlErro' => $curlErro ?: null,
             ]);
+        }
+    }
+
+    // ─────────────────────────────────────────────
+    // CONTAGEM DE MENSAGENS NÃO LIDAS (polling)
+    // Retorna JSON: { total: int, por_contato: { id: count, ... } }
+    // ─────────────────────────────────────────────
+    public function contarNaoLidas() {
+        if (!$this->idUsuarioLogado) {
+            echo json_encode(['total' => 0, 'por_contato' => new \stdClass()]);
+            return;
+        }
+
+        try {
+            // Marca todas as mensagens destinadas a este usuário como ENTREGUES
+            // (ele está online, pois está fazendo polling)
+            try {
+                $updEntregue = $this->pdo->prepare("
+                    UPDATE mensagens_chat
+                    SET entregue_em = NOW()
+                    WHERE destinatario_id = :uid AND entregue_em IS NULL AND deletado = 0
+                ");
+                $updEntregue->execute([':uid' => $this->idUsuarioLogado]);
+            } catch (PDOException $e) {
+                error_log("Erro ao marcar entregue: " . $e->getMessage());
+            }
+
+            // Total global
+            $stmtTotal = $this->pdo->prepare("
+                SELECT COUNT(*) FROM mensagens_chat
+                WHERE destinatario_id = :uid AND lido_em IS NULL AND deletado = 0
+            ");
+            $stmtTotal->execute([':uid' => $this->idUsuarioLogado]);
+            $total = (int)$stmtTotal->fetchColumn();
+
+            // Por contato (remetente)
+            $stmtPorContato = $this->pdo->prepare("
+                SELECT remetente_id, COUNT(*)::INT as cnt
+                FROM mensagens_chat
+                WHERE destinatario_id = :uid AND lido_em IS NULL AND deletado = 0
+                GROUP BY remetente_id
+            ");
+            $stmtPorContato->execute([':uid' => $this->idUsuarioLogado]);
+            $rows = $stmtPorContato->fetchAll(PDO::FETCH_ASSOC);
+
+            $porContato = new \stdClass();
+            foreach ($rows as $r) {
+                $porContato->{$r['remetente_id']} = (int)$r['cnt'];
+            }
+
+            echo json_encode(['total' => $total, 'por_contato' => $porContato]);
+        } catch (PDOException $e) {
+            http_response_code(500);
+            echo json_encode(['erro' => 'Erro SQL: ' . $e->getMessage()]);
+        }
+    }
+
+    // ─────────────────────────────────────────────
+    // MARCAR COMO LIDO via endpoint dedicado
+    // POST ?acao=mark_read JSON: { remetente_id: int }
+    // ─────────────────────────────────────────────
+    public function marcarComoLido($remetenteId) {
+        if (!$this->idUsuarioLogado || !$remetenteId) {
+            echo json_encode(['sucesso' => false]);
+            return;
+        }
+
+        try {
+            $upd = $this->pdo->prepare("
+                UPDATE mensagens_chat
+                SET lido_em = NOW()
+                WHERE destinatario_id = :user AND remetente_id = :rem AND lido_em IS NULL
+            ");
+            $upd->execute([
+                ':user' => $this->idUsuarioLogado,
+                ':rem'  => (int)$remetenteId,
+            ]);
+            echo json_encode(['sucesso' => true, 'atualizados' => $upd->rowCount()]);
+        } catch (PDOException $e) {
+            http_response_code(500);
+            echo json_encode(['erro' => 'Erro SQL: ' . $e->getMessage()]);
+        }
+    }
+
+    // ─────────────────────────────────────────────
+    // VERIFICAR STATUS DE CONTRATO (polling)
+    // GET ?acao=contract_status&com=ID
+    // Retorna JSON: { contrato: { id, status, finalizado_prestador_em } | null }
+    // ─────────────────────────────────────────────
+    public function verificarStatusContrato() {
+        if (!$this->idUsuarioLogado || !$this->idDestinatarioAtual) {
+            echo json_encode(['contrato' => null]);
+            return;
+        }
+
+        try {
+            $stmt = $this->pdo->prepare("
+                SELECT c.id, c.status, c.finalizado_prestador_em
+                FROM contratos c
+                WHERE ((c.cliente_id = :u1 AND c.prestador_id = :u2)
+                   OR  (c.cliente_id = :u2 AND c.prestador_id = :u1))
+                  AND c.status IN ('pendente', 'aceito')
+                ORDER BY c.criado_em DESC
+                LIMIT 1
+            ");
+            $stmt->execute([
+                ':u1' => $this->idUsuarioLogado,
+                ':u2' => $this->idDestinatarioAtual,
+            ]);
+            $contrato = $stmt->fetch(PDO::FETCH_ASSOC);
+            echo json_encode(['contrato' => $contrato ?: null]);
+        } catch (PDOException $e) {
+            http_response_code(500);
+            echo json_encode(['erro' => 'Erro SQL: ' . $e->getMessage()]);
         }
     }
 }

@@ -104,13 +104,8 @@ if ($acao === 'mudar_status' && $_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         if ($souCliente) {
-            // Etapa 2: cliente confirma — só pode se o prestador já entregou
-            if ($contrato['finalizado_prestador_em'] === null) {
-                http_response_code(400);
-                echo json_encode(['erro' => 'O prestador ainda não marcou o serviço como entregue.']);
-                exit;
-            }
-            $sucesso = $contratoModel->atualizarStatus($contratoId, 'concluido');
+            // Etapa 2: cliente confirma — pode confirmar a qualquer momento (antes ou depois do prestador)
+            $sucesso = $contratoModel->atualizarStatusParaConcluidoPeloCliente($contratoId);
             echo json_encode(['sucesso' => $sucesso]);
             exit;
         }
@@ -141,7 +136,10 @@ if ($acao === 'salvar_avaliacao' && $_SERVER['REQUEST_METHOD'] === 'POST') {
         exit;
     }
 
-    if ($contrato['cliente_id'] != $idUsuarioLogado) {
+    $souCliente   = ($contrato['cliente_id'] == $idUsuarioLogado);
+    $souPrestador = ($contrato['prestador_id'] == $idUsuarioLogado);
+
+    if (!$souCliente && !$souPrestador) {
         http_response_code(403);
         echo json_encode(['erro' => 'Você não tem permissão para avaliar este contrato.']);
         exit;
@@ -153,11 +151,18 @@ if ($acao === 'salvar_avaliacao' && $_SERVER['REQUEST_METHOD'] === 'POST') {
         exit;
     }
 
-    if ($contrato['avaliado']) {
+    if ($souCliente && $contrato['avaliado']) {
         http_response_code(400);
-        echo json_encode(['erro' => 'Este contrato já foi avaliado.']);
+        echo json_encode(['erro' => 'Você já avaliou este contrato.']);
         exit;
     }
+    if ($souPrestador && $contrato['avaliado_prestador']) {
+        http_response_code(400);
+        echo json_encode(['erro' => 'Você já avaliou este contrato.']);
+        exit;
+    }
+
+    $avaliadorTipo = $souCliente ? 'cliente' : 'prestador';
 
     $sucesso = $contratoModel->salvarAvaliacao(
         $contratoId,
@@ -165,7 +170,8 @@ if ($acao === 'salvar_avaliacao' && $_SERVER['REQUEST_METHOD'] === 'POST') {
         $contrato['prestador_id'],
         $contrato['servico_id'],
         $nota,
-        $comentario
+        $comentario,
+        $avaliadorTipo
     );
 
     echo json_encode(['sucesso' => $sucesso]);
