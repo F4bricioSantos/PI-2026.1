@@ -17,7 +17,6 @@ $contratoModel->executarRotinaConclusaoAutomatica();
 
 $acao = $_GET['acao'] ?? '';
 
-// ─── Listar serviços do prestador ────────────────────────────────────────────
 if ($acao === 'listar_servicos' && $_SERVER['REQUEST_METHOD'] === 'GET') {
     $prestadorId = (int)($_GET['prestador_id'] ?? 0);
     $servicos = $contratoModel->listarServicosPrestador($prestadorId);
@@ -25,7 +24,6 @@ if ($acao === 'listar_servicos' && $_SERVER['REQUEST_METHOD'] === 'GET') {
     exit;
 }
 
-// ─── Propor contrato ─────────────────────────────────────────────────────────
 if ($acao === 'propor_contrato' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     $data        = json_decode(file_get_contents('php://input'), true);
     $prestadorId = (int)($data['prestador_id'] ?? 0);
@@ -54,7 +52,6 @@ if ($acao === 'propor_contrato' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     exit;
 }
 
-// ─── Mudar status ─────────────────────────────────────────────────────────────
 if ($acao === 'mudar_status' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     $data       = json_decode(file_get_contents('php://input'), true);
     $contratoId = (int)$data['id'];
@@ -69,7 +66,6 @@ if ($acao === 'mudar_status' && $_SERVER['REQUEST_METHOD'] === 'POST') {
 
     $souPrestador = ($idUsuarioLogado == $contrato['prestador_id']);
     $souCliente   = ($idUsuarioLogado == $contrato['cliente_id']);
-
     // Apenas o prestador pode aceitar a proposta
     if ($novoStatus === 'aceito') {
         if (!$souPrestador) {
@@ -97,7 +93,6 @@ if ($acao === 'mudar_status' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     // Conclusão: fluxo em duas etapas
     if ($novoStatus === 'concluido') {
         if ($souPrestador) {
-            // Etapa 1: prestador entrega — marca finalizado_prestador_em
             $sucesso = $contratoModel->marcarComoFinalizadoPrestador($contratoId);
             echo json_encode(['sucesso' => $sucesso]);
             exit;
@@ -114,9 +109,9 @@ if ($acao === 'mudar_status' && $_SERVER['REQUEST_METHOD'] === 'POST') {
         echo json_encode(['erro' => 'Sem permissão para concluir este contrato.']);
         exit;
     }
+    exit;
 }
 
-// Salvar avaliação
 if ($acao === 'salvar_avaliacao' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     $data       = json_decode(file_get_contents('php://input'), true);
     $contratoId = (int)($data['contrato_id'] ?? 0);

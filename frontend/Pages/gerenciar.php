@@ -1,11 +1,7 @@
 <?php
-header('Content-Type: text/html; charset=UTF-8');
-
-// 1. PROTEÇÃO DE SESSÃO
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
-
 if (empty($_SESSION['usuario_id'])) {
     header('Location: /PI-2026.1/frontend/Pages/login.php');
     exit;
@@ -19,11 +15,12 @@ $idUsuario = (int)$_SESSION['usuario_id'];
 $mensagem = '';
 $erro = '';
 
-// Define a URL do Supabase
+if (empty($_SESSION['csrf_token'])) {
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+}
 if (!defined('SB_URL')) define('SB_URL', 'https://yplpxzmwtkencrrtxmof.supabase.co');
 $urlBaseSupabase = SB_URL . "/storage/v1/object/public/fotos/";
-
-// 2. BUSCA DADOS DO PRESTADOR PARA O HEADER E BIO
+ 
 try {
     $stmtBio = $pdo->prepare("SELECT bio FROM prestadores_detalhes WHERE usuario_id = :id");
     $stmtBio->execute([':id' => $idUsuario]);
@@ -40,6 +37,11 @@ try {
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $acao = $_POST['acao'] ?? '';
 
+    // VALIDAÇÃO CSRF
+    if (!isset($_POST['csrf_token']) || $_POST['csrf_token'] !== $_SESSION['csrf_token']) {
+        die("Requisição inválida (CSRF).");
+    }
+
     // --- LÓGICA DE EXCLUSÃO ---
     if ($acao === 'excluir') {
         $idServico = filter_input(INPUT_POST, 'servico_id', FILTER_VALIDATE_INT);
@@ -50,6 +52,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $servicoParaExcluir = $stmtRef->fetch(PDO::FETCH_ASSOC);
 
             if ($servicoParaExcluir) {
+                // Impede exclusão Apenas se houver contratos 'pendentes' ou 'aceitos' (em andamento)
+                $stmtContratos = $pdo->prepare("SELECT COUNT(*) FROM contratos WHERE servico_id = :id AND status IN ('pendente', 'aceito')");
+                $stmtContratos->execute([':id' => $idServico]);
+                if ((int)$stmtContratos->fetchColumn() > 0) {
+                    echo "<script>window.location.href='gerenciar.php?erro=contrato_ativo';</script>";
+                    exit;
+                }
+
                 $tituloProjeto = $servicoParaExcluir['titulo'];
 
                 // Deleta fotos do Supabase (se a função existir)
@@ -146,6 +156,7 @@ $temServico = count($servicos) > 0;
       <div class="bg-gray-50 p-4 flex gap-3">
         <button onclick="fecharModalExcluir()" class="flex-1 py-3 text-sm font-bold text-gray-500 hover:bg-gray-200 rounded-xl transition-colors">Cancelar</button>
         <form method="POST" class="flex-1">
+            <input type="hidden" name="csrf_token" value="<?= $_SESSION['csrf_token'] ?>">
             <input type="hidden" name="acao" value="excluir">
             <input type="hidden" name="servico_id" id="excluir-id">
             <button type="submit" class="w-full py-3 text-sm font-bold bg-red-500 text-white hover:bg-red-600 rounded-xl shadow-lg transition-all">Confirmar</button>
@@ -156,10 +167,20 @@ $temServico = count($servicos) > 0;
 
   <div id="sidebar-container" class="fixed inset-y-0 left-0 z-50 w-60 bg-sidebar flex flex-col h-screen transform -translate-x-full md:relative md:translate-x-0 transition-transform duration-300 ease-in-out"></div>
 
+  <script type="module">
+    import { renderSidebar } from '../src/components/sidebar.js';
+    const isPro = <?= $temServico ? 'true' : 'false' ?>;
+    const isAdmin = <?= (isset($usuarioLogado['tipo_usuario']) && $usuarioLogado['tipo_usuario'] === 'admin') ? 'true' : 'false' ?>;
+    renderSidebar('sidebar-container', 'gerenciar', isPro, isAdmin, {}, {
+      nome: "<?= htmlspecialchars($usuarioLogado['nome']) ?>",
+      foto: "<?= $usuarioLogado['foto_perfil'] ?>"
+    });
+  </script>
+
   <main class="flex-1 flex flex-col overflow-hidden w-full relative">
     <header class="flex items-center justify-between px-4 md:px-8 py-4 md:py-5 border-b border-gray-200 bg-white flex-shrink-0">
         <div class="flex items-center gap-2 text-gray-400">
-          <button onclick="window.toggleSidebar && window.toggleSidebar()" class="md:hidden p-2 -ml-2 rounded-lg text-gray-500 hover:bg-gray-100 focus:outline-none transition-colors">
+          <button onclick="window.toggleSidebar && window.toggleSidebar()" class="md:hidden p-2 -ml-2 rounded-lg text-gray-500 hover:bg-gray-100 focus:outline-none transition-colors flex-shrink-0">
             <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/></svg>
           </button>
           <button onclick="history.back()" class="hover:text-gray-600 p-1 md:-ml-1 rounded-lg hover:bg-gray-100 hidden md:block">
@@ -169,15 +190,7 @@ $temServico = count($servicos) > 0;
           <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
           <span class="text-gray-800 font-bold text-lg tracking-tight">Gerenciar</span>
         </div>
-        <div class="w-10 h-10 rounded-full bg-orange flex items-center justify-center text-white font-bold text-sm overflow-hidden border-2 border-orange/20">
-            <?php if(!empty($usuarioLogado['foto_perfil']) && $usuarioLogado['foto_perfil'] !== 'default.png'): ?>
-                <img src="<?= $urlBaseSupabase . $usuarioLogado['foto_perfil'] ?>" class="w-full h-full object-cover">
-            <?php else: ?>
-                <?= strtoupper(mb_substr($usuarioLogado['nome'] ?? 'U', 0, 1)) ?>
-            <?php endif; ?>
-        </div>
     </header>
-
     <div class="flex-1 overflow-y-auto px-4 md:px-8 py-6 custom-scroll">
       <h2 class="text-4xl font-extrabold text-slate-900 mb-6 tracking-tight">Seus Serviços</h2>
 
@@ -187,6 +200,11 @@ $temServico = count($servicos) > 0;
         </div>
       <?php endif; ?>
 
+      <?php if (isset($_GET['erro']) && $_GET['erro'] === 'contrato_ativo'): ?>
+        <div class="mb-6 p-4 bg-red-50 border border-red-100 text-red-600 rounded-2xl font-bold text-sm flex items-center gap-3">
+            Não é possível excluir este serviço enquanto houver contratos pendentes ou em andamento.
+        </div>
+      <?php endif; ?>
       <section class="bg-white border rounded-2xl overflow-hidden shadow-sm">
         <div class="overflow-x-auto custom-scroll">
           <div class="min-w-[600px]">
@@ -196,7 +214,6 @@ $temServico = count($servicos) > 0;
               <div class="col-span-2 px-5 py-4 text-center">Base</div>
               <div class="col-span-3 px-5 py-4 text-right">Opções</div>
             </div>
-
             <?php if(empty($servicos)): ?>
                 <div class="p-10 text-center text-gray-400 text-sm italic">Nenhum serviço cadastrado.</div>
             <?php else: ?>
@@ -220,7 +237,6 @@ $temServico = count($servicos) > 0;
             <?php endif; ?>
           </div>
         </div>
-      </section>
     </div>
   </main>
 
@@ -228,7 +244,9 @@ $temServico = count($servicos) > 0;
     <div class="w-full max-w-lg bg-white rounded-3xl shadow-2xl p-8">
         <h3 class="text-2xl font-black text-slate-900 uppercase mb-6">Editar Serviço</h3>
         <form method="POST" class="space-y-4">
-          <input type="hidden" name="acao" value="editar"><input type="hidden" id="edit-id" name="servico_id">
+          <input type="hidden" name="csrf_token" value="<?= $_SESSION['csrf_token'] ?>">
+          <input type="hidden" name="acao" value="editar">
+          <input type="hidden" id="edit-id" name="servico_id">
           <div><label class="block text-[10px] font-black text-gray-400 mb-1 uppercase">Título</label>
           <input type="text" id="edit-titulo" name="titulo" required class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm font-bold outline-none focus:border-orange"></div>
           <div class="grid grid-cols-2 gap-4">
@@ -246,12 +264,6 @@ $temServico = count($servicos) > 0;
         </form>
     </div>
   </div>
-
-  <script type="module">
-    import { renderSidebar } from '../src/components/sidebar.js';
-    const isPro = <?= $temServico ? 'true' : 'false' ?>;
-    renderSidebar('sidebar-container', 'gerenciar', isPro);
-  </script>
 
   <script>
     const modalEditar = document.getElementById('modal-editar');

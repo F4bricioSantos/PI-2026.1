@@ -5,12 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Cadastro — ReformAí</title>
     <meta name="description" content="Crie sua conta no ReformAí e comece a encontrar profissionais ou oferecer seus serviços de reforma." />
-
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="../src/assets/output.css" />
-
     <style>
       body { font-family: 'Inter', sans-serif; }
 
@@ -30,16 +28,12 @@
 
     <div class="w-full max-w-[440px]">
       <div class="bg-white rounded-2xl shadow-sm border border-gray-100 px-6 py-8 sm:px-10 sm:py-10">
-
         <div class="mb-8 text-center">
           <h1 class="text-[28px] font-bold text-slate-900 leading-tight">Cadastro</h1>
           <p class="mt-1.5 text-[14px] text-gray-400">Crie sua conta para começar a reformar.</p>
         </div>
-
         <form id="cadastro-form" novalidate class="flex flex-col gap-5">
-
           <input type="hidden" name="fluxo" id="fluxo" value="cliente" />
-
           <div class="flex flex-col gap-1.5">
             <label for="nome" class="text-[13px] font-medium text-slate-700">Nome completo</label>
             <div class="relative">
@@ -52,7 +46,6 @@
             </div>
             <p id="nome-error" class="hidden text-[12px] text-orange-500 mt-0.5">Por favor, insira seu nome completo.</p>
           </div>
-
           <div class="flex flex-col gap-1.5">
             <label for="cpf" class="text-[13px] font-medium text-slate-700">CPF</label>
             <div class="relative">
@@ -65,7 +58,6 @@
             </div>
             <p id="cpf-error" class="hidden text-[12px] text-orange-500 mt-0.5">Por favor, insira um CPF válido.</p>
           </div>
-
           <div class="flex flex-col gap-1.5">
             <label for="email" class="text-[13px] font-medium text-slate-700">E-mail</label>
             <div class="relative">
@@ -83,7 +75,6 @@
             </div>
             <p id="email-error" class="hidden text-[12px] text-orange-500 mt-0.5">Este e-mail já está cadastrado.</p>
           </div>
-
           <div class="flex flex-col gap-1.5">
             <label for="senha" class="text-[13px] font-medium text-slate-700">Senha</label>
             <div class="relative">
@@ -102,7 +93,6 @@
             </div>
             <p id="senha-error" class="hidden text-[12px] text-orange-500 mt-0.5">A senha deve ter pelo menos 8 caracteres.</p>
           </div>
-
           <div class="flex flex-col gap-1.5">
             <label for="confirmar-senha" class="text-[13px] font-medium text-slate-700">Confirmar senha</label>
             <div class="relative">
@@ -121,7 +111,6 @@
             </div>
             <p id="confirmar-senha-error" class="hidden text-[12px] text-orange-500 mt-0.5">As senhas não coincidem.</p>
           </div>
-
           <button id="btn-cadastrar" type="submit"
             class="btn-primary mt-1 w-full h-[52px] bg-orange-500 hover:bg-orange-600 active:bg-orange-700
                    text-white text-[15px] font-semibold rounded-lg shadow-sm
@@ -134,13 +123,10 @@
             </svg>
           </button>
 
-        </form>
-
         <p class="mt-6 text-center text-[13px] text-gray-400">
           Já tem uma conta?
           <a href="login.php" class="text-orange-500 font-medium hover:text-orange-600 hover:underline transition-colors ml-1">Faça login</a>
         </p>
-
       </div>
     </div>
 
@@ -206,7 +192,6 @@
         if (resto === 10 || resto === 11) resto = 0;
         return resto === parseInt(cpf.substring(10, 11));
       }
-
       cpfInput.addEventListener('input', (e) => {
         let v = e.target.value.replace(/\D/g, '');
         if (v.length > 11) v = v.substring(0, 11);
@@ -215,19 +200,16 @@
         v = v.replace(/(\d{3})(\d{1,2})$/, '$1-$2');
         e.target.value = v;
       });
-
       document.getElementById('toggle-senha').addEventListener('click', () => {
         const isPassword = senhaInput.type === 'password';
         senhaInput.type = isPassword ? 'text' : 'password';
         document.getElementById('eye-icon').style.opacity = isPassword ? '0.5' : '1';
       });
-
       document.getElementById('toggle-confirmar').addEventListener('click', () => {
         const isPassword = confirmarInput.type === 'password';
         confirmarInput.type = isPassword ? 'text' : 'password';
         document.getElementById('eye-icon-confirmar').style.opacity = isPassword ? '0.5' : '1';
       });
-
       function setError(input, errorEl, iconEl = null, msg = null) {
         input.classList.add('border-orange-400', 'bg-orange-50', 'input-error');
         input.classList.remove('border-gray-200', 'bg-white');
@@ -236,72 +218,57 @@
         if (iconEl) iconEl.classList.remove('hidden');
         setTimeout(() => input.classList.remove('input-error'), 500);
       }
-
       function clearError(input, errorEl, iconEl = null) {
         input.classList.remove('border-orange-400', 'bg-orange-50', 'input-error');
         input.classList.add('border-gray-200', 'bg-white');
         errorEl.classList.add('hidden');
         if (iconEl) iconEl.classList.add('hidden');
       }
-
       nomeInput.addEventListener('blur', () => {
         if (!nomeInput.value.trim()) setError(nomeInput, nomeError);
         else clearError(nomeInput, nomeError);
       });
-
       cpfInput.addEventListener('blur', () => {
         if (!validaCPF(cpfInput.value)) setError(cpfInput, cpfError);
         else clearError(cpfInput, cpfError);
       });
-
       emailInput.addEventListener('blur', () => {
         const v = emailInput.value.trim();
         const valid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
         if (!v || !valid) setError(emailInput, emailError, emailIcon, 'Por favor, insira um e-mail válido.');
         else clearError(emailInput, emailError, emailIcon);
       });
-
       senhaInput.addEventListener('blur', () => {
         if (senhaInput.value.length < 8) setError(senhaInput, senhaError);
         else clearError(senhaInput, senhaError);
       });
-
       confirmarInput.addEventListener('blur', () => {
         if (!confirmarInput.value || confirmarInput.value !== senhaInput.value) setError(confirmarInput, confirmarError);
         else clearError(confirmarInput, confirmarError);
       });
-
       form.addEventListener('submit', async (e) => {
         e.preventDefault();
         let valid = true;
-
         if (!nomeInput.value.trim()) { setError(nomeInput, nomeError); valid = false; }
         if (!validaCPF(cpfInput.value)) { setError(cpfInput, cpfError); valid = false; }
-
         const emailVal = emailInput.value.trim();
         if (!emailVal || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailVal)) {
           setError(emailInput, emailError, emailIcon, 'Por favor, insira um e-mail válido.');
           valid = false;
         }
-
         if (senhaInput.value.length < 8) { setError(senhaInput, senhaError); valid = false; }
         if (!confirmarInput.value || confirmarInput.value !== senhaInput.value) { setError(confirmarInput, confirmarError); valid = false; }
-
         if (!valid) return;
-
         btnCadastrar.disabled = true;
         btnText.textContent   = 'Enviando código...';
         btnSpinner.classList.remove('hidden');
-
         try {
           const res = await fetch('/PI-2026.1/backend/controllers/AuthController.php?action=enviar_codigo_verificacao', {
             method: 'POST',
             body: new FormData(form),
           });
-          
           const textData = await res.text();
           const data = JSON.parse(textData.trim());
-
           if (res.ok || data.sucesso) {
             if (data.token_desenvolvimento) {
               alert(`[MODO DESENVOLVIMENTO] Use o código: ${data.token_desenvolvimento}`);
@@ -322,12 +289,10 @@
           btnSpinner.classList.add('hidden');
         }
       });
-
       btnCancelarModal.addEventListener('click', () => {
         modalEmail.classList.add('hidden');
         codigoInput.value = '';
       });
-
       btnConfirmarCodigo.addEventListener('click', async (e) => {
         e.preventDefault();
         
@@ -337,23 +302,18 @@
           codigoError.textContent = 'O código precisa conter 6 algarismos.';
           return;
         }
-
         btnConfirmarCodigo.disabled = true;
         btnConfirmarCodigo.textContent = 'Autenticando...';
-
         try {
           const formData = new FormData(form);
           formData.append('codigo_token', codigo);
-
           const res = await fetch('/PI-2026.1/backend/controllers/AuthController.php?action=cadastrar', {
             method: 'POST',
             body: formData
           });
-          
           const textData = await res.text();
           const cleanText = textData.trim().substring(textData.indexOf('{'));
           const data = JSON.parse(cleanText);
-
           if (data.sucesso === true) {
             window.location.href = data.redirect;
           } else {

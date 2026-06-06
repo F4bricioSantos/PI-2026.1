@@ -8,7 +8,7 @@ $controller = new ChatController($pdo);
 $metodo     = $_SERVER['REQUEST_METHOD'];
 $acao       = $_GET['acao'] ?? '';
 
-if ($metodo === 'GET') {
+if ($metodo === 'GET') { 
 
     if ($acao === 'listar_contatos') {
         $controller->listarContatosConversas();
@@ -23,19 +23,13 @@ if ($metodo === 'GET') {
         $controller->listarMensagens();
     }
 
-} elseif ($metodo === 'POST') {
-
-    // Upload de imagem: multipart/form-data com campo "imagem"
+} elseif ($metodo === 'POST') { 
     if ($acao === 'upload') {
         $controller->uploadImagem();
-
-    // Marcar mensagens como lidas: JSON com { remetente_id }
     } elseif ($acao === 'mark_read') {
         $dados = json_decode(file_get_contents('php://input'), true) ?? [];
         $remetenteId = (int)($dados['remetente_id'] ?? 0);
         $controller->marcarComoLido($remetenteId);
-
-    // Envio de mensagem: JSON com { mensagem, url_imagem }
     } else {
         $dados     = json_decode(file_get_contents('php://input'), true) ?? [];
         $texto     = isset($dados['mensagem'])   ? trim($dados['mensagem'])   : '';
@@ -43,10 +37,7 @@ if ($metodo === 'GET') {
         $controller->enviarMensagem($texto, $urlImagem ?: null);
     }
 
-} elseif ($metodo === 'PUT') {
-
-    // Edição de mensagem: JSON com { id, message }
-    // Nota: o frontend envia o campo como "message" (não "mensagem")
+} elseif ($metodo === 'PUT') { 
     $dados  = json_decode(file_get_contents('php://input'), true) ?? [];
     $id     = (int)($dados['id']      ?? 0);
     $texto  = isset($dados['message']) ? trim($dados['message']) : '';

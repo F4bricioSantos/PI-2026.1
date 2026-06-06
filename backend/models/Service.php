@@ -7,7 +7,6 @@ class Service {
         $this->db = $conexao;
     }
 
-    // Lista todos os serviços menos os do próprio usuário logado
     public function listarTodos(int $usuarioId): array {
         try {
             $sql = "
@@ -37,7 +36,6 @@ class Service {
         }
     }
 
-    // Busca um serviço específico pelo id
     public function buscarPorId(int $id): array|false {
         try {
             $sql = "
@@ -63,7 +61,6 @@ class Service {
         }
     }
 
-    // Lista serviços do próprio usuário (para área do prestador)
     public function listarDoUsuario(int $usuarioId): array {
         try {
             $sql = "
@@ -85,7 +82,6 @@ class Service {
         }
     }
 
-    // Cadastra um novo serviço
     public function cadastrar(int $prestadorId, string $titulo, string $categoria, ?float $valor, ?string $descricao): bool {
         try {
             $stmt = $this->db->prepare("

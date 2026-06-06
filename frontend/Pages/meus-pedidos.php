@@ -1,12 +1,11 @@
 <?php
-header('Content-Type: text/html; charset=UTF-8');
-
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
 require_once '../../backend/config/auth.php';
 require_once '../../backend/config/Conexao.php';
+require_once '../../backend/models/User.php';
 
 $idUsuarioLogado = $_SESSION['usuario_id'] ?? 0;
 
@@ -14,16 +13,12 @@ if (!defined('SB_URL')) define('SB_URL', 'https://yplpxzmwtkencrrtxmof.supabase.
 $urlBaseSupabase = SB_URL . "/storage/v1/object/public/fotos/";
 
 try {
-    // 1. Verifica se o usuário possui serviços cadastrados (Controle da Sidebar)
+    $userModel = new User($pdo);
+    $usuarioLogado = $userModel->buscarPorId($idUsuarioLogado);
+
     $stmtCheck = $pdo->prepare("SELECT COUNT(*) FROM servicos WHERE prestador_id = :id");
     $stmtCheck->execute([':id' => $idUsuarioLogado]);
     $temServico = $stmtCheck->fetchColumn() > 0;
-
-    // 2. Query de Pedidos baseada estritamente no seu Schema de Contratos
-    // Mapeamento de Status:
-    // 'pendente' -> PENDENTES
-    // 'aceito' -> EM ANDAMENTO
-    // 'concluido' ou 'cancelado' -> CONCLUÍDOS (ou finalizados)
     $sqlPedidos = "
         SELECT 
             c.id AS contrato_id,
@@ -34,12 +29,12 @@ try {
             c.avaliado,
             c.favorito AS contrato_favorito,
             s.id AS servico_id,
-            s.titulo AS servico_titulo,
+            COALESCE(s.titulo, 'Serviço Removido') AS servico_titulo,
             u.id AS prestador_id,
             u.nome AS prestador_nome,
             u.foto_perfil AS prestador_foto
         FROM contratos c
-        JOIN servicos s ON s.id = c.servico_id
+        LEFT JOIN servicos s ON s.id = c.servico_id
         JOIN usuarios u ON u.id = c.prestador_id
         WHERE c.cliente_id = :cliente_id
         ORDER BY c.criado_em DESC
@@ -47,8 +42,6 @@ try {
     $stmtPedidos = $pdo->prepare($sqlPedidos);
     $stmtPedidos->execute([':cliente_id' => $idUsuarioLogado]);
     $pedidos = $stmtPedidos->fetchAll(PDO::FETCH_ASSOC);
-
-    // 3. Query de Favoritos (Garantindo exibição única de serviços favoritados)
     $sqlFavoritos = "
         SELECT 
             s.id AS servico_id,
@@ -69,8 +62,7 @@ try {
     $stmtFav = $pdo->prepare($sqlFavoritos);
     $stmtFav->execute([':usuario_id' => $idUsuarioLogado]);
     $favoritos = $stmtFav->fetchAll(PDO::FETCH_ASSOC);
-
-    // 4. Lista dos IDs de todos os serviços favoritados pelo usuário (para coloração rápida dos botões)
+    
     $stmtFavsList = $pdo->prepare("SELECT servico_id FROM favoritos_servicos WHERE usuario_id = :uid");
     $stmtFavsList->execute([':uid' => $idUsuarioLogado]);
     $favoritosIds = $stmtFavsList->fetchAll(PDO::FETCH_COLUMN);
@@ -78,13 +70,10 @@ try {
         $favoritosIds = [];
     }
 
-    // Busca a contagem global de mensagens não lidas para o usuário logado
     $stmtUnreadMsgCount = $pdo->prepare("SELECT COUNT(*) FROM mensagens_chat WHERE destinatario_id = :uid AND lido_em IS NULL AND deletado = 0");
     $stmtUnreadMsgCount->execute([':uid' => $idUsuarioLogado]);
     $totalMensagensNaoLidas = (int)$stmtUnreadMsgCount->fetchColumn();
-
-    // Flag de admin (a tabela usuarios não possui coluna tipo_usuario)
-    $isAdmin = false;
+    $isAdmin = (isset($usuarioLogado['tipo_usuario']) && $usuarioLogado['tipo_usuario'] === 'admin');
 
 } catch (PDOException $e) {
     // Fallback preventivo caso a tabela 'favoritos' ainda não esteja criada fisicamente
@@ -129,15 +118,17 @@ try {
 
   <script type="module">
     import { renderSidebar } from '../src/components/sidebar.js';
-    const hasServices = <?= $temServico ? 'true' : 'false' ?>;
-    const isAdmin = <?= $isAdmin ? 'true' : 'false' ?>;
+    const isAdminJS = <?= $isAdmin ? 'true' : 'false' ?>;
+    const temServicoJS = <?= $temServico ? 'true' : 'false' ?>;
     const badges = {
       badgeMensagens: <?= $totalMensagensNaoLidas ?>,
       badgeAgendamentos: 0
     };
-    renderSidebar('sidebar-container', 'agendamentos', hasServices, isAdmin, badges);
+    renderSidebar('sidebar-container', 'agendamentos', temServicoJS, isAdminJS, badges, {
+      nome: "<?= htmlspecialchars($usuarioLogado['nome']) ?>",
+      foto: "<?= $usuarioLogado['foto_perfil'] ?>"
+    });
   </script>
-
   <main class="flex-1 flex flex-col overflow-hidden w-full relative">
     
     <header class="flex items-center justify-between px-4 md:px-8 py-4 md:py-5 border-b border-gray-200 bg-white flex-shrink-0">
@@ -151,7 +142,6 @@ try {
         </div>
       </div>
     </header>
-
     <div class="bg-white border-b border-gray-200 px-4 md:px-8 flex-shrink-0">
       <nav class="hidden md:flex gap-6">
         <button onclick="switchTab('pedidos')" id="tab-btn-pedidos" class="border-b-2 border-orange text-orange font-bold text-sm py-4 px-2 transition-all">
@@ -171,7 +161,6 @@ try {
         </button>
       </nav>
     </div>
-
     <div class="flex-1 overflow-y-auto px-4 md:px-8 py-6 custom-scroll">
       <div class="max-w-5xl mx-auto space-y-8">
 
@@ -189,7 +178,6 @@ try {
               <p class="text-gray-400 text-sm italic">Nenhum pedido encontrado no sistema.</p>
             </div>
           <?php else: ?>
-
             <div id="section-pendente" class="status-section space-y-4">
               <h2 class="text-xs font-extrabold text-gray-400 uppercase tracking-wider">Pendentes</h2>
               <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -240,7 +228,6 @@ try {
                 <?php endif; ?>
               </div>
             </div>
-
             <div id="section-aceito" class="status-section space-y-4 pt-2">
               <h2 class="text-xs font-extrabold text-gray-400 uppercase tracking-wider">Em andamento</h2>
               <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -291,7 +278,6 @@ try {
                 <?php endif; ?>
               </div>
             </div>
-
             <div id="section-concluido" class="status-section space-y-4 pt-2">
               <h2 class="text-xs font-extrabold text-gray-400 uppercase tracking-wider">Concluídos</h2>
               <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -355,7 +341,6 @@ try {
                 <?php endif; ?>
               </div>
             </div>
-
           <?php endif; ?>
         </div>
 
@@ -379,7 +364,6 @@ try {
                       <?php endif; ?>
                     </div>
                     <div class="min-w-0 flex-1">
-                      <span class="text-[9px] font-extrabold text-orange uppercase tracking-wider block mb-0.5"><?= htmlspecialchars($fav['categoria_nome'] ?? 'Geral') ?></span>
                       <h3 class="font-extrabold text-gray-900 text-sm tracking-tight truncate leading-snug"><?= htmlspecialchars($fav['servico_titulo']) ?></h3>
                       <p class="text-xs text-gray-500 font-medium truncate mt-0.5"><?= htmlspecialchars($fav['prestador_nome']) ?></p>
                       <p class="text-xs font-black text-gray-800 mt-1"><?= $fav['valor_base'] > 0 ? 'R$ ' . number_format($fav['valor_base'], 0, ',', '.') : 'A combinar' ?></p>
@@ -396,7 +380,6 @@ try {
             </div>
           <?php endif; ?>
         </div>
-
       </div>
     </div>
   </main>
@@ -452,7 +435,6 @@ try {
     async function toggleFavorito(event, servicoId) {
       event.preventDefault();
       event.stopPropagation();
-      
       const btn = event.currentTarget;
       
       try {
@@ -463,7 +445,6 @@ try {
           },
           body: JSON.stringify({ servico_id: servicoId })
         });
-        
         const result = await response.json();
         
         if (result.sucesso) {

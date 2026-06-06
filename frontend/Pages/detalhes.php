@@ -7,15 +7,18 @@ if (session_status() === PHP_SESSION_NONE) {
 
 require_once '../../backend/config/auth.php';
 require_once '../../backend/config/Conexao.php';
+require_once '../../backend/models/User.php';
 
 $idServico = filter_input(INPUT_GET, 'id', FILTER_VALIDATE_INT);
 $idUsuarioLogado = $_SESSION['usuario_id'] ?? 0;
+
+$userModel = new User($pdo);
+$usuarioLogado = $userModel->buscarPorId($idUsuarioLogado);
 
 if (!$idServico) {
     header('Location: dashboard.php');
     exit;
 }
-
 if (!defined('SB_URL')) define('SB_URL', 'https://yplpxzmwtkencrrtxmof.supabase.co');
 $urlBaseSupabase = SB_URL . "/storage/v1/object/public/fotos/";
 
@@ -75,18 +78,14 @@ try {
     ]);
     $portfolio = $stmtPort->fetchAll(PDO::FETCH_ASSOC);
 
-    // Verifica se este serviço está favoritado pelo usuário logado
     $stmtFavCheck = $pdo->prepare("SELECT COUNT(*) FROM favoritos_servicos WHERE usuario_id = :uid AND servico_id = :sid");
     $stmtFavCheck->execute([':uid' => $idUsuarioLogado, ':sid' => $idServico]);
     $estaFavoritado = $stmtFavCheck->fetchColumn() > 0;
 
-    // Busca a contagem global de mensagens não lidas para o usuário logado
     $stmtUnreadMsgCount = $pdo->prepare("SELECT COUNT(*) FROM mensagens_chat WHERE destinatario_id = :uid AND lido_em IS NULL AND deletado = 0");
     $stmtUnreadMsgCount->execute([':uid' => $idUsuarioLogado]);
     $totalMensagensNaoLidas = (int)$stmtUnreadMsgCount->fetchColumn();
-
-    // Flag de admin (a tabela usuarios não possui coluna tipo_usuario)
-    $isAdmin = false;
+    $isAdmin = (isset($usuarioLogado['tipo_usuario']) && $usuarioLogado['tipo_usuario'] === 'admin');
 
 } catch (PDOException $e) {
     die("Erro ao carregar dados: " . $e->getMessage());
@@ -128,18 +127,18 @@ try {
 
   <script type="module">
     import { renderSidebar } from '../src/components/sidebar.js';
-    
     const hasServices = <?= $temServico ? 'true' : 'false' ?>;
     const isAdmin = <?= $isAdmin ? 'true' : 'false' ?>;
     const badges = {
       badgeMensagens: <?= $totalMensagensNaoLidas ?>,
       badgeAgendamentos: 0
     };
-    
-    renderSidebar('sidebar-container', 'inicio', hasServices, isAdmin, badges);
+    renderSidebar('sidebar-container', 'inicio', hasServices, isAdmin, badges, {
+      nome: "<?= htmlspecialchars($usuarioLogado['nome']) ?>",
+      foto: "<?= $usuarioLogado['foto_perfil'] ?>"
+    });
   </script>
-
-  <main class="flex-1 flex flex-col overflow-hidden w-full relative">
+  <main class="flex-1 flex flex-col min-w-0 relative bg-bg">
     <header class="flex items-center justify-between px-4 md:px-8 py-4 md:py-5 border-b border-gray-200 bg-white flex-shrink-0">
       <div class="flex items-center gap-2 text-gray-400">
         <button onclick="window.toggleSidebar && window.toggleSidebar()" class="md:hidden p-2 -ml-2 rounded-lg text-gray-500 hover:bg-gray-100 focus:outline-none transition-colors">
@@ -153,7 +152,6 @@ try {
         <span class="text-gray-800 font-bold text-lg tracking-tight">Detalhes</span>
       </div>
     </header>
-
     <div class="flex-1 overflow-y-auto px-4 md:px-8 py-6 md:py-8 custom-scroll">
       <div class="flex flex-col lg:flex-row gap-8 max-w-6xl mx-auto">
         
@@ -176,7 +174,6 @@ try {
               <span class="text-sm font-medium text-gray-500"><?= htmlspecialchars($servico['categoria_nome'] ?? 'Geral') ?></span>
             </div>
           </div>
-
           <div class="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
             <div class="flex items-center gap-2 mb-4">
               <div class="w-1 h-5 bg-orange rounded-full"></div>
@@ -201,7 +198,6 @@ try {
                 <?php endif; ?>
             </div>
           </div>
-
           <div class="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
             <div class="flex items-center gap-2 mb-6">
               <div class="w-1 h-5 bg-orange rounded-full"></div>
@@ -224,7 +220,6 @@ try {
               </div>
             <?php endif; ?>
           </div>
-
           <div class="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
             <div class="flex items-center gap-2 mb-6">
               <div class="w-1 h-5 bg-orange rounded-full"></div>
@@ -263,7 +258,6 @@ try {
             </div>
           </div>
         </div>
-
         <div class="w-full lg:w-80">
           <div class="sticky top-6 bg-white rounded-2xl border border-gray-100 shadow-sm p-5 space-y-6">
             <div class="flex items-center gap-4">
@@ -290,7 +284,6 @@ try {
               </div>
 
             </div>
-
             <div class="space-y-2">
               <div class="flex items-center gap-3 bg-gray-50 rounded-xl px-4 py-3 border border-gray-100 text-gray-700">
                 <svg class="w-4 h-4 text-orange" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg>
@@ -301,7 +294,6 @@ try {
                 <span class="text-xs font-medium truncate"><?= htmlspecialchars($servico['prestador_email']) ?></span>
               </div>
             </div>
-
             <div class="space-y-2.5">
               <a href="chat.php?com=<?= (int)$servico['prestador_id'] ?>" class="w-full bg-orange hover:bg-orange-600 text-white font-bold py-3 rounded-xl text-xs flex items-center justify-center gap-2 transition-all">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">

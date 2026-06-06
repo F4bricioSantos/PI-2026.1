@@ -4,6 +4,7 @@ require_once '../../backend/config/Conexao.php';
 require_once '../../backend/models/User.php';
 require_once '../../backend/models/Contrato.php';
 
+
 $idUsuarioLogado = $_SESSION['usuario_id'];
 $userModel = new User($pdo);
 $usuario   = $userModel->buscarPorId($idUsuarioLogado);
@@ -39,15 +40,20 @@ if ($idDestinatario > 0) {
 
 $contratoModel = new Contrato($pdo);
 
-$contratoAtivo         = null;
+$contratoAtivo         = null; // Inicializa para evitar "Undefined variable"
+$contratosAtivos       = [];
 $outraPessoaTemServico = false;
 $contratoParaAvaliar   = null;
+$jaContrateiOOutro     = false;
 
 if ($idDestinatario > 0) {
-    $contratoAtivo         = $contratoModel->buscarContratoAtivo($idUsuarioLogado, $idDestinatario);
+    $contratoAtivo = $contratoModel->buscarContratoAtivo($idUsuarioLogado, $idDestinatario);
+    if ($contratoAtivo) {
+        $contratosAtivos   = [$contratoAtivo];
+        $jaContrateiOOutro = true;
+    }
     $outraPessoaTemServico = $contratoModel->checarSeTemServico($idDestinatario);
-
-    if (!$contratoAtivo) {
+    if (empty($contratosAtivos)) {
         $contratoParaAvaliar = $contratoModel->buscarContratoParaAvaliar($idUsuarioLogado, $idDestinatario);
     }
 }
@@ -100,7 +106,10 @@ $totalMensagensNaoLidas = (int)$stmtUnreadMsgCount->fetchColumn();
     import { renderSidebar } from '../src/components/sidebar.js';
     const temServico = <?= $temServico ? 'true' : 'false' ?>;
     const isAdmin    = <?= (isset($usuario['tipo_usuario']) && $usuario['tipo_usuario'] === 'admin') ? 'true' : 'false' ?>;
-    renderSidebar('sidebar-container', 'chat', temServico, isAdmin, { badgeMensagens: <?= $totalMensagensNaoLidas ?>, badgeAgendamentos: 0 });
+    renderSidebar('sidebar-container', 'chat', temServico, isAdmin, { badgeMensagens: <?= $totalMensagensNaoLidas ?>, badgeAgendamentos: 0 }, {
+      nome: "<?= htmlspecialchars($usuario['nome']) ?>",
+      foto: "<?= $usuario['foto_perfil'] ?>"
+    });
   </script>
 
   <main class="flex-1 flex overflow-hidden p-0 md:p-6 md:gap-6 w-full relative">
@@ -134,7 +143,6 @@ $totalMensagensNaoLidas = (int)$stmtUnreadMsgCount->fetchColumn();
           <div id="topo-avatar"></div>
           <div>
             <h2 class="text-sm font-bold text-gray-900 truncate"><?= $nomeDestinatario ?></h2>
-            <p class="text-[11px] text-gray-400">online</p>
           </div>
         </a>
       </div>
@@ -338,7 +346,7 @@ $totalMensagensNaoLidas = (int)$stmtUnreadMsgCount->fetchColumn();
 
   const urlApiBase      = '../../backend/controllers/RoteadorChat.php';
   const urlApiMensagens = comQuemId ? `${urlApiBase}?com=${comQuemId}` : null;
-  const urlApiContatos  = `${urlApiBase}?acao=listar_contatos`;
+  const urlApiContatos  = `${urlApiBase}?acao=listar_contatos&com=${comQuemId || 0}`; // Sempre envia 'com' para a API
   const urlApiUpload    = `${urlApiBase}?acao=upload`;
   const servicosPrestadorJS = <?= json_encode($listaServicosDisponiveis) ?>;
 
@@ -408,8 +416,13 @@ $totalMensagensNaoLidas = (int)$stmtUnreadMsgCount->fetchColumn();
       if (!textoPuro.trim().startsWith('[') && !textoPuro.trim().startsWith('{')) return;
       const mensagens = JSON.parse(textoPuro);
       if (!mensagens || mensagens.erro) return;
-
-      const estavaNoBaixo = chatContainer.scrollHeight - chatContainer.scrollTop - chatContainer.clientHeight < 60;
+      
+      // Verifica se o usuário estava no final do chat antes de atualizar
+      const estavaNoBaixo = (chatContainer.scrollHeight - chatContainer.scrollTop - chatContainer.clientHeight) < 150;
+      
+      // Se for a primeira vez que carregamos, não queremos transições bruscas
+      const primeiraCarga = chatContainer.innerHTML === '';
+      
       chatContainer.innerHTML = '';
 
       if (mensagens.length === 0) {
@@ -443,13 +456,24 @@ $totalMensagensNaoLidas = (int)$stmtUnreadMsgCount->fetchColumn();
         }
 
         let conteudo = '';
-        if (msg.url_imagem && !foiDeletado) {
-          const nomeSemPrefixo = msg.url_imagem.replace(/^chat\//, '');
-          const urlImg = `${urlBaseChatImagens}${nomeSemPrefixo}`;
-          conteudo += `<img src="${urlImg}" class="max-w-xs rounded-xl border border-gray-200 max-h-48 object-cover mb-1 block cursor-pointer hover:opacity-90" onclick="window.open('${urlImg}','_blank')" onerror="this.style.display='none'">`;
-        }
-        if (msg.mensagem && msg.mensagem.trim() !== '') {
-          conteudo += `<div class="font-medium text-sm leading-relaxed">${msg.mensagem}</div>`;
+        if (foiDeletado) {
+          conteudo = `
+            <span style="display:inline-flex; align-items:center; gap:6px; color:#ef4444; font-style:italic; opacity:.9;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;">
+                    <circle cx="12" cy="12" r="9"></circle>
+                    <line x1="6" y1="18" x2="18" y2="6"></line>
+                </svg>
+                <span>Esta mensagem foi apagada</span>
+            </span>`;
+        } else {
+          if (msg.url_imagem) {
+            const nomeSemPrefixo = msg.url_imagem.replace(/^chat\//, '');
+            const urlImg = `${urlBaseChatImagens}${nomeSemPrefixo}`;
+            conteudo += `<img src="${urlImg}" class="max-w-xs rounded-xl border border-gray-200 max-h-48 object-cover mb-1 block cursor-pointer hover:opacity-90" onclick="window.open('${urlImg}','_blank')" onerror="this.style.display='none'">`;
+          }
+          if (msg.mensagem && msg.mensagem.trim() !== '') {
+            conteudo += `<div class="font-medium text-sm leading-relaxed">${msg.mensagem}</div>`;
+          }
         }
 
         const editadaLabel = (msg.atualizado_em && !foiDeletado) ? `<span class="italic opacity-60"> · editada</span>` : '';
@@ -486,7 +510,10 @@ $totalMensagensNaoLidas = (int)$stmtUnreadMsgCount->fetchColumn();
         chatContainer.appendChild(divAlinhamento);
       });
 
-      if (estavaNoBaixo) chatContainer.scrollTop = chatContainer.scrollHeight;
+      // Se estava no final ou é a primeira carga, rola para o fim (Estilo WhatsApp)
+      if (estavaNoBaixo || primeiraCarga) {
+          chatContainer.scrollTop = chatContainer.scrollHeight;
+      }
     } catch (err) { console.error('Erro ao carregar mensagens:', err); }
   }
 

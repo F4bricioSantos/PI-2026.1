@@ -30,6 +30,14 @@ define('SB_URL', 'https://yplpxzmwtkencrrtxmof.supabase.co');
 // 2. A 'Publishable Key' que você viu na imagem (anon public)
 define('SB_KEY', 'sb_publishable_dWPgiqmCzxZjTXicYc9mAQ_enwu5UE7'); 
 
+// 3. Secret Key (Service Role) para operações administrativas como Upload via ChatController
+define('SB_SECRET_KEY', 'sb_publishable_dWPgiqmCzxZjTXicYc9mAQ_enwu5UE7'); // Ajuste para sua service_role_key real
+
+/**
+ * Nota de Segurança: As chaves acima devem ser movidas para um arquivo .env 
+ * em ambiente de produção para evitar exposição de credenciais.
+ */
+
 function gerenciarFotoSupabase($arquivoTmp, $nomeAntigo = null) {
     // PASSO A: APAGAR DO SERVIDOR ONLINE
     // Se existe uma foto antiga e não é a 'default.png', mandamos um DELETE para o Supabase
@@ -38,16 +46,13 @@ function gerenciarFotoSupabase($arquivoTmp, $nomeAntigo = null) {
         curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "DELETE");
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_HTTPHEADER, [
-            "Authorization: Bearer " . SB_KEY,
-            "apikey: " . SB_KEY
+            "Authorization: Bearer " . SB_SECRET_KEY,
+            "apikey: " . SB_SECRET_KEY
         ]);
         curl_exec($ch);
         curl_close($ch);
     }
-
-    // Se o código foi chamado apenas para apagar (sem novo arquivo), retorna o padrão
     if (!$arquivoTmp) return 'default.png';
-
     // PASSO B: UPLOAD DA NOVA FOTO
     $extensao = pathinfo($_FILES['foto_perfil']['name'], PATHINFO_EXTENSION);
     $novoNome = uniqid() . "." . $extensao;
@@ -57,8 +62,8 @@ function gerenciarFotoSupabase($arquivoTmp, $nomeAntigo = null) {
     curl_setopt($ch, CURLOPT_POSTFIELDS, file_get_contents($arquivoTmp));
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
     curl_setopt($ch, CURLOPT_HTTPHEADER, [
-        "Authorization: Bearer " . SB_KEY,
-        "apikey: " . SB_KEY,
+        "Authorization: Bearer " . SB_SECRET_KEY,
+        "apikey: " . SB_SECRET_KEY,
         "Content-Type: " . $_FILES['foto_perfil']['type']
     ]);
     
@@ -67,7 +72,6 @@ function gerenciarFotoSupabase($arquivoTmp, $nomeAntigo = null) {
 
     return $novoNome; 
 }
-
 function fazerUploadPortfolioSupabase($arquivoTmp, $nomeOriginal) {
     $extensao = pathinfo($nomeOriginal, PATHINFO_EXTENSION);
     // Salvamos dentro da subpasta 'portfolio/' para organizar
@@ -78,8 +82,8 @@ function fazerUploadPortfolioSupabase($arquivoTmp, $nomeOriginal) {
     curl_setopt($ch, CURLOPT_POSTFIELDS, file_get_contents($arquivoTmp));
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
     curl_setopt($ch, CURLOPT_HTTPHEADER, [
-        "Authorization: Bearer " . SB_KEY,
-        "apikey: " . SB_KEY,
+        "Authorization: Bearer " . SB_SECRET_KEY,
+        "apikey: " . SB_SECRET_KEY,
         "Content-Type: image/" . $extensao // Simplificado
     ]);
     
@@ -87,12 +91,8 @@ function fazerUploadPortfolioSupabase($arquivoTmp, $nomeOriginal) {
     $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
     curl_close($ch);
 
-    // Se o código for 200 (OK), retorna o caminho salvo
     return ($httpCode === 200) ? $novoNome : false;
 }
-
-// Adicione isto ao seu Conexao.php
-// Adicione ou atualize esta função no seu Conexao.php
 function apagarArquivoSupabase($caminhoRelativo) {
     if (!$caminhoRelativo || $caminhoRelativo === 'default.png') return false;
 
@@ -103,8 +103,8 @@ function apagarArquivoSupabase($caminhoRelativo) {
     curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "DELETE");
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
     curl_setopt($ch, CURLOPT_HTTPHEADER, [
-        "Authorization: Bearer " . SB_KEY,
-        "apikey: " . SB_KEY
+        "Authorization: Bearer " . SB_SECRET_KEY,
+        "apikey: " . SB_SECRET_KEY
     ]);
     
     $resposta = curl_exec($ch);

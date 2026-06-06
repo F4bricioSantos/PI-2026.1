@@ -1,21 +1,15 @@
 <?php
-// 1. PROTEÇÃO DE SESSÃO
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
-
 if (empty($_SESSION['usuario_id'])) {
     header('Location: /PI-2026.1/frontend/Pages/login.php');
     exit;
 }
-
-// 2. INCLUDES E CONFIGURAÇÕES
 require_once '../../backend/config/Conexao.php';
 require_once '../../backend/models/User.php';
 
 $idUsuario = $_SESSION['usuario_id'];
-
-// --- BUSCA DADOS DO USUÁRIO PARA O HEADER ---
 $userModel = new User($pdo);
 $usuario = $userModel->buscarPorId($idUsuario);
 
@@ -23,14 +17,10 @@ $usuario = $userModel->buscarPorId($idUsuario);
 if (!defined('SB_URL')) define('SB_URL', 'https://yplpxzmwtkencrrtxmof.supabase.co'); 
 $urlBaseSupabase = SB_URL . "/storage/v1/object/public/fotos/";
 
-// --- NOVA REGRA: CONTAGEM DE SERVIÇOS (Para o aviso e para o limite) ---
 $stmtCheck = $pdo->prepare("SELECT COUNT(*) FROM servicos WHERE prestador_id = :id");
 $stmtCheck->execute([':id' => $idUsuario]);
 $totalServicos = (int)$stmtCheck->fetchColumn();
-
 $erro = '';
-
-// 3. PROCESSAMENTO DO FORMULÁRIO
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $titulo    = trim($_POST['titulo']    ?? '');
     $categoria = trim($_POST['categoria'] ?? '');
@@ -108,12 +98,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
   <script type="module">
     import { renderSidebar } from '../src/components/sidebar.js';
-    
-    // Convertemos o número $totalServicos em booleano (se for > 0, vira true)
     const isPro = <?= ($totalServicos > 0) ? 'true' : 'false' ?>;
-    
-    // Renderiza definindo 'novo-servico' como a página ativa
-    renderSidebar('sidebar-container', 'novo-servico', isPro);
+    renderSidebar('sidebar-container', 'novo-servico', isPro, false, {}, {
+      nome: "<?= htmlspecialchars($usuario['nome']) ?>",
+      foto: "<?= $usuario['foto_perfil'] ?>"
+    });
 </script>
 
   <main class="flex-1 flex flex-col overflow-hidden w-full relative">
@@ -155,17 +144,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             </div>
           </div>
         <?php endif; ?>
-
         <span class="inline-block px-3 py-1 bg-slate-100 text-slate-500 text-[10px] font-bold uppercase tracking-widest rounded-full mb-4">Área do Prestador</span>
         <h1 class="text-4xl font-extrabold text-slate-900 tracking-tight mb-2">Novo Serviço</h1>
         <p class="text-gray-500 mb-10">Preencha os dados abaixo. Use a categoria para classificar o serviço e o título para os detalhes.</p>
-
         <?php if ($erro): ?>
           <div class="mb-6 p-4 rounded-2xl bg-red-50 border border-red-200 text-red-600 text-sm font-medium">
             <?= htmlspecialchars($erro) ?>
           </div>
         <?php endif; ?>
-
         <form method="POST" action="" class="space-y-8" onsubmit="const btn=this.querySelector('button[type=submit]'); btn.disabled=true; btn.innerHTML='Salvando...';">
           <div class="space-y-2">
             <label class="text-sm font-bold text-slate-700 ml-1">Título do Serviço</label>

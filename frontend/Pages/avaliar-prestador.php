@@ -42,14 +42,14 @@ $stmtContrato = $pdo->prepare("
         c.status,
         c.avaliado,
         c.avaliado_prestador,
-        s.titulo AS servico_titulo,
+        COALESCE(s.titulo, 'Serviço Removido') AS servico_titulo,
         uc.nome AS cliente_nome,
         uc.foto_perfil AS cliente_foto,
         up.nome AS prestador_nome,
         up.foto_perfil AS prestador_foto,
         pd.nicho AS prestador_nicho
     FROM contratos c
-    JOIN servicos s ON c.servico_id = s.id
+    LEFT JOIN servicos s ON c.servico_id = s.id
     JOIN usuarios uc ON c.cliente_id = uc.id
     JOIN usuarios up ON c.prestador_id = up.id
     LEFT JOIN prestadores_detalhes pd ON pd.usuario_id = up.id
@@ -148,24 +148,30 @@ if ($totalAvaliacoes > 0) {
 <body class="font-sans bg-bg text-gray-800 flex h-screen overflow-hidden">
 
   <!-- ══════════════ SIDEBAR ══════════════ -->
-  <div id="sidebar-container" class="w-60 bg-sidebar flex-shrink-0 h-screen"></div>
+  <div id="sidebar-container" class="fixed inset-y-0 left-0 z-50 w-60 bg-sidebar flex flex-col h-screen transform -translate-x-full md:relative md:translate-x-0 transition-transform duration-300 ease-in-out"></div>
   <script type="module">
     import { renderSidebar } from '../src/components/sidebar.js';
     const temServico = <?= $temServico ? 'true' : 'false' ?>;
     const isAdmin    = <?= $isAdmin ? 'true' : 'false' ?>;
-    renderSidebar('sidebar-container', 'agendamentos', temServico, isAdmin);
+    renderSidebar('sidebar-container', 'agendamentos', temServico, isAdmin, {}, {
+      nome: "<?= htmlspecialchars($usuario['nome']) ?>",
+      foto: "<?= $usuario['foto_perfil'] ?>"
+    });
   </script>
 
   <!-- ══════════════ MAIN ══════════════ -->
-  <main class="flex-1 flex flex-col overflow-hidden">
+  <main class="flex-1 flex flex-col overflow-hidden w-full relative">
 
     <!-- Top bar -->
     <header class="flex items-center justify-between px-8 py-5 border-b border-gray-200 bg-white flex-shrink-0">
       <div class="flex items-center gap-2 text-gray-400">
-        <button onclick="history.back()" aria-label="Voltar" class="hover:text-gray-600 transition-colors p-1 -ml-1 rounded-lg hover:bg-gray-100">
+        <button onclick="window.toggleSidebar && window.toggleSidebar()" class="md:hidden p-2 -ml-2 rounded-lg text-gray-500 hover:bg-gray-100 focus:outline-none transition-colors">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/></svg>
+        </button>
+        <button onclick="history.back()" aria-label="Voltar" class="hover:text-gray-600 transition-colors p-1 rounded-lg hover:bg-gray-100 hidden md:block">
           <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
         </button>
-        <a href="./dashboard.php" class="text-gray-400 text-sm hover:text-orange transition-colors">Início</a>
+        <a href="./dashboard.php" class="text-gray-400 text-sm hover:text-orange transition-colors md:ml-2">Início</a>
         <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
         <span class="text-gray-800 font-bold text-lg tracking-tight">Avaliar <?= ($souCliente) ? 'Prestador' : 'Cliente' ?></span>
       </div>

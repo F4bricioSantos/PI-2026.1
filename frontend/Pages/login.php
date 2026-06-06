@@ -6,13 +6,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Entrar — ReformAí</title>
   <meta name="description" content="Acesse sua conta ReformAí e gerencie suas reformas e profissionais." />
-
-  <!-- Fonte Inter -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-
-  <!-- Estilos Tailwind CSS -->
   <link rel="stylesheet" href="../src/assets/output.css" />
 
   <style>
@@ -64,12 +60,9 @@
       animation: fadeIn 0.25s ease forwards;
     }
 
-    .btn-primary:active {
-      transform: scale(0.98);
-    }
-
-    /* Efeito de pressionar o botão (contorno) */
-    .btn-outline:active {
+    .btn-primary:active,
+    .btn-outline:active
+    {
       transform: scale(0.98);
     }
   </style>
@@ -79,16 +72,11 @@
 
   <div class="w-full max-w-[440px]">
 
-    <!-- Card -->
     <div class="bg-white rounded-2xl shadow-sm border border-gray-100 px-6 py-8 sm:px-10 sm:py-10">
-
-      <!-- Cabeçalho (centralizado) -->
       <div class="mb-8 text-center">
         <h1 class="text-[26px] font-bold text-slate-900 leading-tight">Bem-vindo de volta</h1>
         <p class="mt-1.5 text-[14px] text-gray-400">Acesse sua conta para gerenciar suas reformas</p>
       </div>
-
-      <!-- Formulário -->
       <form id="login-form" novalidate class="flex flex-col gap-5">
 
         <!-- Campo: E-mail -->
@@ -110,7 +98,6 @@
           </div>
           <p id="email-error" class="hidden text-[12px] text-orange-500 mt-0.5">Insira um e-mail válido.</p>
         </div>
-
         <!-- Campo: Senha -->
         <div class="flex flex-col gap-1.5">
           <label for="senha" class="text-[13px] font-medium text-slate-700">Senha</label>
@@ -130,20 +117,17 @@
             </span>
           </div>
           <p id="senha-error" class="hidden text-[12px] text-orange-500 mt-0.5">Insira sua senha.</p>
-
-          <!-- Mensagem de erro: credenciais inválidas -->
-          <div id="global-error" class="hidden fade-in flex items-center gap-2 text-[13px] text-orange-600 mt-1"
-            role="alert" aria-live="polite">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-              stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 flex-shrink-0">
-              <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
-              <line x1="12" y1="9" x2="12" y2="13" />
-              <line x1="12" y1="17" x2="12.01" y2="17" />
-            </svg>
-            <span>E-mail ou senha inválidos.</span>
-          </div>
         </div>
-
+        <div id="global-error" class="hidden fade-in flex items-center gap-2 text-[13px] text-orange-600 mt-1"
+          role="alert" aria-live="polite">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+            stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 flex-shrink-0">
+            <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+            <line x1="12" y1="9" x2="12" y2="13" />
+            <line x1="12" y1="17" x2="12.01" y2="17" />
+          </svg>
+          <span>E-mail ou senha inválidos.</span>
+        </div>
         <!-- Link: Esqueceu a senha (alinhado à direita) -->
         <div class="flex justify-end -mt-2">
           <a href="esqueci-senha.php" id="forgot-link"
@@ -151,8 +135,6 @@
             Esqueceu sua senha?
           </a>
         </div>
-
-        <!-- Botão: Entrar -->
         <button id="btn-entrar" type="submit" class="btn-primary w-full h-[52px] bg-orange-500 hover:bg-orange-600 active:bg-orange-700
                    text-white text-[15px] font-semibold rounded-lg
                    shadow-sm focus:outline-none focus:ring-4 focus:ring-orange-200
@@ -164,8 +146,6 @@
             <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
           </svg>
         </button>
-
-        <!-- Botão: Criar Conta (contorno) -->
         <a href="cadastro.php" id="btn-criar-conta" class="btn-outline w-full h-[52px] border-2 border-orange-500 text-orange-500 text-[15px] font-semibold rounded-lg
                    hover:bg-orange-50 active:bg-orange-100
                    focus:outline-none focus:ring-4 focus:ring-orange-100
@@ -174,8 +154,6 @@
         </a>
 
       </form>
-
-      <!-- Termos de uso e privacidade -->
       <p class="mt-7 text-center text-[12px] text-gray-400 leading-relaxed">
         Ao entrar, você concorda com nossos
         <a href="#"
@@ -184,8 +162,7 @@
         <a href="#"
           class="text-orange-500 underline underline-offset-2 hover:text-orange-600 transition-colors">Privacidade</a>.
       </p>
-
-    </div><!-- /cartão principal -->
+    </div>
   </div>
 
   <script>

@@ -1,76 +1,52 @@
 <?php
-header('Content-Type: text/html; charset=UTF-8');
-
-// 1. PROTEÇÃO DE SESSÃO E INCLUDES ORIGINAIS
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
-
 if (empty($_SESSION['usuario_id'])) {
     header('Location: /PI-2026.1/frontend/Pages/login.php');
     exit;
 }
-
 require_once '../../backend/config/auth.php';
 require_once '../../backend/config/Conexao.php';
 require_once '../../backend/models/User.php';
-
-// Variáveis de Configuração
 $usuarioId = (int)$_SESSION['usuario_id'];
 $mensagem = '';
 $erro = '';
 $limiteFotos = 7;
 $urlBaseSupabase = "https://yplpxzmwtkencrrtxmof.supabase.co/storage/v1/object/public/fotos/";
-
 $idParaSelecionar = filter_input(INPUT_GET, 'selecionar', FILTER_VALIDATE_INT);
-
-// Busca dados do utilizador
 $userModel = new User($pdo);
 $usuarioLogado = $userModel->buscarPorId($usuarioId);
-
-// Busca serviços (para o Select e para a Sidebar)
 $stmtS = $pdo->prepare("SELECT id, titulo, categoria_nome FROM servicos WHERE prestador_id = ? ORDER BY id DESC");
 $stmtS->execute([$usuarioId]);
 $servicos = $stmtS->fetchAll(PDO::FETCH_ASSOC);
 $temServico = count($servicos) > 0;
-
 $servicosMap = [];
 foreach ($servicos as $s) {
     $servicosMap[$s['id']] = $s;
 }
-
-// 2. LÓGICA DE PROCESSAMENTO COMPLETA (POST)
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-
-    // Ação: Excluir Projeto Completo
     if (isset($_POST['excluir_projeto_titulo'])) {
         $tituloExc = $_POST['excluir_projeto_titulo'];
-        
-        // Busca URLs para apagar no Supabase antes de deletar do banco
         $stmtBusca = $pdo->prepare("SELECT url_imagem FROM portfolio_imagens WHERE titulo_projeto = ? AND usuario_id = ?");
         $stmtBusca->execute([$tituloExc, $usuarioId]);
         $fotosParaApagar = $stmtBusca->fetchAll();
-
         foreach ($fotosParaApagar as $f) {
             if (function_exists('apagarArquivoSupabase')) {
                 apagarArquivoSupabase($f['url_imagem']); 
             }
         }
-        
         $stmtDel = $pdo->prepare("DELETE FROM portfolio_imagens WHERE titulo_projeto = ? AND usuario_id = ?");
         if ($stmtDel->execute([$tituloExc, $usuarioId])) {
             header('Location: portfolio.php?ok=3'); 
             exit;
         }
     }
-
-    // Ação: Excluir Foto Individual
     if (isset($_POST['excluir_foto_id'])) {
         $fotoId = (int)$_POST['excluir_foto_id'];
         $stmtBusca = $pdo->prepare("SELECT url_imagem FROM portfolio_imagens WHERE id = ? AND usuario_id = ?");
         $stmtBusca->execute([$fotoId, $usuarioId]);
         $foto = $stmtBusca->fetch();
-
         if ($foto) {
             if (function_exists('apagarArquivoSupabase')) {
                 apagarArquivoSupabase($foto['url_imagem']); 
@@ -82,20 +58,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
     }
-
-    // Ação: Upload de Fotos (vincular ao serviço)
     if (isset($_FILES['foto_trabalho'])) {
         $servicoId = filter_input(INPUT_POST, 'servico_id', FILTER_VALIDATE_INT);
         $tituloProjeto = $servicosMap[$servicoId]['titulo'] ?? '';
-
-        // Contagem atual de fotos para este projeto
         $stmtC = $pdo->prepare("SELECT COUNT(*) FROM portfolio_imagens WHERE usuario_id = ? AND titulo_projeto = ?");
         $stmtC->execute([$usuarioId, $tituloProjeto]);
         $jaTem = (int)$stmtC->fetchColumn();
-
         $arquivos = $_FILES['foto_trabalho'];
         $qtdNovas = is_array($arquivos['name']) ? count(array_filter($arquivos['name'])) : 0;
-
         if (!$servicoId) {
             $erro = 'Selecione um serviço relacionado.';
         } elseif (($jaTem + $qtdNovas) > $limiteFotos) {
@@ -105,7 +75,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             for ($i = 0; $i < $qtdNovas; $i++) {
                 $tmpNome = $arquivos['tmp_name'][$i];
                 $nomeOri = $arquivos['name'][$i];
-
                 if (is_uploaded_file($tmpNome)) {
                     if (function_exists('fazerUploadPortfolioSupabase')) {
                         $caminhoNoSupabase = fazerUploadPortfolioSupabase($tmpNome, $nomeOri);
@@ -126,8 +95,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 }
-
-// Mensagens de retorno
 $status = $_GET['ok'] ?? '';
 if ($status === '1') $mensagem = 'Fotos adicionadas com sucesso!';
 if ($status === '2') $mensagem = 'A foto foi removida com sucesso!';
@@ -135,8 +102,6 @@ if ($status === '3') $mensagem = 'O projeto e todas as suas fotos foram excluíd
 if ($idParaSelecionar && !$status) {
     $mensagem = 'Serviço cadastrado com sucesso! Agora adicione fotos para o seu portfólio.';
 }
-
-// Agrupamento de Projetos
 $stmtP = $pdo->prepare("SELECT * FROM portfolio_imagens WHERE usuario_id = ? ORDER BY data_upload DESC");
 $stmtP->execute([$usuarioId]);
 $projetosAgrupados = [];
@@ -144,7 +109,6 @@ foreach ($stmtP->fetchAll(PDO::FETCH_ASSOC) as $item) {
     $projetosAgrupados[$item['titulo_projeto']][] = $item;
 }
 ?>
-
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -160,7 +124,6 @@ foreach ($stmtP->fetchAll(PDO::FETCH_ASSOC) as $item) {
   </script>
 </head>
 <body class="bg-bg text-gray-800 flex h-screen overflow-hidden font-sans">
-
   <div id="modalConfirm" class="fixed inset-0 z-[100] hidden flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
     <div class="bg-white rounded-2xl w-full max-w-sm overflow-hidden shadow-2xl scale-95 transition-all">
       <div class="p-6 text-center">
@@ -179,11 +142,14 @@ foreach ($stmtP->fetchAll(PDO::FETCH_ASSOC) as $item) {
       </div>
     </div>
   </div>
-
   <div id="sidebar-container" class="fixed inset-y-0 left-0 z-50 w-60 bg-sidebar flex flex-col h-screen transform -translate-x-full md:relative md:translate-x-0 transition-transform duration-300 ease-in-out"></div>
   <script type="module">
     import { renderSidebar } from '../src/components/sidebar.js';
-    renderSidebar('sidebar-container', 'portfolio', <?= $temServico ? 'true' : 'false' ?>);
+    const isAdmin = <?= (isset($usuarioLogado['tipo_usuario']) && $usuarioLogado['tipo_usuario'] === 'admin') ? 'true' : 'false' ?>;
+    renderSidebar('sidebar-container', 'portfolio', <?= $temServico ? 'true' : 'false' ?>, isAdmin, {}, {
+      nome: "<?= htmlspecialchars($usuarioLogado['nome']) ?>",
+      foto: "<?= $usuarioLogado['foto_perfil'] ?>"
+    });
   </script>
 
   <main class="flex-1 flex flex-col overflow-hidden w-full relative">
@@ -208,7 +174,6 @@ foreach ($stmtP->fetchAll(PDO::FETCH_ASSOC) as $item) {
             </div>
         </a>
     </header>
-
     <div class="flex-1 overflow-y-auto px-4 md:px-8 py-6 custom-scroll">
       <div class="mb-6">
         <h2 class="text-4xl font-extrabold text-slate-900 tracking-tight">Meus Trabalhos</h2>
@@ -222,7 +187,6 @@ foreach ($stmtP->fetchAll(PDO::FETCH_ASSOC) as $item) {
         
         <section class="lg:col-span-4 bg-white border border-gray-200 rounded-2xl p-6 shadow-sm h-fit lg:sticky lg:top-0">
           <h3 class="text-2xl font-extrabold text-slate-900 mb-6">Novo Trabalho</h3>
-          
           <form method="POST" enctype="multipart/form-data" class="space-y-5" onsubmit="const btn=this.querySelector('button[type=submit]'); btn.disabled=true; btn.innerHTML='Enviando...';">
             <div>
               <label class="block text-xs font-bold text-gray-700 mb-2 uppercase tracking-widest">Serviço Realizado</label>
@@ -235,7 +199,6 @@ foreach ($stmtP->fetchAll(PDO::FETCH_ASSOC) as $item) {
                   <?php endforeach; ?>
               </select>
             </div>
-
             <div>
               <label class="block text-xs font-bold text-gray-700 mb-2 uppercase tracking-widest">Fotos (Limite 7)</label>
               <label class="border-2 border-dashed border-gray-200 rounded-2xl p-10 text-center block cursor-pointer hover:border-orange hover:bg-orange/5 transition-all">
@@ -243,11 +206,9 @@ foreach ($stmtP->fetchAll(PDO::FETCH_ASSOC) as $item) {
                 <p id="file-msg" class="text-xs font-black text-gray-400 uppercase tracking-[0.2em]">Selecionar Imagens</p>
               </label>
             </div>
-
             <button type="submit" class="w-full bg-orange text-white py-4 rounded-xl font-bold text-sm shadow-lg shadow-orange/20 hover:bg-orange-600 transition-all uppercase">Vincular Fotos</button>
           </form>
         </section>
-
         <section class="lg:col-span-8 space-y-8">
           <?php foreach ($projetosAgrupados as $titulo => $fotos): ?>
             <?php 

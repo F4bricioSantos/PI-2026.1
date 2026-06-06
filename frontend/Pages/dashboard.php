@@ -7,14 +7,12 @@ $idUsuarioLogado = $_SESSION['usuario_id'];
 $userModel = new User($pdo);
 $usuario   = $userModel->buscarPorId($idUsuarioLogado);
 
-// TRAVA DE SEGURANÇA: Se o usuário limpou o banco e a sessão sobrou
 if (!$usuario) {
     session_destroy();
     header("Location: login.php");
     exit;
 }
 
-// VERIFICAÇÃO PARA A SIDEBAR: Se o usuário já cadastrou algum serviço
 $stmtCheck = $pdo->prepare("SELECT COUNT(*) FROM servicos WHERE prestador_id = :id");
 $stmtCheck->execute([':id' => $idUsuarioLogado]);
 $temServico = $stmtCheck->fetchColumn() > 0;
@@ -28,7 +26,6 @@ $busca          = trim($_GET['busca']     ?? '');
 $cidade         = trim($_GET['cidade']    ?? '');
 $precoMin       = trim($_GET['preco_min'] ?? '');
 $precoMax       = trim($_GET['preco_max'] ?? '');
-
 // Endpoint para o Autocomplete de Cidades (AJAX)
 if (isset($_GET['ajax_cidades'])) {
     $termo = $_GET['ajax_cidades'] . '%';
@@ -37,7 +34,6 @@ if (isset($_GET['ajax_cidades'])) {
     echo json_encode($stmt->fetchAll(PDO::FETCH_COLUMN));
     exit;
 }
-
 // Construção da Query SQL
 $where  = ['s.prestador_id != :usuario_id'];
 $params = [':usuario_id' => $idUsuarioLogado];
@@ -84,7 +80,6 @@ $sql = "
 $stmt = $pdo->prepare($sql);
 $stmt->execute($params);
 $servicos = $stmt->fetchAll();
-
 // Busca lista de ids dos serviços favoritos do usuário logado
 $stmtFavs = $pdo->prepare("SELECT servico_id FROM favoritos_servicos WHERE usuario_id = :uid");
 $stmtFavs->execute([':uid' => $idUsuarioLogado]);
@@ -92,7 +87,6 @@ $favoritosIds = $stmtFavs->fetchAll(PDO::FETCH_COLUMN);
 if (!$favoritosIds) {
     $favoritosIds = [];
 }
-
 // Busca a contagem global de mensagens não lidas para o usuário logado
 $stmtUnreadMsgCount = $pdo->prepare("SELECT COUNT(*) FROM mensagens_chat WHERE destinatario_id = :uid AND lido_em IS NULL AND deletado = 0");
 $stmtUnreadMsgCount->execute([':uid' => $idUsuarioLogado]);
@@ -132,23 +126,19 @@ $categoriasGerais = ["Reformas", "Pintura e Textura", "Elétrica", "Hidráulica"
   <div id="sidebar-container" class="fixed inset-y-0 left-0 z-50 w-60 bg-sidebar flex flex-col h-screen transform -translate-x-full md:relative md:translate-x-0 transition-transform duration-300 ease-in-out"></div>
   <script type="module">
     import { renderSidebar } from '../src/components/sidebar.js';
-
-    // Captura se o usuário tem serviço ativo do seu PHP
     const temServico = <?= $temServico ? 'true' : 'false' ?>;
-    
-    // Captura se o usuário logado é administrador (verifica a coluna tipo_usuario do seu banco)
     const isAdmin = <?= (isset($usuario['tipo_usuario']) && $usuario['tipo_usuario'] === 'admin') ? 'true' : 'false' ?>;
-
-    // Inicializa os contadores com os valores reais
     const badges = {
       badgeMensagens: <?= $totalMensagensNaoLidas ?>,
       badgeAgendamentos: 0
     };
 
     // Renderiza passando todos os dados corretamente
-    renderSidebar('sidebar-container', 'inicio', temServico, isAdmin, badges);
+    renderSidebar('sidebar-container', 'inicio', temServico, isAdmin, badges, {
+      nome: "<?= htmlspecialchars($usuario['nome']) ?>",
+      foto: "<?= $usuario['foto_perfil'] ?>"
+    });
   </script>
-
   <main class="flex-1 flex flex-col overflow-hidden w-full relative">
     <header class="flex items-center justify-between px-4 md:px-8 py-4 md:py-5 border-b border-gray-200 bg-white flex-shrink-0">
       <div class="flex items-center gap-3 text-gray-800">
@@ -174,7 +164,6 @@ $categoriasGerais = ["Reformas", "Pintura e Textura", "Elétrica", "Hidráulica"
         </div>
       </a>
     </header>
-
     <div class="flex-1 overflow-y-auto px-4 md:px-8 py-4 md:py-6 custom-scroll">
       
       <form id="filtroForm" method="GET" action="" class="space-y-4 mb-6 md:mb-8">
@@ -203,7 +192,6 @@ $categoriasGerais = ["Reformas", "Pintura e Textura", "Elétrica", "Hidráulica"
             <svg class="w-3 h-3 <?= $categoriaAtiva === 'Favoritos' ? 'fill-white text-white' : 'fill-none text-current' ?>" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
             FAVORITOS
           </a>
-          
           <?php foreach ($categoriasGerais as $cat): ?>
             <a href="?categoria=<?=urlencode($cat).$urlParams?>" class="px-5 py-2 rounded-full text-[11px] font-bold transition-all <?= $categoriaAtiva === $cat ? 'bg-orange text-white' : 'bg-white text-gray-500 border border-gray-200 hover:border-orange hover:text-orange' ?>">
               <?= mb_strtoupper($cat) ?>
@@ -266,9 +254,7 @@ $categoriasGerais = ["Reformas", "Pintura e Textura", "Elétrica", "Hidráulica"
                     </span>
                   </div>
                   <div class="flex items-center gap-2">
-                    <?php 
-                    $isFav = in_array($s['id'], $favoritosIds);
-                    ?>
+                    <?php $isFav = in_array($s['id'], $favoritosIds); ?>
                     <button onclick="toggleFavorito(event, <?= $s['id'] ?>)" data-service-id="<?= $s['id'] ?>" class="fav-btn p-2.5 rounded-xl border transition-all shadow-sm flex items-center justify-center <?= $isFav ? 'bg-orange/10 border-orange/20 text-orange' : 'bg-gray-50 border-gray-100 text-gray-400 hover:text-orange hover:border-orange/20' ?>" title="<?= $isFav ? 'Remover dos Favoritos' : 'Salvar nos Favoritos' ?>">
                       <svg class="w-4 h-4 <?= $isFav ? 'fill-orange' : 'fill-none' ?>" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
                         <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>

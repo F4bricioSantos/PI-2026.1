@@ -167,42 +167,15 @@ class ChatController {
     }
 
     try {
-        $mensagemApagada = '
-        <span style="
-            display:inline-flex;
-            align-items:center;
-            gap:6px;
-            color:#ef4444;
-            font-style:italic;
-            opacity:.9;
-        ">
-            <svg xmlns="http://www.w3.org/2000/svg"
-                 width="14"
-                 height="14"
-                 viewBox="0 0 24 24"
-                 fill="none"
-                 stroke="#ef4444"
-                 stroke-width="2"
-                 stroke-linecap="round"
-                 stroke-linejoin="round"
-                 style="flex-shrink:0;">
-                <circle cx="12" cy="12" r="9"></circle>
-                <line x1="6" y1="18" x2="18" y2="6"></line>
-            </svg>
-            <span>Esta mensagem foi apagada</span>
-        </span>';
-
         $stmt = $this->pdo->prepare("
             UPDATE mensagens_chat
-            SET mensagem = :mensagem,
+            SET mensagem = '',
                 url_imagem = NULL,
                 deletado = 1
             WHERE id = :id
               AND remetente_id = :user
         ");
-
         $sucesso = $stmt->execute([
-            ':mensagem' => $mensagemApagada,
             ':id'       => $idMensagem,
             ':user'     => $this->idUsuarioLogado,
         ]);
@@ -228,20 +201,29 @@ class ChatController {
         try {
             $stmt = $this->pdo->prepare("
                 SELECT u.id, u.nome, u.foto_perfil,
-                       (SELECT COUNT(*)::INT 
+                       (SELECT COUNT(*)::INT
                         FROM mensagens_chat m2 
                         WHERE m2.remetente_id = u.id 
                           AND m2.destinatario_id = :user 
                           AND m2.lido_em IS NULL 
-                          AND m2.deletado = 0) AS unread_count
+                          AND m2.deletado = 0) AS unread_count,
+                       (SELECT MAX(criado_em) FROM mensagens_chat m3 
+                        WHERE (m3.remetente_id = u.id AND m3.destinatario_id = :user)
+                           OR (m3.remetente_id = :user AND m3.destinatario_id = u.id)) as ultima_atividade
                 FROM usuarios u
-                JOIN mensagens_chat m
-                  ON (m.remetente_id = u.id OR m.destinatario_id = u.id)
-                WHERE (m.remetente_id = :user OR m.destinatario_id = :user)
-                  AND u.id != :user
-                GROUP BY u.id, u.nome, u.foto_perfil
+                WHERE u.id != :user
+                  AND (
+                    u.id = :atual 
+                    OR EXISTS (SELECT 1 FROM mensagens_chat m4 
+                               WHERE (m4.remetente_id = u.id AND m4.destinatario_id = :user)
+                                  OR (m4.destinatario_id = u.id AND m4.remetente_id = :user))
+                  )
+                ORDER BY (u.id = :atual) DESC, ultima_atividade DESC NULLS LAST
             ");
-            $stmt->execute([':user' => $this->idUsuarioLogado]);
+            $stmt->execute([
+                ':user'  => (int)$this->idUsuarioLogado,
+                ':atual' => $this->idDestinatarioAtual ? (int)$this->idDestinatarioAtual : 0
+            ]);
             echo json_encode($stmt->fetchAll(PDO::FETCH_ASSOC));
         } catch (PDOException $e) {
             http_response_code(500);
@@ -292,13 +274,17 @@ class ChatController {
         $nomeFinal = time() . '_' . uniqid('', true) . '.' . $extensao;
         $path      = "chat/{$nomeFinal}";
 
-        $supabaseUrl = 'https://yplpxzmwtkencrrtxmof.supabase.co';
-        $supabaseKey = 'sb_secret_JhmF8klpQEn3lG8SpzrYig_74tbfzEH'; // ← Substitua pela sua chave (Settings → API → service_role)
         $bucket      = 'fotos';
+
+        // Validação de tamanho (Limite de 5MB) para evitar estouro de storage
+        if ($arquivo['size'] > 5 * 1024 * 1024) {
+            http_response_code(413);
+            echo json_encode(['erro' => 'A imagem excede o limite de 5MB.']);
+            return;
+        }
 
         // Lê o binário do arquivo temporário.
         // O Supabase Storage espera o body BINÁRIO PURO no POST (não multipart/form-data).
-        // NÃO use CURLFile aqui — CURLFile força multipart e conflita com Content-Type da imagem.
         $corposBinario = file_get_contents($arquivo['tmp_name']);
         if ($corposBinario === false) {
             http_response_code(500);
@@ -306,14 +292,14 @@ class ChatController {
             return;
         }
 
-        $ch = curl_init("{$supabaseUrl}/storage/v1/object/{$bucket}/{$path}");
+        $ch = curl_init(SB_URL . "/storage/v1/object/{$bucket}/{$path}");
         curl_setopt_array($ch, [
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_CUSTOMREQUEST  => 'POST',
             CURLOPT_POSTFIELDS     => $corposBinario,
             CURLOPT_HTTPHEADER     => [
-                "Authorization: Bearer {$supabaseKey}",
-                "apikey: {$supabaseKey}",
+                "Authorization: Bearer " . SB_SECRET_KEY,
+                "apikey: " . SB_SECRET_KEY,
                 "Content-Type: {$mime}",
                 "Content-Length: " . strlen($corposBinario),
                 "x-upsert: true",
@@ -372,7 +358,7 @@ class ChatController {
 
             // Por contato (remetente)
             $stmtPorContato = $this->pdo->prepare("
-                SELECT remetente_id, COUNT(*)::INT as cnt
+                SELECT remetente_id, COUNT(*) as cnt
                 FROM mensagens_chat
                 WHERE destinatario_id = :uid AND lido_em IS NULL AND deletado = 0
                 GROUP BY remetente_id

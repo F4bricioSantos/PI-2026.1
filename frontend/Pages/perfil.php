@@ -70,7 +70,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         $pdo->commit();
-        echo "<script>window.location.href='perfil.php?sucesso=1';</script>";
+
+        // Fluxo condicional: se for novo cadastro, redireciona para o próximo passo
+        if (isset($_GET['new']) && $_GET['new'] === '1') {
+            $fluxo = $_GET['fluxo'] ?? 'cliente';
+            $destino = ($fluxo === 'prestador') ? 'novo-servico.php' : 'dashboard.php';
+            echo "<script>window.location.href='{$destino}';</script>";
+        } else {
+            echo "<script>window.location.href='perfil.php?sucesso=1';</script>";
+        }
         exit;
 
     } catch (Exception $e) {
@@ -113,21 +121,34 @@ $fotoExibicao = ($dados['foto_perfil'] == 'default.png' || empty($dados['foto_pe
     
     // No perfil.php a variável que você usou no topo é $temServico
     const isPro = <?= ($temServico) ? 'true' : 'false' ?>;
+    const isAdmin = <?= (isset($dados['tipo_usuario']) && $dados['tipo_usuario'] === 'admin') ? 'true' : 'false' ?>;
     
-    // Renderiza definindo 'perfil' como a página ativa
-    renderSidebar('sidebar-container', 'perfil', isPro);
-</script>
-  <main class="flex-1 flex flex-col overflow-hidden w-full relative">
-    <header class="flex items-center justify-between px-4 md:px-8 py-4 md:py-5 border-b border-gray-200 bg-white">
-      <div class="flex items-center gap-3">
-        <button onclick="window.toggleSidebar && window.toggleSidebar()" class="md:hidden p-2 -ml-2 rounded-lg text-gray-500 hover:bg-gray-100 focus:outline-none transition-colors">
+    // Renderiza a sidebar - a lógica interna agora cuida da marcação ativa
+    renderSidebar('sidebar-container', 'perfil', isPro, isAdmin, {}, {
+      nome: "<?= htmlspecialchars($dados['nome']) ?>",
+      foto: "<?= $dados['foto_perfil'] ?>",
+      id: "<?= $idUsuario ?>"
+    });
+</script> 
+  <main class="flex-1 flex flex-col overflow-hidden w-full relative bg-bg">
+    <header class="flex items-center justify-between px-4 md:px-8 py-4 md:py-5 border-b border-gray-200 bg-white flex-shrink-0">
+      <div class="flex items-center gap-2 text-gray-400">
+        <button onclick="window.toggleSidebar && window.toggleSidebar()" class="md:hidden p-2 -ml-2 rounded-lg text-gray-500 hover:bg-gray-100 focus:outline-none transition-colors flex-shrink-0">
           <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/></svg>
         </button>
-        <h1 class="text-gray-800 font-bold text-lg tracking-tight">Meu Perfil</h1>
+        <button onclick="history.back()" class="hover:text-gray-600 p-1 md:-ml-1 rounded-lg hover:bg-gray-100 hidden md:block">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
+        </button>
+        <a href="./dashboard.php" class="text-gray-400 text-sm hover:text-orange transition-colors">Início</a>
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
+        <span class="text-gray-800 font-bold text-lg tracking-tight">Meu Perfil</span>
       </div>
-      <div class="flex gap-3">
+      <div class="flex items-center gap-3">
         <?php if(isset($_GET['sucesso']) && empty($mensagem)): ?>
             <span class="text-xs font-bold text-emerald-600 bg-emerald-50 px-3 py-1 rounded-lg border border-emerald-100">Alterações salvas!</span>
+        <?php endif; ?>
+        <?php if(isset($_GET['new']) && $_GET['new'] === '1'): ?>
+            <span class="text-xs font-bold text-orange bg-orange-50 px-3 py-1 rounded-lg border border-orange-100 italic">Bem-vindo! Complete seu perfil para continuar.</span>
         <?php endif; ?>
         <?php if($mensagem): ?>
             <span class="text-xs font-bold text-red-600 bg-red-50 px-3 py-1 rounded-lg border border-red-100"><?= $mensagem ?></span>

@@ -1,7 +1,6 @@
 <?php
 ini_set('display_errors', 1);
 error_reporting(E_ALL);
-
 if (session_status() === PHP_SESSION_NONE) session_start();
 
 header('Content-Type: application/json; charset=utf-8');
@@ -12,7 +11,6 @@ require_once __DIR__ . '/../services/EmailService.php';
 use Backend\Services\EmailService;
 
 $action = $_GET['action'] ?? '';
-
 match ($action) {
     'enviar_codigo_verificacao' => enviarCodigoVerificacao($pdo),
     'cadastrar'                 => cadastrar($pdo),
@@ -23,7 +21,6 @@ match ($action) {
     'redefinir_senha'           => redefinirSenha($pdo),
     default                     => responder(405, ['sucesso' => false, 'mensagem' => 'Ação não reconhecida.'])
 };
-
 function enviarCodigoVerificacao(PDO $pdo): void
 {
     if ($_SERVER['REQUEST_METHOD'] !== 'POST')
@@ -34,10 +31,8 @@ function enviarCodigoVerificacao(PDO $pdo): void
     $email = trim($_POST['email'] ?? '');
 
     $erros = [];
-
     if (empty($nome))
         $erros['nome'] = 'Por favor, insira seu nome completo.';
-
     $cpfNumerico = preg_replace('/\D/', '', $cpf);
     if (strlen($cpfNumerico) !== 11)
         $erros['cpf'] = 'Por favor, insira um CPF válido.';
@@ -47,18 +42,13 @@ function enviarCodigoVerificacao(PDO $pdo): void
 
     if (!empty($erros))
         responder(200, ['sucesso' => false, 'erros' => $erros]);
-
     $user   = new User($pdo);
     $existe = $user->verificarExistencia($email, $cpfNumerico);
-
     if ($existe === true)
         responder(200, ['sucesso' => false, 'erros' => ['email' => 'Este e-mail ou CPF já está cadastrado.']]);
-
     $codigoToken = (string)rand(100000, 999999);
-
     $_SESSION['registro_token'] = $codigoToken;
     $_SESSION['registro_token_expira'] = time() + (15 * 60);
-
     $primeiroNome = explode(' ', $nome)[0];
     $assunto   = "Seu código de verificação — ReformAí";
     $corpoHTML = "
@@ -73,7 +63,6 @@ function enviarCodigoVerificacao(PDO $pdo): void
             </p>
         </div>
     ";
-
     $emailEnviado = EmailService::enviar($email, $nome, $assunto, $corpoHTML);
 
     if ($emailEnviado) {
@@ -86,7 +75,6 @@ function enviarCodigoVerificacao(PDO $pdo): void
         ]);
     }
 }
-
 function cadastrar(PDO $pdo): void
 {
     if ($_SERVER['REQUEST_METHOD'] !== 'POST')
@@ -104,96 +92,64 @@ function cadastrar(PDO $pdo): void
     if (!isset($_SESSION['registro_token']) || time() > $_SESSION['registro_token_expira']) {
         responder(200, ['sucesso' => false, 'mensagem' => 'Código de verificação expirou. Solicite um novo envio.']);
     }
-
     if ($codigoToken !== $_SESSION['registro_token']) {
         responder(200, ['sucesso' => false, 'mensagem' => 'Código incorreto. Verifique sua caixa de entrada.']);
     }
-
     $erros = [];
-
     if (empty($nome))
         $erros['nome'] = 'Por favor, insira seu nome completo.';
-
     $cpfNumerico = preg_replace('/\D/', '', $cpf);
     if (strlen($cpfNumerico) !== 11)
         $erros['cpf'] = 'Por favor, insira um CPF válido.';
-
     if (empty($email) || !filter_var($email, FILTER_VALIDATE_EMAIL))
         $erros['email'] = 'Por favor, insira um e-mail válido.';
-
     if (strlen($senha) < 8)
         $erros['senha'] = 'A senha deve ter pelo menos 8 caracteres.';
-
     if ($senha !== $confirma)
         $erros['confirmar-senha'] = 'As senhas não coincidem.';
-
     if (!empty($erros))
         responder(200, ['sucesso' => false, 'erros' => $erros]);
-
     $user   = new User($pdo);
     $existe = $user->verificarExistencia($email, $cpfNumerico);
-
     if ($existe === true)
         responder(200, ['sucesso' => false, 'erros' => ['email' => 'Este e-mail ou CPF já está cadastrado.']]);
-
     $ok = $user->cadastrar($nome, $email, $cpfNumerico, $senha, $telefone);
-
     if (!$ok)
         responder(200, ['sucesso' => false, 'mensagem' => 'Não foi possível realizar o cadastro.']);
-
     unset($_SESSION['registro_token']);
     unset($_SESSION['registro_token_expira']);
-
     $novo = $user->buscarPorEmail($email);
     $_SESSION['usuario_id']   = $novo['id'];
     $_SESSION['usuario_nome'] = $novo['nome'];
     $_SESSION['logado']       = true;
     $_SESSION['fluxo']        = $fluxo;
-
-    if ($fluxo === 'prestador') {
-        responder(200, [
-            'sucesso'  => true,
-            'redirect' => '/PI-2026.1/frontend/Pages/novo-servico.php',
-        ]);
-    } else {
-        responder(200, [
-            'sucesso'  => true,
-            'redirect' => '/PI-2026.1/frontend/Pages/dashboard.php',
-        ]);
-    }
+    responder(200, [
+        'sucesso'  => true,
+        'redirect' => '/PI-2026.1/frontend/Pages/perfil.php?fluxo=' . $fluxo . '&new=1',
+    ]);
 }
-
 function login(PDO $pdo): void
 {
     if ($_SERVER['REQUEST_METHOD'] !== 'POST')
         responder(405, ['sucesso' => false, 'mensagem' => 'Método não permitido.']);
-
     $email = trim($_POST['email'] ?? '');
     $senha = $_POST['senha']      ?? '';
-
     $erros = [];
-
     if (empty($email) || !filter_var($email, FILTER_VALIDATE_EMAIL))
         $erros['email'] = 'Por favor, insira um e-mail válido.';
-
     if (empty($senha))
         $erros['senha'] = 'Por favor, insira sua senha.';
-
     if (!empty($erros))
         responder(200, ['sucesso' => false, 'erros' => $erros]);
-
     $user = new User($pdo);
     $ok   = $user->login($email, $senha);
-
     if (!$ok)
-        responder(200, ['sucesso' => false, 'mensagem' => 'E-mail ou senha inválidos.']);
-
+        responder(200, ['sucesso' => false, 'erro_global' => true, 'mensagem' => 'E-mail ou senha inválidos.']);
     responder(200, [
         'sucesso'  => true,
         'redirect' => '/PI-2026.1/frontend/Pages/dashboard.php',
     ]);
 }
-
 function logout(): void
 {
     if (session_status() === PHP_SESSION_NONE) session_start();
@@ -203,39 +159,23 @@ function logout(): void
     header('Location: /PI-2026.1/frontend/Pages/login.php');
     exit;
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
-// REDEFINIÇÃO DE SENHA
-// ─────────────────────────────────────────────────────────────────────────────
-
-/**
- * Etapa 1 do reset: valida o e-mail e envia o código por e-mail.
- */
 function enviarCodigoReset(PDO $pdo): void
 {
     if ($_SERVER['REQUEST_METHOD'] !== 'POST')
         responder(405, ['sucesso' => false, 'mensagem' => 'Método não permitido.']);
-
     $email = trim($_POST['email'] ?? '');
-
     if (empty($email) || !filter_var($email, FILTER_VALIDATE_EMAIL))
         responder(200, ['sucesso' => false, 'mensagem' => 'Insira um e-mail válido.']);
-
     $user    = new User($pdo);
     $usuario = $user->buscarPorEmail($email);
-
-    // Responde sempre com sucesso para não vazar informação de cadastro
     if (!$usuario) {
         responder(200, ['sucesso' => true, 'mensagem' => 'Se o e-mail estiver cadastrado, você receberá o código.']);
     }
-
     $codigoToken = (string)rand(100000, 999999);
-
     $_SESSION['reset_token']        = $codigoToken;
     $_SESSION['reset_email']        = $email;
     $_SESSION['reset_token_expira'] = time() + (15 * 60); // 15 minutos
     $_SESSION['reset_verificado']   = false;
-
     $primeiroNome = explode(' ', $usuario['nome'])[0];
     $assunto      = "Redefinição de senha — ReformAí";
     $corpoHTML    = "
@@ -250,13 +190,10 @@ function enviarCodigoReset(PDO $pdo): void
             </p>
         </div>
     ";
-
     $emailEnviado = EmailService::enviar($email, $usuario['nome'], $assunto, $corpoHTML);
-
     if ($emailEnviado) {
         responder(200, ['sucesso' => true, 'mensagem' => 'Código enviado com sucesso!']);
     } else {
-        // Modo desenvolvimento: retorna o token no JSON
         responder(200, [
             'sucesso'              => true,
             'token_desenvolvimento' => $codigoToken,
@@ -264,75 +201,45 @@ function enviarCodigoReset(PDO $pdo): void
         ]);
     }
 }
-
-/**
- * Etapa 2 do reset: verifica o código sem ainda trocar a senha.
- * Marca a sessão como verificada para que a etapa 3 possa prosseguir.
- */
 function verificarCodigoReset(): void
 {
     if ($_SERVER['REQUEST_METHOD'] !== 'POST')
         responder(405, ['sucesso' => false, 'mensagem' => 'Método não permitido.']);
-
     $email  = trim($_POST['email']        ?? '');
     $codigo = trim($_POST['codigo_token'] ?? '');
-
     if (!isset($_SESSION['reset_token']) || time() > $_SESSION['reset_token_expira'])
         responder(200, ['sucesso' => false, 'mensagem' => 'Código expirado. Solicite um novo.']);
-
     if ($_SESSION['reset_email'] !== $email)
         responder(200, ['sucesso' => false, 'mensagem' => 'Sessão inválida. Reinicie o processo.']);
-
     if ($codigo !== $_SESSION['reset_token'])
         responder(200, ['sucesso' => false, 'mensagem' => 'Código incorreto. Verifique sua caixa de entrada.']);
-
     $_SESSION['reset_verificado'] = true;
-
     responder(200, ['sucesso' => true]);
 }
-
-/**
- * Etapa 3 do reset: troca a senha no banco (só se o código já foi verificado).
- */
 function redefinirSenha(PDO $pdo): void
 {
     if ($_SERVER['REQUEST_METHOD'] !== 'POST')
         responder(405, ['sucesso' => false, 'mensagem' => 'Método não permitido.']);
-
-    // Garante que o código foi verificado nesta sessão
     if (empty($_SESSION['reset_verificado']) || $_SESSION['reset_verificado'] !== true)
         responder(200, ['sucesso' => false, 'mensagem' => 'Verificação pendente. Confirme o código primeiro.']);
-
     if (!isset($_SESSION['reset_token']) || time() > $_SESSION['reset_token_expira'])
         responder(200, ['sucesso' => false, 'mensagem' => 'Sessão expirada. Reinicie o processo.']);
-
     $email    = trim($_POST['email']          ?? '');
     $nova     = $_POST['nova_senha']          ?? '';
     $confirma = $_POST['confirmar_senha']     ?? '';
-
     if ($_SESSION['reset_email'] !== $email)
         responder(200, ['sucesso' => false, 'mensagem' => 'Sessão inválida. Reinicie o processo.']);
-
     if (strlen($nova) < 8)
         responder(200, ['sucesso' => false, 'mensagem' => 'A senha deve ter pelo menos 8 caracteres.']);
-
     if ($nova !== $confirma)
         responder(200, ['sucesso' => false, 'mensagem' => 'As senhas não coincidem.']);
-
     $user = new User($pdo);
     $ok   = $user->atualizarSenha($email, $nova);
-
     if (!$ok)
         responder(200, ['sucesso' => false, 'mensagem' => 'Não foi possível atualizar a senha. Tente novamente.']);
-
-    // Limpa os dados de reset da sessão
     unset($_SESSION['reset_token'], $_SESSION['reset_token_expira'], $_SESSION['reset_email'], $_SESSION['reset_verificado']);
-
     responder(200, ['sucesso' => true, 'mensagem' => 'Senha redefinida com sucesso!']);
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
-
 function responder(int $status, array $dados): never
 {
     http_response_code($status);
