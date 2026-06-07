@@ -418,11 +418,12 @@ class ChatController {
 
         try {
             $stmt = $this->pdo->prepare("
-                SELECT c.id, c.status, c.finalizado_prestador_em
+                SELECT c.id, c.status, c.finalizado_prestador_em, c.finalizado_cliente_em, 
+                       c.avaliado, c.avaliado_prestador, c.cliente_id, c.prestador_id
                 FROM contratos c
                 WHERE ((c.cliente_id = :u1 AND c.prestador_id = :u2)
                    OR  (c.cliente_id = :u2 AND c.prestador_id = :u1))
-                  AND c.status IN ('pendente', 'aceito')
+                  AND c.status IN ('pendente', 'aceito', 'concluido')
                 ORDER BY c.criado_em DESC
                 LIMIT 1
             ");

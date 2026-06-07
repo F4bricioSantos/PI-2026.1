@@ -84,6 +84,7 @@ CREATE TABLE contratos (
     criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     atualizado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     finalizado_prestador_em TIMESTAMP,
+    finalizado_cliente_em TIMESTAMP,
     avaliado BOOLEAN DEFAULT FALSE,
     favorito BOOLEAN NOT NULL DEFAULT FALSE,
     avaliado_prestador BOOLEAN DEFAULT FALSE,

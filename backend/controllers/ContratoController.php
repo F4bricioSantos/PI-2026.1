@@ -66,14 +66,14 @@ if ($acao === 'mudar_status' && $_SERVER['REQUEST_METHOD'] === 'POST') {
 
     $souPrestador = ($idUsuarioLogado == $contrato['prestador_id']);
     $souCliente   = ($idUsuarioLogado == $contrato['cliente_id']);
-    // Apenas o prestador pode aceitar a proposta
+    // Apenas o prestador pode aceitar a proposta e mudar o status direto para 'aceito'
     if ($novoStatus === 'aceito') {
         if (!$souPrestador) {
             http_response_code(403);
             echo json_encode(['erro' => 'Apenas o prestador pode aceitar a proposta.']);
             exit;
         }
-        $sucesso = $contratoModel->atualizarStatus($contratoId, 'aceito');
+        $sucesso = $contratoModel->aceitarProposta($contratoId);
         echo json_encode(['sucesso' => $sucesso]);
         exit;
     }
@@ -90,23 +90,45 @@ if ($acao === 'mudar_status' && $_SERVER['REQUEST_METHOD'] === 'POST') {
         exit;
     }
 
-    // Conclusão: fluxo em duas etapas
+    // Conclusão: fluxo em duas etapas ou confirmação definitiva
     if ($novoStatus === 'concluido') {
+        if (!$souPrestador && !$souCliente) {
+            http_response_code(403);
+            echo json_encode(['erro' => 'Sem permissão para concluir este contrato.']);
+            exit;
+        }
+
         if ($souPrestador) {
-            $sucesso = $contratoModel->marcarComoFinalizadoPrestador($contratoId);
-            echo json_encode(['sucesso' => $sucesso]);
-            exit;
+            if ($contrato['finalizado_cliente_em'] !== null) {
+                // Confirmando finalização definitiva
+                $sucesso = $contratoModel->confirmarConclusaoDefinitiva($contratoId);
+            } else {
+                // Marcando conclusão do prestador primeiro
+                $sucesso = $contratoModel->marcarComoFinalizadoPrestador($contratoId);
+            }
+        } else { // souCliente
+            if ($contrato['finalizado_prestador_em'] !== null) {
+                // Confirmando finalização definitiva
+                $sucesso = $contratoModel->confirmarConclusaoDefinitiva($contratoId);
+            } else {
+                // Marcando conclusão do cliente primeiro
+                $sucesso = $contratoModel->marcarComoFinalizadoCliente($contratoId);
+            }
         }
 
-        if ($souCliente) {
-            // Etapa 2: cliente confirma — pode confirmar a qualquer momento (antes ou depois do prestador)
-            $sucesso = $contratoModel->atualizarStatusParaConcluidoPeloCliente($contratoId);
-            echo json_encode(['sucesso' => $sucesso]);
+        echo json_encode(['sucesso' => $sucesso]);
+        exit;
+    }
+
+    // Retornar para "Em andamento"
+    if ($novoStatus === 'em_andamento') {
+        if (!$souPrestador && !$souCliente) {
+            http_response_code(403);
+            echo json_encode(['erro' => 'Sem permissão para alterar este contrato.']);
             exit;
         }
-
-        http_response_code(403);
-        echo json_encode(['erro' => 'Sem permissão para concluir este contrato.']);
+        $sucesso = $contratoModel->voltarParaAndamento($contratoId);
+        echo json_encode(['sucesso' => $sucesso]);
         exit;
     }
     exit;

@@ -60,7 +60,52 @@ class Contrato {
     public function marcarComoFinalizadoPrestador($id) {
         $stmt = $this->pdo->prepare("
             UPDATE contratos 
-            SET finalizado_prestador_em = CURRENT_TIMESTAMP 
+            SET finalizado_prestador_em = CURRENT_TIMESTAMP,
+                atualizado_em = CURRENT_TIMESTAMP 
+            WHERE id = :id
+        ");
+        return $stmt->execute([':id' => $id]);
+    }
+
+    public function marcarComoFinalizadoCliente($id) {
+        $stmt = $this->pdo->prepare("
+            UPDATE contratos 
+            SET finalizado_cliente_em = CURRENT_TIMESTAMP,
+                atualizado_em = CURRENT_TIMESTAMP 
+            WHERE id = :id
+        ");
+        return $stmt->execute([':id' => $id]);
+    }
+
+    public function aceitarProposta($id) {
+        $stmt = $this->pdo->prepare("
+            UPDATE contratos 
+            SET status = 'aceito',
+                atualizado_em = CURRENT_TIMESTAMP
+            WHERE id = :id
+        ");
+        return $stmt->execute([':id' => $id]);
+    }
+
+    public function confirmarConclusaoDefinitiva($id) {
+        $stmt = $this->pdo->prepare("
+            UPDATE contratos 
+            SET status = 'concluido', 
+                finalizado_prestador_em = COALESCE(finalizado_prestador_em, CURRENT_TIMESTAMP),
+                finalizado_cliente_em = COALESCE(finalizado_cliente_em, CURRENT_TIMESTAMP),
+                atualizado_em = CURRENT_TIMESTAMP
+            WHERE id = :id
+        ");
+        return $stmt->execute([':id' => $id]);
+    }
+
+    public function voltarParaAndamento($id) {
+        $stmt = $this->pdo->prepare("
+            UPDATE contratos 
+            SET status = 'aceito', 
+                finalizado_prestador_em = NULL, 
+                finalizado_cliente_em = NULL,
+                atualizado_em = CURRENT_TIMESTAMP
             WHERE id = :id
         ");
         return $stmt->execute([':id' => $id]);
@@ -68,7 +113,7 @@ class Contrato {
 
     public function atualizarStatus($id, $status) {
         $stmt = $this->pdo->prepare("
-            UPDATE contratos SET status = :status WHERE id = :id
+            UPDATE contratos SET status = :status, atualizado_em = CURRENT_TIMESTAMP WHERE id = :id
         ");
         return $stmt->execute([':status' => $status, ':id' => $id]);
     }
@@ -90,26 +135,39 @@ class Contrato {
     }
 
     public function atualizarStatusParaConcluidoPeloCliente($id) {
-        $stmt = $this->pdo->prepare("
-            UPDATE contratos 
-            SET status = 'concluido', 
-                finalizado_prestador_em = COALESCE(finalizado_prestador_em, CURRENT_TIMESTAMP),
-                atualizado_em = CURRENT_TIMESTAMP
-            WHERE id = :id
-        ");
-        return $stmt->execute([':id' => $id]);
+        return $this->confirmarConclusaoDefinitiva($id);
     }
 
-    // Conclui automaticamente contratos onde o prestador entregou
-    // há mais de 15 dias e o cliente não confirmou
+    // Executa rotinas automáticas de conclusão (10 dias)
     public function executarRotinaConclusaoAutomatica() {
-        $this->pdo->query("
-            UPDATE contratos 
-            SET status = 'concluido' 
-            WHERE status = 'aceito' 
-              AND finalizado_prestador_em IS NOT NULL 
-              AND finalizado_prestador_em <= CURRENT_TIMESTAMP - INTERVAL '15 days'
-        ");
+        try {
+            // 1. Prestador finalizou primeiro, usuário não respondeu em 10 dias -> conclui automaticamente
+            $this->pdo->query("
+                UPDATE contratos 
+                SET status = 'concluido', 
+                    finalizado_cliente_em = COALESCE(finalizado_cliente_em, CURRENT_TIMESTAMP),
+                    atualizado_em = CURRENT_TIMESTAMP
+                WHERE status = 'aceito' 
+                  AND finalizado_prestador_em IS NOT NULL 
+                  AND finalizado_cliente_em IS NULL
+                  AND finalizado_prestador_em <= CURRENT_TIMESTAMP - INTERVAL '10 days'
+            ");
+
+            // 2. Usuário finalizou primeiro, prestador não respondeu em 10 dias -> conclui automaticamente
+            $this->pdo->query("
+                UPDATE contratos 
+                SET status = 'concluido', 
+                    finalizado_prestador_em = COALESCE(finalizado_prestador_em, CURRENT_TIMESTAMP),
+                    atualizado_em = CURRENT_TIMESTAMP
+                WHERE status = 'aceito' 
+                  AND finalizado_cliente_em IS NOT NULL 
+                  AND finalizado_prestador_em IS NULL
+                  AND finalizado_cliente_em <= CURRENT_TIMESTAMP - INTERVAL '10 days'
+            ");
+        } catch (PDOException $e) {
+            // Grava silenciosamente o erro de banco de dados nos logs para evitar queda do sistema
+            error_log("Erro ao rodar rotina de conclusão automática (talvez colunas ausentes): " . $e->getMessage());
+        }
     }
 
     public function salvarAvaliacao($contratoId, $clienteId, $prestadorId, $servicoId, $nota, $comentario, $avaliadorTipo = 'cliente') {

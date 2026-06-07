@@ -226,6 +226,15 @@ const _configPorStatus = {
                     <path d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
                 </svg>`,
     },
+    em_andamento: {
+        titulo:          'Voltar para Em Andamento?',
+        descricao:       'O contrato retornará ao status de Em Andamento para continuação ou correção do serviço.',
+        labelConfirmar:  'Confirmar',
+        corConfirmar:    'bg-blue-600 hover:bg-blue-700',
+        icone: `<svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99"/>
+                </svg>`,
+    },
 };
 
 export async function alterarStatusContrato(id, status) {

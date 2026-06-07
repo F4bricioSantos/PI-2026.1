@@ -58,6 +58,15 @@ if ($idDestinatario > 0) {
     }
 }
 
+// Busca o contrato mais recente (independente de estar ativo ou concluído) apenas para sincronismo do JS
+// Isso evita o loop infinito de recarregamento quando o contrato é finalizado
+$contratoSincronismo = null;
+if ($idDestinatario > 0) {
+    $stmtSync = $pdo->prepare("SELECT id, status, finalizado_prestador_em, finalizado_cliente_em FROM contratos WHERE ((cliente_id = :u1 AND prestador_id = :u2) OR (cliente_id = :u2 AND prestador_id = :u1)) AND status IN ('pendente', 'aceito', 'concluido') ORDER BY criado_em DESC LIMIT 1");
+    $stmtSync->execute([':u1' => $idUsuarioLogado, ':u2' => $idDestinatario]);
+    $contratoSincronismo = $stmtSync->fetch(PDO::FETCH_ASSOC);
+}
+
 $listaServicosDisponiveis = $outraPessoaTemServico
     ? $contratoModel->listarServicosPrestador($idDestinatario)
     : [];
@@ -152,12 +161,16 @@ $totalMensagensNaoLidas = (int)$stmtUnreadMsgCount->fetchColumn();
         <?php if ($contratoAtivo):
             $status       = $contratoAtivo['status'];
             $souPrestador = ($contratoAtivo['prestador_id'] == $idUsuarioLogado);
-            $corStatus    = $status === 'aceito' ? 'bg-green-500' : 'bg-yellow-500';
-            if ($contratoAtivo['finalizado_prestador_em'] !== null) $corStatus = 'bg-blue-500';
+
+            $corStatus = 'bg-yellow-500';
+            if ($status === 'aceito') $corStatus = 'bg-green-500';
+            if (!empty($contratoAtivo['finalizado_prestador_em']) || !empty($contratoAtivo['finalizado_cliente_em'])) $corStatus = 'bg-blue-500';
             $dataFormatada = date('d/m/Y', strtotime($contratoAtivo['data_pactuada']));
+            $fpEm = $contratoAtivo['finalizado_prestador_em'] ?? null;
+            $fcEm = $contratoAtivo['finalizado_cliente_em'] ?? null;
         ?>
             <div class="absolute left-0 top-0 bottom-0 w-1 <?= $corStatus ?>"></div>
-            <div class="flex items-center gap-2 pl-2">
+            <div class="flex items-center gap-2 pl-2 flex-shrink-0">
               <div class="leading-tight">
                 <span class="text-[10px] md:text-xs font-bold text-gray-900 uppercase tracking-wide">
                   CONTRATO: <?= htmlspecialchars($contratoAtivo['nome_servico']) ?>
@@ -167,60 +180,133 @@ $totalMensagensNaoLidas = (int)$stmtUnreadMsgCount->fetchColumn();
             </div>
 
             <div class="flex flex-wrap items-center gap-2 pl-2 sm:pl-0">
+
               <?php if ($status === 'pendente'): ?>
                   <?php if ($souPrestador): ?>
-                      <button onclick="alterarStatusContrato(<?= $contratoAtivo['id'] ?>, 'aceito')" class="bg-green-600 hover:bg-green-700 text-white font-bold px-3 py-1.5 rounded-xl text-xs cursor-pointer transition-all">Aceitar Proposta</button>
-                      <button onclick="alterarStatusContrato(<?= $contratoAtivo['id'] ?>, 'cancelado')" class="bg-white border text-gray-500 font-bold px-3 py-1.5 rounded-xl text-xs cursor-pointer">Recusar</button>
+                      <!-- Prestador: Aceitar / Recusar -->
+                      <button onclick="alterarStatusContrato(<?= $contratoAtivo['id'] ?>, 'aceito')"
+                              class="bg-green-600 hover:bg-green-700 text-white font-bold px-3 py-1.5 rounded-xl text-xs cursor-pointer transition-all shadow-sm">
+                          Aceitar
+                      </button>
+                      <button onclick="alterarStatusContrato(<?= $contratoAtivo['id'] ?>, 'cancelado')"
+                              class="bg-white hover:bg-red-50 border border-red-200 text-red-500 font-bold px-3 py-1.5 rounded-xl text-xs cursor-pointer transition-all">
+                          Recusar
+                      </button>
                   <?php else: ?>
-                      <span class="bg-yellow-100 text-yellow-700 px-2 py-1 rounded text-[10px] font-bold">Aguardando Aceite do Prestador</span>
-                      <button onclick="alterarStatusContrato(<?= $contratoAtivo['id'] ?>, 'cancelado')" class="bg-white border text-gray-500 font-bold px-3 py-1.5 rounded-xl text-xs cursor-pointer">Cancelar Proposta</button>
+                      <!-- Usuário: aguardando -->
+                      <span class="bg-yellow-100 text-yellow-700 px-2.5 py-1 rounded-lg text-[10px] font-bold">
+                          Esperando aceite do prestador
+                      </span>
+                      <button onclick="alterarStatusContrato(<?= $contratoAtivo['id'] ?>, 'cancelado')"
+                              class="bg-white hover:bg-red-50 border border-red-200 text-red-500 font-bold px-3 py-1.5 rounded-xl text-xs cursor-pointer transition-all">
+                          Cancelar
+                      </button>
                   <?php endif; ?>
-              <?php endif; ?>
 
-              <?php if ($status === 'aceito'): ?>
-                  <?php if ($contratoAtivo['finalizado_prestador_em'] === null): ?>
-                      <?php if ($souPrestador): ?>
-                          <button onclick="alterarStatusContrato(<?= $contratoAtivo['id'] ?>, 'concluido')" class="bg-orange hover:bg-orange-dark text-white font-bold px-3 py-1.5 rounded-xl text-xs cursor-pointer shadow-md">Concluir Serviço</button>
-                      <?php else: ?>
-                          <span class="bg-green-100 text-green-700 px-2 py-1 rounded text-[10px] font-bold">Serviço em Andamento</span>
-                          <button onclick="alterarStatusContrato(<?= $contratoAtivo['id'] ?>, 'concluido')" class="bg-orange text-white font-bold px-3 py-1.5 rounded-xl text-xs cursor-pointer">Confirmar Conclusão</button>
-                      <?php endif; ?>
+              <?php elseif ($status === 'aceito' && !$fpEm && !$fcEm): ?>
+                  <!-- ESTADO 2: Em andamento — igual para ambos -->
+                  <span class="bg-green-100 text-green-700 px-2.5 py-1 rounded-lg text-[10px] font-bold">Em andamento</span>
+                  <button onclick="alterarStatusContrato(<?= $contratoAtivo['id'] ?>, 'concluido')"
+                          class="bg-orange hover:bg-orange-dark text-white font-bold px-3 py-1.5 rounded-xl text-xs cursor-pointer shadow-md transition-all">
+                      Marcar como concluído
+                  </button>
+                  <button onclick="alterarStatusContrato(<?= $contratoAtivo['id'] ?>, 'cancelado')"
+                          class="bg-white hover:bg-red-50 border border-red-200 text-red-500 font-bold px-3 py-1.5 rounded-xl text-xs cursor-pointer transition-all">
+                      Cancelar
+                  </button>
+
+              <?php elseif ($status === 'aceito' && $fcEm && !$fpEm): ?>
+                  <!-- ESTADO 3: Cliente marcou como concluído primeiro -->
+                  <?php if ($souPrestador): ?>
+                      <span class="bg-blue-100 text-blue-700 px-2.5 py-1 rounded-lg text-[10px] font-bold animate-pulse">
+                          Marcado como concluído pelo cliente
+                      </span>
+                      <button onclick="alterarStatusContrato(<?= $contratoAtivo['id'] ?>, 'concluido')"
+                              class="bg-green-600 hover:bg-green-700 text-white font-bold px-3 py-1.5 rounded-xl text-xs cursor-pointer transition-all shadow-sm">
+                          Concluir serviço
+                      </button>
+                      <button onclick="alterarStatusContrato(<?= $contratoAtivo['id'] ?>, 'em_andamento')"
+                              class="bg-blue-500 hover:bg-blue-600 text-white font-bold px-3 py-1.5 rounded-xl text-xs cursor-pointer transition-all">
+                          Retornar para "Em andamento"
+                      </button>
+                      <button onclick="alterarStatusContrato(<?= $contratoAtivo['id'] ?>, 'cancelado')"
+                              class="bg-white hover:bg-red-50 border border-red-200 text-red-500 font-bold px-3 py-1.5 rounded-xl text-xs cursor-pointer transition-all">
+                          Cancelar
+                      </button>
                   <?php else: ?>
-                      <?php if ($souPrestador): ?>
-                          <span class="bg-blue-100 text-blue-700 px-2 py-1 rounded text-[10px] font-bold">Aguardando confirmação do cliente (Prazo de até 15d)</span>
-                      <?php else: ?>
-                          <span class="bg-blue-100 text-blue-700 px-2 py-1 rounded text-[10px] font-bold animate-pulse">O prestador marcou como finalizado!</span>
-                          <button onclick="alterarStatusContrato(<?= $contratoAtivo['id'] ?>, 'concluido')" class="bg-green-600 text-white font-bold px-3 py-1.5 rounded-xl text-xs cursor-pointer">Marcar como finalizado</button>
-                      <?php endif; ?>
+                      <div class="flex flex-col gap-0.5 max-w-xs">
+                          <span class="bg-blue-100 text-blue-700 px-2.5 py-1 rounded-lg text-[10px] font-bold">
+                              Aguardando confirmação do prestador (10 dias)
+                          </span>
+                          <p class="text-[10px] text-gray-400 italic px-0.5 leading-relaxed">
+                              O prestador tem até 10 dias para responder. Após esse prazo, o serviço será concluído automaticamente.
+                          </p>
+                      </div>
+                      <button onclick="alterarStatusContrato(<?= $contratoAtivo['id'] ?>, 'cancelado')"
+                              class="bg-white hover:bg-red-50 border border-red-200 text-red-500 font-bold px-3 py-1.5 rounded-xl text-xs cursor-pointer transition-all">
+                          Cancelar
+                      </button>
                   <?php endif; ?>
-                  <button onclick="alterarStatusContrato(<?= $contratoAtivo['id'] ?>, 'cancelado')" class="bg-white hover:bg-gray-100 border border-gray-200 text-gray-500 font-bold px-3 py-1.5 rounded-xl text-xs transition-all cursor-pointer">Cancelar</button>
+
+              <?php elseif ($status === 'aceito' && $fpEm && !$fcEm): ?>
+                  <!-- ESTADO 4: Prestador marcou como concluído primeiro -->
+                  <?php if ($souPrestador): ?>
+                      <div class="flex flex-col gap-0.5 max-w-xs">
+                          <span class="bg-blue-100 text-blue-700 px-2.5 py-1 rounded-lg text-[10px] font-bold">
+                              Aguardando confirmação do usuário (10 dias)
+                          </span>
+                          <p class="text-[10px] text-gray-400 italic px-0.5 leading-relaxed">
+                              O usuário tem até 10 dias para responder. Após esse prazo, o serviço será concluído automaticamente.
+                          </p>
+                      </div>
+                      <button onclick="alterarStatusContrato(<?= $contratoAtivo['id'] ?>, 'em_andamento')"
+                              class="bg-blue-500 hover:bg-blue-600 text-white font-bold px-3 py-1.5 rounded-xl text-xs cursor-pointer transition-all">
+                          Retornar para "Em andamento"
+                      </button>
+                      <button onclick="alterarStatusContrato(<?= $contratoAtivo['id'] ?>, 'cancelado')"
+                              class="bg-white hover:bg-red-50 border border-red-200 text-red-500 font-bold px-3 py-1.5 rounded-xl text-xs cursor-pointer transition-all">
+                          Cancelar
+                      </button>
+                  <?php else: ?>
+                      <span class="bg-blue-100 text-blue-700 px-2.5 py-1 rounded-lg text-[10px] font-bold animate-pulse">
+                          Marcado como concluído pelo prestador
+                      </span>
+                      <button onclick="alterarStatusContrato(<?= $contratoAtivo['id'] ?>, 'concluido')"
+                              class="bg-green-600 hover:bg-green-700 text-white font-bold px-3 py-1.5 rounded-xl text-xs cursor-pointer transition-all shadow-sm">
+                          Concluir serviço
+                      </button>
+                      <button onclick="alterarStatusContrato(<?= $contratoAtivo['id'] ?>, 'cancelado')"
+                              class="bg-white hover:bg-red-50 border border-red-200 text-red-500 font-bold px-3 py-1.5 rounded-xl text-xs cursor-pointer transition-all">
+                          Cancelar
+                      </button>
+                  <?php endif; ?>
+
               <?php endif; ?>
             </div>
 
         <?php else: ?>
+            <!-- ESTADO 5: Sem contrato ativo — Avaliação / Novo contrato -->
             <div class="absolute left-0 top-0 bottom-0 w-1 bg-gray-300"></div>
             <div class="flex items-center justify-between w-full pl-2">
-                <?php if ($outraPessoaTemServico): ?>
-                    <p class="text-xs text-gray-500 font-medium">Combine os detalhes por aqui e feche um serviço!</p>
-                    <div class="flex items-center gap-2">
-                        <?php if ($contratoParaAvaliar): ?>
-                            <a href="./avaliar-prestador.php?contrato_id=<?= $contratoParaAvaliar['id'] ?>&com=<?= $idDestinatario ?>"
-                               class="flex items-center gap-1.5 bg-yellow-400 hover:bg-yellow-500 text-white font-bold px-3 py-1.5 rounded-xl text-xs transition-all cursor-pointer shadow-md">
-                                <svg class="w-3.5 h-3.5 fill-white" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
-                                <?= ($contratoParaAvaliar['cliente_id'] == $idUsuarioLogado) ? 'Avaliar Prestador' : 'Avaliar Cliente' ?>
-                            </a>
-                        <?php endif; ?>
-                        <button onclick="abrirModalContrato()" class="bg-orange hover:bg-orange-dark text-white font-bold px-4 py-2 rounded-xl text-xs transition-all cursor-pointer shadow-md">
-                            Enviar Contrato
-                        </button>
-                    </div>
-                <?php elseif ($contratoParaAvaliar): ?>
+                <?php if ($contratoParaAvaliar): ?>
                     <p class="text-xs text-gray-500 font-medium">Serviço concluído — deixe sua avaliação!</p>
-                    <a href="./avaliar-prestador.php?contrato_id=<?= $contratoParaAvaliar['id'] ?>&com=<?= $idDestinatario ?>"
-                       class="flex items-center gap-1.5 bg-yellow-400 hover:bg-yellow-500 text-white font-bold px-3 py-1.5 rounded-xl text-xs transition-all cursor-pointer shadow-md">
-                        <svg class="w-3.5 h-3.5 fill-white" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
-                                <?= ($contratoParaAvaliar['cliente_id'] == $idUsuarioLogado) ? 'Avaliar Prestador' : 'Avaliar Cliente' ?>
-                    </a>
+                    <div class="flex items-center gap-2">
+                        <a href="./avaliar-prestador.php?contrato_id=<?= $contratoParaAvaliar['id'] ?>&com=<?= $idDestinatario ?>"
+                           class="flex items-center gap-1.5 bg-yellow-400 hover:bg-yellow-500 text-white font-bold px-3 py-1.5 rounded-xl text-xs transition-all cursor-pointer shadow-md">
+                            <svg class="w-3.5 h-3.5 fill-white" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                            <?= ($contratoParaAvaliar['cliente_id'] == $idUsuarioLogado) ? 'Avaliar prestador' : 'Avaliar usuário' ?>
+                        </a>
+                        <?php if ($outraPessoaTemServico): ?>
+                            <button onclick="abrirModalContrato()" class="bg-orange hover:bg-orange-dark text-white font-bold px-4 py-2 rounded-xl text-xs transition-all cursor-pointer shadow-md">
+                                Enviar Contrato
+                            </button>
+                        <?php endif; ?>
+                    </div>
+                <?php elseif ($outraPessoaTemServico): ?>
+                    <p class="text-xs text-gray-500 font-medium">Combine os detalhes por aqui e feche um serviço!</p>
+                    <button onclick="abrirModalContrato()" class="bg-orange hover:bg-orange-dark text-white font-bold px-4 py-2 rounded-xl text-xs transition-all cursor-pointer shadow-md">
+                        Enviar Contrato
+                    </button>
                 <?php else: ?>
                     <p class="text-xs text-gray-400 italic">Nenhum vínculo de serviço ativo ou disponível para este usuário.</p>
                 <?php endif; ?>
@@ -662,41 +748,67 @@ $totalMensagensNaoLidas = (int)$stmtUnreadMsgCount->fetchColumn();
   carregarMensagens();
   marcarComoLidoNoServidor();
 
-  if (comQuemId) {
-    // Polling de mensagens + marcar como lido a cada ciclo (quase instantâneo)
-    setInterval(() => {
-      carregarMensagens();
-      marcarComoLidoNoServidor();
-    }, 2000);
-  }
-
-  // Polling de contatos (atualiza badges sem F5)
-  setInterval(carregarContatos, 3000);
+  let isReloading = false;
 
   // ─── Polling de contrato (detecta mudanças e recarrega a barra) ───
-  const _contratoStatusInicial = <?= json_encode($contratoAtivo ? ['id' => $contratoAtivo['id'], 'status' => $contratoAtivo['status'], 'fp' => $contratoAtivo['finalizado_prestador_em']] : null) ?>;
+  const _contratoStatusInicial = <?= json_encode($contratoSincronismo ? [
+      'id' => (string)$contratoSincronismo['id'],
+      'status' => (string)$contratoSincronismo['status'],
+      'fp' => (bool)$contratoSincronismo['finalizado_prestador_em'],
+      'fc' => (bool)$contratoSincronismo['finalizado_cliente_em']
+  ] : null) ?>;
 
   async function _pollContratoStatus() {
-    if (!comQuemId) return;
+    if (!comQuemId || isReloading) return;
+    
+    if (_contratoStatusInicial && _contratoStatusInicial.status === 'concluido') return;
+
     try {
       const resp = await fetch(`${urlApiBase}?acao=contract_status&com=${comQuemId}`);
       if (!resp.ok) return;
       const data = await resp.json();
       const novoContrato = data.contrato;
-      // Compara estado atual com o que foi renderizado pelo PHP
+      
       const iniId     = _contratoStatusInicial ? _contratoStatusInicial.id : null;
       const iniStatus = _contratoStatusInicial ? _contratoStatusInicial.status : null;
-      const iniFp     = _contratoStatusInicial ? _contratoStatusInicial.fp : null;
-      const novoId     = novoContrato ? novoContrato.id : null;
-      const novoStatus = novoContrato ? novoContrato.status : null;
-      const novoFp     = novoContrato ? novoContrato.finalizado_prestador_em : null;
-      // Se mudou qualquer coisa, recarrega a página para atualizar a barra de contrato
-      if (iniId !== novoId || iniStatus !== novoStatus || iniFp !== novoFp) {
-        window.location.reload();
+      const iniFp     = _contratoStatusInicial ? _contratoStatusInicial.fp : false;
+      const iniFc     = _contratoStatusInicial ? _contratoStatusInicial.fc : false;
+      
+      const novoId     = novoContrato ? String(novoContrato.id) : null;
+      const novoStatus = novoContrato ? String(novoContrato.status) : null;
+      const novoFp     = novoContrato ? !!novoContrato.finalizado_prestador_em : false;
+      const novoFc     = novoContrato ? !!novoContrato.finalizado_cliente_em : false;
+      
+      if (iniId !== novoId || iniStatus !== novoStatus || iniFp !== novoFp || iniFc !== novoFc) {
+          isReloading = true;
+          window.location.reload();
       }
     } catch (e) { /* silencioso */ }
+    finally {
+        if (!isReloading) setTimeout(_pollContratoStatus, 4000);
+    }
   }
-  if (comQuemId) setInterval(_pollContratoStatus, 3000);
+
+  async function loopMensagens() {
+    if (comQuemId && !isReloading) {
+      await carregarMensagens();
+      await marcarComoLidoNoServidor();
+    }
+    setTimeout(loopMensagens, 2000);
+  }
+
+  async function loopContatos() {
+    if (!isReloading) {
+      await carregarContatos();
+    }
+    setTimeout(loopContatos, 5000);
+  }
+
+  if (comQuemId) {
+    _pollContratoStatus();
+    loopMensagens();
+  }
+  loopContatos();
 </script>
 <script type="module">
   import { abrirModalContrato, fecharModalContrato, enviarPropostaContrato, alterarStatusContrato } from '../src/js/contrato.js';

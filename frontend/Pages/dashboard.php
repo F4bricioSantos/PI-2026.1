@@ -67,13 +67,14 @@ $whereSql = 'WHERE ' . implode(' AND ', $where);
 $sql = "
     SELECT s.id, s.titulo, s.categoria_nome, s.valor_base, s.descricao_curta,
            u.nome AS prestador_nome, u.cidade, u.foto_perfil AS prestador_foto,
+           s.prestador_id,
            COALESCE(ROUND(AVG(a.nota)::NUMERIC, 1), 0) AS media_nota,
            COUNT(a.id)::INT AS total_avaliacoes
     FROM servicos s
     JOIN usuarios u ON u.id = s.prestador_id
     LEFT JOIN avaliacoes a ON a.prestador_id = s.prestador_id
     $whereSql
-    GROUP BY s.id, u.nome, u.cidade, u.foto_perfil
+    GROUP BY s.id, u.nome, u.cidade, u.foto_perfil, s.prestador_id
     ORDER BY s.id DESC
 ";
 
@@ -215,11 +216,11 @@ $categoriasGerais = ["Reformas", "Pintura e Textura", "Elétrica", "Hidráulica"
       <?php else: ?>
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pb-10">
             <?php foreach ($servicos as $i => $s): ?>
-              <div class="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 card-reveal flex flex-col gap-4" style="animation-delay:<?= $i * 50 ?>ms">
+              <div onclick="window.location.href='detalhes.php?id=<?= $s['id'] ?>'" class="cursor-pointer bg-white rounded-2xl p-5 shadow-sm border border-gray-100 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 card-reveal flex flex-col gap-4" style="animation-delay:<?= $i * 50 ?>ms">
                 
                 <div class="flex items-center justify-between">
                   <div class="flex items-center gap-3">
-                    <div class="w-11 h-11 rounded-full bg-gray-100 flex-shrink-0 overflow-hidden border border-gray-200">
+                    <a href="ver-perfil.php?id=<?= $s['prestador_id'] ?>" onclick="event.stopPropagation();" class="w-11 h-11 rounded-full bg-gray-100 flex-shrink-0 overflow-hidden border border-gray-200 block hover:opacity-80 transition-opacity">
                       <?php if($s['prestador_foto'] && $s['prestador_foto'] !== 'default.png'): ?>
                         <img src="<?= $urlBaseSupabase . $s['prestador_foto'] ?>" class="w-full h-full object-cover">
                       <?php else: ?>
@@ -227,7 +228,7 @@ $categoriasGerais = ["Reformas", "Pintura e Textura", "Elétrica", "Hidráulica"
                           <?= strtoupper(substr($s['prestador_nome'], 0, 1)) ?>
                         </div>
                       <?php endif; ?>
-                    </div>
+                    </a>
                     <div>
                       <h4 class="text-sm font-bold text-gray-900 leading-tight"><?= htmlspecialchars($s['prestador_nome']) ?></h4>
                       <p class="text-[10px] text-gray-400 font-medium"><?= htmlspecialchars(explode(' - ', $s['cidade'])[0]) ?></p>
@@ -260,7 +261,7 @@ $categoriasGerais = ["Reformas", "Pintura e Textura", "Elétrica", "Hidráulica"
                         <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
                       </svg>
                     </button>
-                    <a href="detalhes.php?id=<?= $s['id'] ?>" class="bg-gray-50 hover:bg-orange hover:text-white text-orange p-2.5 rounded-xl transition-all shadow-sm">
+                    <a href="detalhes.php?id=<?= $s['id'] ?>" onclick="event.stopPropagation();" class="bg-gray-50 hover:bg-orange hover:text-white text-orange p-2.5 rounded-xl transition-all shadow-sm">
                       <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg>
                     </a>
                   </div>
