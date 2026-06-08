@@ -161,13 +161,13 @@
           <h2 class="text-[20px] font-bold text-slate-900">Senha redefinida!</h2>
           <p class="text-[14px] text-gray-400 mt-1">Sua senha foi alterada com sucesso. Faça login para continuar.</p>
         </div>
-        <a href="login.php" class="w-full h-[52px] bg-orange-500 hover:bg-orange-600 text-white text-[15px] font-semibold rounded-lg shadow-sm focus:outline-none focus:ring-4 focus:ring-orange-200 transition-all duration-200 flex items-center justify-center">
+        <a href="/login" class="w-full h-[52px] bg-orange-500 hover:bg-orange-600 text-white text-[15px] font-semibold rounded-lg shadow-sm focus:outline-none focus:ring-4 focus:ring-orange-200 transition-all duration-200 flex items-center justify-center">
           Ir para o login
         </a>
       </div>
       <p id="link-login" class="mt-6 text-center text-[13px] text-gray-400">
         Lembrou a senha?
-        <a href="login.php" class="text-orange-500 font-medium hover:text-orange-600 hover:underline transition-colors ml-1">Fazer login</a>
+        <a href="/login" class="text-orange-500 font-medium hover:text-orange-600 hover:underline transition-colors ml-1">Fazer login</a>
       </p>
     </div>
   </div>

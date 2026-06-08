@@ -209,7 +209,7 @@ export function renderSidebar(containerId, activePage = '', isPro = false, isAdm
           </div>
         </a>
         
-        <a href="/backend/controllers/AuthController.php?action=logout" 
+        <a href="/logout" 
            class="w-9 h-9 flex items-center justify-center rounded-xl text-white/40 hover:text-red-400 hover:bg-red-400/10 transition-all"
            title="Sair da Conta">
           <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">

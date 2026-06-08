@@ -125,7 +125,7 @@ function cadastrar(PDO $pdo): void
     $_SESSION['fluxo']        = $fluxo;
     responder(200, [
         'sucesso'  => true,
-        'redirect' => '/frontend/pages/perfil.php?fluxo=' . $fluxo . '&new=1',
+        'redirect' => '/perfil?fluxo=' . $fluxo . '&new=1',
     ]);
 }
 function login(PDO $pdo): void
@@ -147,7 +147,7 @@ function login(PDO $pdo): void
         responder(200, ['sucesso' => false, 'erro_global' => true, 'mensagem' => 'E-mail ou senha inválidos.']);
     responder(200, [
         'sucesso'  => true,
-        'redirect' => '/frontend/pages/dashboard.php',
+        'redirect' => '/dashboard',
     ]);
 }
 function logout(): void
@@ -156,7 +156,7 @@ function logout(): void
     session_unset();
     session_destroy();
     header('Content-Type: text/html');
-    header('Location: /frontend/pages/login.php');
+    header('Location: /login');
     exit;
 }
 function enviarCodigoReset(PDO $pdo): void

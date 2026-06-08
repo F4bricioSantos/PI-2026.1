@@ -125,7 +125,7 @@
 
         <p class="mt-6 text-center text-[13px] text-gray-400">
           Já tem uma conta?
-          <a href="login.php" class="text-orange-500 font-medium hover:text-orange-600 hover:underline transition-colors ml-1">Faça login</a>
+          <a href="/login" class="text-orange-500 font-medium hover:text-orange-600 hover:underline transition-colors ml-1">Faça login</a>
         </p>
       </div>
     </div>

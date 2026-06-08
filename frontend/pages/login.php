@@ -130,7 +130,7 @@
         </div>
         <!-- Link: Esqueceu a senha (alinhado à direita) -->
         <div class="flex justify-end -mt-2">
-          <a href="esqueci-senha.php" id="forgot-link"
+          <a href="/esqueci-senha" id="forgot-link"
             class="text-[13px] text-orange-500 font-medium hover:text-orange-600 hover:underline transition-colors">
             Esqueceu sua senha?
           </a>
@@ -146,7 +146,7 @@
             <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
           </svg>
         </button>
-        <a href="cadastro.php" id="btn-criar-conta" class="btn-outline w-full h-[52px] border-2 border-orange-500 text-orange-500 text-[15px] font-semibold rounded-lg
+        <a href="/cadastro" id="btn-criar-conta" class="btn-outline w-full h-[52px] border-2 border-orange-500 text-orange-500 text-[15px] font-semibold rounded-lg
                    hover:bg-orange-50 active:bg-orange-100
                    focus:outline-none focus:ring-4 focus:ring-orange-100
                    transition-all duration-200 flex items-center justify-center">

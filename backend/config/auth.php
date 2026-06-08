@@ -5,7 +5,7 @@ if (session_status() === PHP_SESSION_NONE) {
 
 // 1. Verifica se existe sessão
 if (empty($_SESSION['usuario_id'])) {
-    header('Location: /frontend/pages/login.php');
+    header('Location: /login');
     exit;
 }
 
@@ -18,6 +18,6 @@ if (!$stmtCheckAuth->fetch()) {
     // Se o usuário foi deletado do banco, destrói a sessão e expulsa
     session_unset();
     session_destroy();
-    header('Location: /frontend/pages/login.php?erro=usuario_inexistente');
+    header('Location: /login?erro=usuario_inexistente');
     exit;
 }

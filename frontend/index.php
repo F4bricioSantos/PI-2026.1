@@ -23,8 +23,8 @@
           <a href="#avaliacoes" class="nav-link hover:text-slate-900 transition-all border-b-2 border-transparent">Avaliações</a>
         </div>
         <div class="hidden md:flex items-center space-x-6 text-[15px]">
-          <a href="pages/login.php" class="font-medium text-gray-500 hover:text-gray-900 transition-colors">Entrar</a>
-          <a href="pages/cadastro.php?fluxo=cliente" class="px-5 py-2.5 bg-orange-500 text-white font-medium rounded-lg hover:bg-orange-600 transition-colors shadow-sm focus:outline-none focus:ring-4 focus:ring-orange-100">
+          <a href="/login" class="font-medium text-gray-500 hover:text-gray-900 transition-colors">Entrar</a>
+          <a href="/cadastro?fluxo=cliente" class="px-5 py-2.5 bg-orange-500 text-white font-medium rounded-lg hover:bg-orange-600 transition-colors shadow-sm focus:outline-none focus:ring-4 focus:ring-orange-100">
             Cadastre-se grátis
           </a>
         </div>
@@ -79,7 +79,7 @@
                 <p class="text-[13px] text-gray-500 mt-0.5">Encontre especialistas avaliados.</p>
               </div>
             </div>
-            <a href="pages/cadastro.php?fluxo=cliente"
+            <a href="/cadastro?fluxo=cliente"
                class="w-full py-[12px] bg-[#111827] text-white text-[14px] font-semibold rounded-[12px] hover:bg-slate-800 transition-colors shadow-sm focus:outline-none focus:ring-4 focus:ring-slate-200 flex items-center justify-center gap-2">
               Buscar serviços
               <i data-lucide="arrow-right" class="w-4 h-4 text-orange-400 opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all"></i>
@@ -98,7 +98,7 @@
                 <p class="text-[13px] text-gray-500 mt-0.5">Aumente sua renda diária.</p>
               </div>
             </div>
-            <a href="pages/cadastro.php?fluxo=prestador"
+            <a href="/cadastro?fluxo=prestador"
                class="w-full py-[12px] bg-orange-500 text-white text-[14px] font-semibold rounded-[12px] hover:bg-orange-600 transition-colors shadow-sm focus:outline-none focus:ring-4 focus:ring-orange-100 flex items-center justify-center gap-2">
               Me cadastrar
               <i data-lucide="arrow-right" class="w-4 h-4 text-white opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all"></i>
@@ -182,27 +182,27 @@
             <a href="#" class="text-[14px] font-medium text-orange-500 hover:text-orange-600 transition-colors flex items-center gap-1 group">Ver todas <span class="group-hover:translate-x-1 transition-transform">&rarr;</span></a>
           </div>
           <div class="grid grid-cols-2 lg:grid-cols-6 gap-4">
-            <a href="pages/cadastro.php?fluxo=cliente" class="bg-white p-6 rounded-[24px] flex flex-col items-center justify-center gap-4 shadow-[0_2px_12px_-4px_rgba(0,0,0,0.02)] hover:shadow-xl hover:-translate-y-1 transition-all duration-300 border border-transparent hover:border-gray-100 group">
+            <a href="/cadastro?fluxo=cliente" class="bg-white p-6 rounded-[24px] flex flex-col items-center justify-center gap-4 shadow-[0_2px_12px_-4px_rgba(0,0,0,0.02)] hover:shadow-xl hover:-translate-y-1 transition-all duration-300 border border-transparent hover:border-gray-100 group">
               <div class="text-gray-400 group-hover:text-amber-500 transition-colors"><i data-lucide="zap" class="w-7 h-7"></i></div>
               <span class="text-[14px] font-medium text-slate-700 group-hover:text-slate-900 transition-colors">Elétrica</span>
             </a>
-            <a href="pages/cadastro.php?fluxo=cliente" class="bg-white p-6 rounded-[24px] flex flex-col items-center justify-center gap-4 shadow-[0_2px_12px_-4px_rgba(0,0,0,0.02)] hover:shadow-xl hover:-translate-y-1 transition-all duration-300 border border-transparent hover:border-gray-100 group">
+            <a href="/cadastro?fluxo=cliente" class="bg-white p-6 rounded-[24px] flex flex-col items-center justify-center gap-4 shadow-[0_2px_12px_-4px_rgba(0,0,0,0.02)] hover:shadow-xl hover:-translate-y-1 transition-all duration-300 border border-transparent hover:border-gray-100 group">
               <div class="text-gray-400 group-hover:text-orange-500 transition-colors"><i data-lucide="droplets" class="w-7 h-7"></i></div>
               <span class="text-[14px] font-medium text-slate-700 group-hover:text-slate-900 transition-colors">Hidráulica</span>
             </a>
-            <a href="pages/cadastro.php?fluxo=cliente" class="bg-white p-6 rounded-[24px] flex flex-col items-center justify-center gap-4 shadow-[0_2px_12px_-4px_rgba(0,0,0,0.02)] hover:shadow-xl hover:-translate-y-1 transition-all duration-300 border border-transparent hover:border-gray-100 group">
+            <a href="/cadastro?fluxo=cliente" class="bg-white p-6 rounded-[24px] flex flex-col items-center justify-center gap-4 shadow-[0_2px_12px_-4px_rgba(0,0,0,0.02)] hover:shadow-xl hover:-translate-y-1 transition-all duration-300 border border-transparent hover:border-gray-100 group">
               <div class="text-gray-400 group-hover:text-orange-600 transition-colors"><i data-lucide="paint-roller" class="w-7 h-7"></i></div>
               <span class="text-[14px] font-medium text-slate-700 group-hover:text-slate-900 transition-colors">Pintura</span>
             </a>
-            <a href="pages/cadastro.php?fluxo=cliente" class="bg-white p-6 rounded-[24px] flex flex-col items-center justify-center gap-4 shadow-[0_2px_12px_-4px_rgba(0,0,0,0.02)] hover:shadow-xl hover:-translate-y-1 transition-all duration-300 border border-transparent hover:border-gray-100 group">
+            <a href="/cadastro?fluxo=cliente" class="bg-white p-6 rounded-[24px] flex flex-col items-center justify-center gap-4 shadow-[0_2px_12px_-4px_rgba(0,0,0,0.02)] hover:shadow-xl hover:-translate-y-1 transition-all duration-300 border border-transparent hover:border-gray-100 group">
               <div class="text-gray-400 group-hover:text-orange-500 transition-colors"><i data-lucide="hammer" class="w-7 h-7"></i></div>
               <span class="text-[14px] font-medium text-slate-700 group-hover:text-slate-900 transition-colors">Reformas</span>
             </a>
-            <a href="pages/cadastro.php?fluxo=cliente" class="bg-white p-6 rounded-[24px] flex flex-col items-center justify-center gap-4 shadow-[0_2px_12px_-4px_rgba(0,0,0,0.02)] hover:shadow-xl hover:-translate-y-1 transition-all duration-300 border border-transparent hover:border-gray-100 group">
+            <a href="/cadastro?fluxo=cliente" class="bg-white p-6 rounded-[24px] flex flex-col items-center justify-center gap-4 shadow-[0_2px_12px_-4px_rgba(0,0,0,0.02)] hover:shadow-xl hover:-translate-y-1 transition-all duration-300 border border-transparent hover:border-gray-100 group">
               <div class="text-gray-400 group-hover:text-orange-400 transition-colors"><i data-lucide="snowflake" class="w-7 h-7"></i></div>
               <span class="text-[14px] font-medium text-slate-700 group-hover:text-slate-900 transition-colors">Climatização</span>
             </a>
-            <a href="pages/cadastro.php?fluxo=cliente" class="bg-white p-6 rounded-[24px] flex flex-col items-center justify-center gap-4 shadow-[0_2px_12px_-4px_rgba(0,0,0,0.02)] hover:shadow-xl hover:-translate-y-1 transition-all duration-300 border border-transparent hover:border-gray-100 group">
+            <a href="/cadastro?fluxo=cliente" class="bg-white p-6 rounded-[24px] flex flex-col items-center justify-center gap-4 shadow-[0_2px_12px_-4px_rgba(0,0,0,0.02)] hover:shadow-xl hover:-translate-y-1 transition-all duration-300 border border-transparent hover:border-gray-100 group">
               <div class="text-gray-400 group-hover:text-amber-500 transition-colors"><i data-lucide="package" class="w-7 h-7"></i></div>
               <span class="text-[14px] font-medium text-slate-700 group-hover:text-slate-900 transition-colors">Montagem</span>
             </a>
@@ -259,7 +259,7 @@
             <p class="text-[15px] md:text-[16px] text-orange-50 font-medium leading-relaxed max-w-[480px] mx-auto md:mx-0">Aumente sua clientela e receba pedidos de serviço todos os dias diretamente no seu celular.</p>
           </div>
           <div class="z-10 w-full md:w-auto">
-            <a href="pages/cadastro.php?fluxo=prestador"
+            <a href="/cadastro?fluxo=prestador"
                class="w-full md:w-auto bg-white text-orange-600 font-bold text-[15px] px-8 py-4 rounded-2xl shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex items-center justify-center focus:outline-none focus:ring-4 focus:ring-white/30">
               Quero me cadastrar
             </a>
