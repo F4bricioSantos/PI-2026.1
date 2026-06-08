@@ -63,7 +63,7 @@ function diagnostic(): void {
         $stmt = $pdo->query("SELECT COUNT(*) as total FROM usuarios");
         $row  = $stmt->fetch(PDO::FETCH_ASSOC);
         echo "Usuários na tabela: " . $row['total'] . "<br>";
-        $stmt2 = $pdo->query("SELECT email FROM usuarios LIMIT 5");
+        $stmt2 = $pdo->query("SELECT email FROM usuarios");
         echo "Emails cadastrados:<br>";
         while ($r = $stmt2->fetch(PDO::FETCH_ASSOC)) {
             echo "- " . htmlspecialchars($r['email']) . "<br>";
