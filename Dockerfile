@@ -15,6 +15,7 @@ RUN a2enmod rewrite
 COPY ./frontend/apache.conf /etc/apache2/sites-available/000-default.conf
 
 # Copia o codigo
+COPY ./.htaccess /var/www/html/.htaccess
 COPY ./index.php /var/www/html/index.php
 COPY ./backend /var/www/html/backend
 COPY ./frontend /var/www/html/frontend
