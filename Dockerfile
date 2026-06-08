@@ -1,5 +1,10 @@
 FROM php:8.2-apache
 
+# Dependencias do sistema para compilar extensoes PostgreSQL
+RUN apt-get update && apt-get install -y \
+    libpq-dev \
+    && rm -rf /var/lib/apt/lists/*
+
 # Extensoes PostgreSQL
 RUN docker-php-ext-install pdo_pgsql pgsql
 
