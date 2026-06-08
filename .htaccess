@@ -1,9 +1,11 @@
 RewriteEngine On
 
-# Se arquivo ou diretorio existe, serve direto
-RewriteCond %{REQUEST_FILENAME} -f [OR]
-RewriteCond %{REQUEST_FILENAME} -d
-RewriteRule ^ - [L]
+# Pastas reais: servem direto (nao reescreve)
+RewriteRule ^backend/ - [L]
+RewriteRule ^frontend/ - [L]
+RewriteRule ^src/ - [L]
 
-# Tudo que nao e arquivo real vai para o front controller
+# Tudo que nao e arquivo nem pasta real vai para o front controller
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^ index.php [QSA,L]
