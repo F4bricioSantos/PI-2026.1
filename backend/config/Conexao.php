@@ -51,7 +51,7 @@ try {
     ]);
 
 } catch (PDOException $e) {
-    ob_end_clean();
+    if (ob_get_level()) ob_end_clean();
     header('Content-Type: application/json; charset=utf-8');
     http_response_code(500);
     echo json_encode(['sucesso' => false, 'mensagem' => 'Erro de conexão com o banco.']);
