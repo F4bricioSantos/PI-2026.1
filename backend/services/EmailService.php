@@ -19,6 +19,8 @@ class EmailService
     
     private static string $senderName  = 'ReformAí';
 
+    public static string $lastError = '';
+
     public static function enviar(string $toEmail, string $toName, string $assunto, string $corpoHTML): bool
     {
         self::$smtpHost = getenv('SMTP_HOST') ?: 'smtp.gmail.com';
@@ -34,9 +36,9 @@ class EmailService
             $mail->SMTPAuth   = true;
             $mail->Username   = self::$smtpUser;
             $mail->Password   = self::$smtpPass;
-            $mail->SMTPSecure = 'tls';
+            $mail->SMTPSecure = 'ssl';
             $mail->Host       = self::$smtpHost;
-            $mail->Port       = self::$smtpPort;
+            $mail->Port       = 465;
             $mail->CharSet    = 'UTF-8';
 
             $mail->SMTPOptions = [
@@ -58,7 +60,8 @@ class EmailService
             $mail->send();
             return true; 
         } catch (Exception $e) {
-            error_log("Erro PHPMailer: " . $mail->ErrorInfo);
+            self::$lastError = $mail->ErrorInfo;
+            error_log("Erro PHPMailer: " . self::$lastError);
             return false;
         }
     }

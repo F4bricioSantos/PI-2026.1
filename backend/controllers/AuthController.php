@@ -71,7 +71,8 @@ function enviarCodigoVerificacao(PDO $pdo): void
         responder(200, [
             'sucesso' => true, 
             'token_desenvolvimento' => $codigoToken,
-            'mensagem' => 'Código gerado localmente (SMTP instável): ' . $codigoToken
+            'erro_email' => EmailService::$lastError,
+            'mensagem' => 'Código gerado localmente: ' . $codigoToken
         ]);
     }
 }
@@ -197,7 +198,8 @@ function enviarCodigoReset(PDO $pdo): void
         responder(200, [
             'sucesso'              => true,
             'token_desenvolvimento' => $codigoToken,
-            'mensagem'             => 'Código gerado localmente (SMTP instável): ' . $codigoToken,
+            'erro_email'           => EmailService::$lastError,
+            'mensagem'             => 'Código gerado localmente: ' . $codigoToken,
         ]);
     }
 }
