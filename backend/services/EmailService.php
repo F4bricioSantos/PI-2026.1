@@ -39,6 +39,14 @@ class EmailService
             $mail->Port       = self::$smtpPort;
             $mail->CharSet    = 'UTF-8';
 
+            $mail->SMTPOptions = [
+                'ssl' => [
+                    'verify_peer'       => false,
+                    'verify_peer_name'  => false,
+                    'allow_self_signed' => true,
+                ],
+            ];
+
             $mail->setFrom(self::$smtpUser, self::$senderName);
             $mail->addAddress($toEmail, $toName);
 
@@ -50,7 +58,7 @@ class EmailService
             $mail->send();
             return true; 
         } catch (Exception $e) {
-            error_log("Erro PHPMailer com Gmail: {$mail->ErrorInfo}");
+            error_log("Erro PHPMailer: " . $mail->ErrorInfo);
             return false;
         }
     }
