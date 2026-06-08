@@ -88,6 +88,8 @@ CREATE TABLE contratos (
     avaliado BOOLEAN DEFAULT FALSE,
     favorito BOOLEAN NOT NULL DEFAULT FALSE,
     avaliado_prestador BOOLEAN DEFAULT FALSE,
+    aceito_prestador_em TIMESTAMP,
+    aceito_cliente_em TIMESTAMP,
     CONSTRAINT fk_contrato_cliente FOREIGN KEY (cliente_id) REFERENCES usuarios(id),
     CONSTRAINT fk_contrato_prestador FOREIGN KEY (prestador_id) REFERENCES usuarios(id),
     CONSTRAINT fk_contrato_servico FOREIGN KEY (servico_id) REFERENCES servicos(id)

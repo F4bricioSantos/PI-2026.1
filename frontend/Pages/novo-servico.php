@@ -3,7 +3,7 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 if (empty($_SESSION['usuario_id'])) {
-    header('Location: /PI-2026.1/frontend/Pages/login.php');
+    header('Location: login.php');
     exit;
 }
 require_once '../../backend/config/Conexao.php';
@@ -14,7 +14,7 @@ $userModel = new User($pdo);
 $usuario = $userModel->buscarPorId($idUsuario);
 
 // Define SB_URL
-if (!defined('SB_URL')) define('SB_URL', 'https://yplpxzmwtkencrrtxmof.supabase.co'); 
+if (!defined('SB_URL')) define('SB_URL', getenv('SB_URL') ?: 'https://yplpxzmwtkencrrtxmof.supabase.co'); 
 $urlBaseSupabase = SB_URL . "/storage/v1/object/public/fotos/";
 
 $stmtCheck = $pdo->prepare("SELECT COUNT(*) FROM servicos WHERE prestador_id = :id");
@@ -51,7 +51,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 if ($ok) {
                     $novoServicoId = $pdo->lastInsertId();
-                    echo "<script>window.location.href='/PI-2026.1/frontend/Pages/portfolio.php?selecionar=" . $novoServicoId . "';</script>";
+                    echo "<script>window.location.href='portfolio.php?selecionar=" . $novoServicoId . "';</script>";
                     exit;
                 } else {
                     $erro = 'Erro ao salvar o serviço. Tente novamente.';

@@ -158,7 +158,7 @@ export function renderSidebar(containerId, activePage = '', isPro = false, isAdm
     .map((item) => buildNavLink(item, isItemActive(item)))
     .join('');
 
-  const urlBaseSupabase = "https://yplpxzmwtkencrrtxmof.supabase.co/storage/v1/object/public/fotos/";
+  const urlBaseSupabase = (window.SB_URL || "https://yplpxzmwtkencrrtxmof.supabase.co") + "/storage/v1/object/public/fotos/";
   const userPhoto = (user && user.foto && user.foto !== 'default.png')
     ? urlBaseSupabase + user.foto
     : null;
@@ -209,7 +209,7 @@ export function renderSidebar(containerId, activePage = '', isPro = false, isAdm
           </div>
         </a>
         
-        <a href="/PI-2026.1/backend/controllers/AuthController.php?action=logout" 
+        <a href="/backend/controllers/AuthController.php?action=logout" 
            class="w-9 h-9 flex items-center justify-center rounded-xl text-white/40 hover:text-red-400 hover:bg-red-400/10 transition-all"
            title="Sair da Conta">
           <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">

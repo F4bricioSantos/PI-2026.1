@@ -1,5 +1,6 @@
 <?php
 
+/*
 $host     = "aws-1-sa-east-1.pooler.supabase.com";
 $port     = "6543";
 $dbname   = "postgres";
@@ -32,11 +33,35 @@ define('SB_KEY', 'sb_publishable_dWPgiqmCzxZjTXicYc9mAQ_enwu5UE7');
 
 // 3. Secret Key (Service Role) para operações administrativas como Upload via ChatController
 define('SB_SECRET_KEY', 'sb_publishable_dWPgiqmCzxZjTXicYc9mAQ_enwu5UE7'); // Ajuste para sua service_role_key real
+*/
 
-/**
- * Nota de Segurança: As chaves acima devem ser movidas para um arquivo .env 
- * em ambiente de produção para evitar exposição de credenciais.
- */
+$host     = getenv('DB_HOST');
+$port     = getenv('DB_PORT');
+$dbname   = getenv('DB_NAME');
+$user     = getenv('DB_USER');
+$password = getenv('DB_PASS');
+
+try {
+    $dsn = "pgsql:host=$host;port=$port;dbname=$dbname;sslmode=require";
+
+    $pdo = new PDO($dsn, $user, $password, [
+        PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
+        PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+        PDO::ATTR_EMULATE_PREPARES   => true,
+    ]);
+
+} catch (PDOException $e) {
+    ob_end_clean();
+    header('Content-Type: application/json; charset=utf-8');
+    http_response_code(500);
+    echo json_encode(['sucesso' => false, 'mensagem' => 'Erro de conexão com o banco.']);
+    exit;
+}
+
+define('SB_URL',        getenv('SB_URL'));
+define('SB_KEY',        getenv('SB_KEY'));
+define('SB_SECRET_KEY', getenv('SB_SECRET_KEY'));
+
 
 function gerenciarFotoSupabase($arquivoTmp, $nomeAntigo = null) {
     // PASSO A: APAGAR DO SERVIDOR ONLINE

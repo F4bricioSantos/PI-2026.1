@@ -3,7 +3,7 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 if (empty($_SESSION['usuario_id'])) {
-    header('Location: /PI-2026.1/frontend/Pages/login.php');
+    header('Location: login.php');
     exit;
 }
 require_once '../../backend/config/auth.php';
@@ -13,7 +13,8 @@ $usuarioId = (int)$_SESSION['usuario_id'];
 $mensagem = '';
 $erro = '';
 $limiteFotos = 7;
-$urlBaseSupabase = "https://yplpxzmwtkencrrtxmof.supabase.co/storage/v1/object/public/fotos/";
+$sbUrl = getenv('SB_URL') ?: 'https://yplpxzmwtkencrrtxmof.supabase.co';
+$urlBaseSupabase = $sbUrl . "/storage/v1/object/public/fotos/";
 $idParaSelecionar = filter_input(INPUT_GET, 'selecionar', FILTER_VALIDATE_INT);
 $userModel = new User($pdo);
 $usuarioLogado = $userModel->buscarPorId($usuarioId);

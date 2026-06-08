@@ -11,16 +11,22 @@ require_once __DIR__ . '/../libs/PHPMailer/src/SMTP.php';
 
 class EmailService
 {
-    private static string $smtpHost = 'smtp.gmail.com';
+    private static string $smtpHost = '';
     private static int    $smtpPort = 587;
     
-    private static string $smtpUser = 'fabriciosantos43@aluno.unifapce.edu.br'; 
-    private static string $smtpPass = 'pnkhuxqupfrmiayw'; 
+    private static string $smtpUser = '';
+    private static string $smtpPass = '';
     
     private static string $senderName  = 'ReformAí';
 
     public static function enviar(string $toEmail, string $toName, string $assunto, string $corpoHTML): bool
     {
+        self::$smtpHost = getenv('SMTP_HOST') ?: 'smtp.gmail.com';
+        self::$smtpPort = (int)(getenv('SMTP_PORT') ?: 587);
+        self::$smtpUser = getenv('SMTP_USER') ?: '';
+        self::$smtpPass = getenv('SMTP_PASS') ?: '';
+        self::$senderName = getenv('SMTP_FROM_NAME') ?: 'ReformAí';
+
         $mail = new PHPMailer(true);
 
         try {
@@ -32,14 +38,6 @@ class EmailService
             $mail->Host       = self::$smtpHost;
             $mail->Port       = self::$smtpPort;
             $mail->CharSet    = 'UTF-8';
-
-            $mail->SMTPOptions = [
-                'ssl' => [
-                    'verify_peer' => false,
-                    'verify_peer_name' => false,
-                    'allow_self_signed' => true
-                ]
-            ];
 
             $mail->setFrom(self::$smtpUser, self::$senderName);
             $mail->addAddress($toEmail, $toName);

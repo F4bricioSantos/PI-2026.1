@@ -263,7 +263,7 @@
         btnText.textContent   = 'Enviando código...';
         btnSpinner.classList.remove('hidden');
         try {
-          const res = await fetch('/PI-2026.1/backend/controllers/AuthController.php?action=enviar_codigo_verificacao', {
+          const res = await fetch('/backend/controllers/AuthController.php?action=enviar_codigo_verificacao', {
             method: 'POST',
             body: new FormData(form),
           });
@@ -307,7 +307,7 @@
         try {
           const formData = new FormData(form);
           formData.append('codigo_token', codigo);
-          const res = await fetch('/PI-2026.1/backend/controllers/AuthController.php?action=cadastrar', {
+          const res = await fetch('/backend/controllers/AuthController.php?action=cadastrar', {
             method: 'POST',
             body: formData
           });

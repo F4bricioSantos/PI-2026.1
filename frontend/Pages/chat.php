@@ -54,6 +54,8 @@ if ($idDestinatario > 0) {
     }
     $outraPessoaTemServico = $contratoModel->checarSeTemServico($idDestinatario);
     if (empty($contratosAtivos)) {
+    // Se não houver contrato ativo, busca se existe um recém-concluído para avaliar
+    if (!$contratoAtivo) {
         $contratoParaAvaliar = $contratoModel->buscarContratoParaAvaliar($idUsuarioLogado, $idDestinatario);
     }
 }

@@ -3,7 +3,7 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 if (empty($_SESSION['usuario_id'])) {
-    header('Location: /PI-2026.1/frontend/Pages/login.php');
+    header('Location: login.php');
     exit;
 }
 
@@ -18,7 +18,7 @@ $erro = '';
 if (empty($_SESSION['csrf_token'])) {
     $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
 }
-if (!defined('SB_URL')) define('SB_URL', 'https://yplpxzmwtkencrrtxmof.supabase.co');
+if (!defined('SB_URL')) define('SB_URL', getenv('SB_URL') ?: 'https://yplpxzmwtkencrrtxmof.supabase.co');
 $urlBaseSupabase = SB_URL . "/storage/v1/object/public/fotos/";
  
 try {
