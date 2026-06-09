@@ -21,7 +21,6 @@ $routes = [
     '/esqueci-senha'    => '/frontend/pages/esqueci-senha.php',
     '/avaliar-prestador'=> '/frontend/pages/avaliar-prestador.php',
     '/ver-perfil'       => '/frontend/pages/ver-perfil.php',
-    '/configuracoes'    => '/frontend/pages/configuracoes.php',
     '/admin'            => '/frontend/pages/admin_dashboard.php',
     '/logout'           => '/backend/controllers/AuthController.php',
 ];
