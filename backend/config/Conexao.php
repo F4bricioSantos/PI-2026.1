@@ -64,38 +64,40 @@ define('SB_SECRET_KEY', getenv('SB_SECRET_KEY'));
 
 
 function gerenciarFotoSupabase($arquivoTmp, $nomeAntigo = null) {
-    // PASSO A: APAGAR DO SERVIDOR ONLINE
-    // Se existe uma foto antiga e não é a 'default.png', mandamos um DELETE para o Supabase
     if ($nomeAntigo && $nomeAntigo !== 'default.png') {
         $ch = curl_init(SB_URL . "/storage/v1/object/fotos/" . $nomeAntigo);
-        curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "DELETE");
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_HTTPHEADER, [
-            "Authorization: Bearer " . SB_SECRET_KEY,
-            "apikey: " . SB_SECRET_KEY
+        curl_setopt_array($ch, [
+            CURLOPT_CUSTOMREQUEST => "DELETE",
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_HTTPHEADER => [
+                "Authorization: Bearer " . SB_SECRET_KEY,
+                "apikey: " . SB_SECRET_KEY
+            ],
         ]);
         curl_exec($ch);
         curl_close($ch);
     }
     if (!$arquivoTmp) return 'default.png';
-    // PASSO B: UPLOAD DA NOVA FOTO
     $extensao = pathinfo($_FILES['foto_perfil']['name'], PATHINFO_EXTENSION);
     $novoNome = uniqid() . "." . $extensao;
-    
+
     $ch = curl_init(SB_URL . "/storage/v1/object/fotos/" . $novoNome);
-    curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "POST");
-    curl_setopt($ch, CURLOPT_POSTFIELDS, file_get_contents($arquivoTmp));
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    curl_setopt($ch, CURLOPT_HTTPHEADER, [
-        "Authorization: Bearer " . SB_SECRET_KEY,
-        "apikey: " . SB_SECRET_KEY,
-        "Content-Type: " . $_FILES['foto_perfil']['type']
+    curl_setopt_array($ch, [
+        CURLOPT_CUSTOMREQUEST => "POST",
+        CURLOPT_POSTFIELDS => file_get_contents($arquivoTmp),
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_HTTPHEADER => [
+            "Authorization: Bearer " . SB_SECRET_KEY,
+            "apikey: " . SB_SECRET_KEY,
+            "Content-Type: " . $_FILES['foto_perfil']['type']
+        ],
     ]);
-    
+
     curl_exec($ch);
+    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
     curl_close($ch);
 
-    return $novoNome; 
+    return ($httpCode >= 200 && $httpCode < 300) ? $novoNome : false;
 }
 function fazerUploadPortfolioSupabase($arquivoTmp, $nomeOriginal) {
     $extensao = pathinfo($nomeOriginal, PATHINFO_EXTENSION);

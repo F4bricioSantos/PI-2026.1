@@ -34,7 +34,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $nomeFotoNova = 'default.png';
         } elseif (isset($_FILES['foto_perfil']) && $_FILES['foto_perfil']['error'] === UPLOAD_ERR_OK) {
             if (function_exists('gerenciarFotoSupabase')) {
-                $nomeFotoNova = gerenciarFotoSupabase($_FILES['foto_perfil']['tmp_name'], $dadosBD['foto_perfil']);
+                $result = gerenciarFotoSupabase($_FILES['foto_perfil']['tmp_name'], $dadosBD['foto_perfil']);
+                if ($result !== false) $nomeFotoNova = $result;
             }
         }
 
