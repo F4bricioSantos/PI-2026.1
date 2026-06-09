@@ -17,7 +17,7 @@ $stmtCheck = $pdo->prepare("SELECT COUNT(*) FROM servicos WHERE prestador_id = :
 $stmtCheck->execute([':id' => $idUsuarioLogado]);
 $temServico = $stmtCheck->fetchColumn() > 0;
 
-// --- CONFIGURAÃ‡ÃƒO SUPABASE ---
+// --- CONFIGURAÇÒO SUPABASE ---
 $urlBaseSupabase = "https://yplpxzmwtkencrrtxmof.supabase.co/storage/v1/object/public/fotos/";
 
 // Captura de Filtros
@@ -34,7 +34,7 @@ if (isset($_GET['ajax_cidades'])) {
     echo json_encode($stmt->fetchAll(PDO::FETCH_COLUMN));
     exit;
 }
-// ConstruÃ§Ã£o da Query SQL
+// Construção da Query SQL
 $where  = ['s.prestador_id != :usuario_id'];
 $params = [':usuario_id' => $idUsuarioLogado];
 
@@ -81,19 +81,19 @@ $sql = "
 $stmt = $pdo->prepare($sql);
 $stmt->execute($params);
 $servicos = $stmt->fetchAll();
-// Busca lista de ids dos serviÃ§os favoritos do usuÃ¡rio logado
+// Busca lista de ids dos serviços favoritos do usuário logado
 $stmtFavs = $pdo->prepare("SELECT servico_id FROM favoritos_servicos WHERE usuario_id = :uid");
 $stmtFavs->execute([':uid' => $idUsuarioLogado]);
 $favoritosIds = $stmtFavs->fetchAll(PDO::FETCH_COLUMN);
 if (!$favoritosIds) {
     $favoritosIds = [];
 }
-// Busca a contagem global de mensagens nÃ£o lidas para o usuÃ¡rio logado
+// Busca a contagem global de mensagens não lidas para o usuário logado
 $stmtUnreadMsgCount = $pdo->prepare("SELECT COUNT(*) FROM mensagens_chat WHERE destinatario_id = :uid AND lido_em IS NULL AND deletado = 0");
 $stmtUnreadMsgCount->execute([':uid' => $idUsuarioLogado]);
 $totalMensagensNaoLidas = (int)$stmtUnreadMsgCount->fetchColumn();
 
-$categoriasGerais = ["Reformas", "Pintura e Textura", "ElÃ©trica", "HidrÃ¡ulica", "Pisos e Revestimentos", "Alvenaria e ConstruÃ§Ã£o"];
+$categoriasGerais = ["Reformas", "Pintura e Textura", "Elétrica", "Hidráulica", "Pisos e Revestimentos", "Alvenaria e Construção"];
 ?>
 
 <!DOCTYPE html>
@@ -101,7 +101,7 @@ $categoriasGerais = ["Reformas", "Pintura e Textura", "ElÃ©trica", "HidrÃ¡ul
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>ReformAÃ­ â€“ InÃ­cio</title>
+  <title>ReformAí – Início</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
   <script>
@@ -152,7 +152,7 @@ $categoriasGerais = ["Reformas", "Pintura e Textura", "ElÃ©trica", "HidrÃ¡ul
             <polyline points="9 22 9 12 15 12 15 22"/>
           </svg>
         </div>
-        <span class="font-bold text-lg tracking-tight">InÃ­cio</span>
+        <span class="font-bold text-lg tracking-tight">Início</span>
       </div>
       
       <a href="perfil.php" class="hover:opacity-80 transition-opacity">
@@ -169,7 +169,7 @@ $categoriasGerais = ["Reformas", "Pintura e Textura", "ElÃ©trica", "HidrÃ¡ul
       
       <form id="filtroForm" method="GET" action="" class="space-y-4 mb-6 md:mb-8">
         <div class="flex flex-col md:flex-row gap-3">
-          <input type="text" name="busca" value="<?= htmlspecialchars($busca) ?>" placeholder="O que vocÃª precisa?" class="flex-1 bg-white border border-gray-200 rounded-2xl px-5 py-3.5 text-sm focus:border-orange outline-none shadow-sm transition-all w-full">
+          <input type="text" name="busca" value="<?= htmlspecialchars($busca) ?>" placeholder="O que você precisa?" class="flex-1 bg-white border border-gray-200 rounded-2xl px-5 py-3.5 text-sm focus:border-orange outline-none shadow-sm transition-all w-full">
           
           <div class="relative w-full md:w-60">
             <input type="text" id="inputCidade" name="cidade" autocomplete="off" value="<?= htmlspecialchars($cidade) ?>" placeholder="Cidade" class="w-full bg-white border border-gray-200 rounded-2xl px-5 py-3.5 text-sm focus:border-orange outline-none shadow-sm transition-all">
@@ -208,9 +208,9 @@ $categoriasGerais = ["Reformas", "Pintura e Textura", "ElÃ©trica", "HidrÃ¡ul
                     <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
                 </svg>
             </div>
-            <h3 class="text-lg font-bold text-gray-900">Nenhum serviÃ§o encontrado</h3>
+            <h3 class="text-lg font-bold text-gray-900">Nenhum serviço encontrado</h3>
             <p class="text-sm text-gray-400 mt-1 max-w-xs text-center leading-relaxed">
-                NÃ£o encontramos resultados para os filtros aplicados. Tente mudar a categoria ou limpar a busca.
+                Não encontramos resultados para os filtros aplicados. Tente mudar a categoria ou limpar a busca.
             </p>
         </div>
       <?php else: ?>

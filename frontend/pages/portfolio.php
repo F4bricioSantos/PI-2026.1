@@ -68,9 +68,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $arquivos = $_FILES['foto_trabalho'];
         $qtdNovas = is_array($arquivos['name']) ? count(array_filter($arquivos['name'])) : 0;
         if (!$servicoId) {
-            $erro = 'Selecione um serviÃ§o relacionado.';
+            $erro = 'Selecione um serviço relacionado.';
         } elseif (($jaTem + $qtdNovas) > $limiteFotos) {
-            $erro = "Limite atingido! Este serviÃ§o jÃ¡ tem $jaTem fotos. MÃ¡ximo permitido: $limiteFotos.";
+            $erro = "Limite atingido! Este serviço já tem $jaTem fotos. Máximo permitido: $limiteFotos.";
         } elseif ($qtdNovas > 0) {
             $sucessoUpload = false;
             for ($i = 0; $i < $qtdNovas; $i++) {
@@ -99,9 +99,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $status = $_GET['ok'] ?? '';
 if ($status === '1') $mensagem = 'Fotos adicionadas com sucesso!';
 if ($status === '2') $mensagem = 'A foto foi removida com sucesso!';
-if ($status === '3') $mensagem = 'O projeto e todas as suas fotos foram excluÃ­dos!';
+if ($status === '3') $mensagem = 'O projeto e todas as suas fotos foram excluídos!';
 if ($idParaSelecionar && !$status) {
-    $mensagem = 'ServiÃ§o cadastrado com sucesso! Agora adicione fotos para o seu portfÃ³lio.';
+    $mensagem = 'Serviço cadastrado com sucesso! Agora adicione fotos para o seu portfólio.';
 }
 $stmtP = $pdo->prepare("SELECT * FROM portfolio_imagens WHERE usuario_id = ? ORDER BY data_upload DESC");
 $stmtP->execute([$usuarioId]);
@@ -115,7 +115,7 @@ foreach ($stmtP->fetchAll(PDO::FETCH_ASSOC) as $item) {
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>PortfÃ³lio | ReformAÃ­</title>
+  <title>Portfólio | ReformAí</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&display=swap" rel="stylesheet" />
   <script>
@@ -132,7 +132,7 @@ foreach ($stmtP->fetchAll(PDO::FETCH_ASSOC) as $item) {
           <svg class="w-8 h-8" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
         </div>
         <h3 id="modalTitle" class="text-xl font-black text-slate-900 mb-2">Excluir?</h3>
-        <p id="modalDesc" class="text-sm text-gray-500">Essa aÃ§Ã£o removerÃ¡ os registos permanentemente.</p>
+        <p id="modalDesc" class="text-sm text-gray-500">Essa ação removerá os registos permanentemente.</p>
       </div>
       <div class="bg-gray-50 p-4 flex gap-3">
         <button onclick="fecharModal()" class="flex-1 py-3 text-sm font-bold text-gray-500 hover:bg-gray-200 rounded-xl transition-colors">Cancelar</button>
@@ -160,9 +160,9 @@ foreach ($stmtP->fetchAll(PDO::FETCH_ASSOC) as $item) {
             <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/></svg>
           </button>
           <button onclick="history.back()" class="hover:text-gray-600 p-1 md:-ml-1 rounded-lg hover:bg-gray-100 hidden md:block"><svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg></button>
-          <a href="./dashboard.php" class="text-gray-400 text-sm hover:text-orange transition-colors">InÃ­cio</a>
+          <a href="./dashboard.php" class="text-gray-400 text-sm hover:text-orange transition-colors">Início</a>
           <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
-          <span class="text-gray-800 font-bold text-lg tracking-tight">PortfÃ³lio</span>
+          <span class="text-gray-800 font-bold text-lg tracking-tight">Portfólio</span>
         </div>
         
         <a href="perfil.php" class="hover:opacity-80 transition-opacity">
@@ -178,7 +178,7 @@ foreach ($stmtP->fetchAll(PDO::FETCH_ASSOC) as $item) {
     <div class="flex-1 overflow-y-auto px-4 md:px-8 py-6 custom-scroll">
       <div class="mb-6">
         <h2 class="text-4xl font-extrabold text-slate-900 tracking-tight">Meus Trabalhos</h2>
-        <p class="text-sm text-gray-500 mt-1">Gerencie seu histÃ³rico visual de serviÃ§os.</p>
+        <p class="text-sm text-gray-500 mt-1">Gerencie seu histórico visual de serviços.</p>
       </div>
 
       <?php if ($mensagem): ?><div class="mb-4 bg-emerald-50 text-emerald-700 px-4 py-3 rounded-xl border border-emerald-100 text-sm font-bold"><?= $mensagem ?></div><?php endif; ?>
@@ -190,9 +190,9 @@ foreach ($stmtP->fetchAll(PDO::FETCH_ASSOC) as $item) {
           <h3 class="text-2xl font-extrabold text-slate-900 mb-6">Novo Trabalho</h3>
           <form method="POST" enctype="multipart/form-data" class="space-y-5" onsubmit="const btn=this.querySelector('button[type=submit]'); btn.disabled=true; btn.innerHTML='Enviando...';">
             <div>
-              <label class="block text-xs font-bold text-gray-700 mb-2 uppercase tracking-widest">ServiÃ§o Realizado</label>
+              <label class="block text-xs font-bold text-gray-700 mb-2 uppercase tracking-widest">Serviço Realizado</label>
               <select name="servico_id" required class="w-full border border-gray-200 rounded-xl px-4 py-3.5 text-sm focus:border-orange outline-none bg-white font-bold text-slate-700">
-                  <option value="">Selecione o serviÃ§o...</option>
+                  <option value="">Selecione o serviço...</option>
                   <?php foreach ($servicos as $s): ?>
                       <option value="<?= $s['id'] ?>" <?= ($idParaSelecionar == $s['id']) ? 'selected' : '' ?>>
                           <?= htmlspecialchars($s['titulo']) ?>
@@ -249,7 +249,7 @@ foreach ($stmtP->fetchAll(PDO::FETCH_ASSOC) as $item) {
 
           <?php if (empty($projetosAgrupados)): ?>
             <div class="h-64 rounded-3xl border-2 border-dashed border-gray-200 flex flex-col items-center justify-center text-gray-400">
-                <p class="font-bold uppercase tracking-widest text-xs">O seu portfÃ³lio estÃ¡ vazio</p>
+                <p class="font-bold uppercase tracking-widest text-xs">O seu portfólio está vazio</p>
             </div>
           <?php endif; ?>
         </section>
@@ -265,7 +265,7 @@ foreach ($stmtP->fetchAll(PDO::FETCH_ASSOC) as $item) {
 
     function confirmarExcluirFoto(id) {
         modalTitle.innerText = "Remover esta foto?";
-        modalDesc.innerText = "A imagem serÃ¡ apagada permanentemente.";
+        modalDesc.innerText = "A imagem será apagada permanentemente.";
         modalInput.name = "excluir_foto_id";
         modalInput.value = id;
         abrirModal();
@@ -273,7 +273,7 @@ foreach ($stmtP->fetchAll(PDO::FETCH_ASSOC) as $item) {
 
     function confirmarExcluirTudo(titulo) {
         modalTitle.innerText = "Excluir projeto?";
-        modalDesc.innerText = `Isto apagarÃ¡ permanentemente as fotos de "${titulo}".`;
+        modalDesc.innerText = `Isto apagará permanentemente as fotos de "${titulo}".`;
         modalInput.name = "excluir_projeto_titulo";
         modalInput.value = titulo;
         abrirModal();

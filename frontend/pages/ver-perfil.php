@@ -1,31 +1,31 @@
 <?php
 require_once '../../backend/config/auth.php';
 require_once '../../backend/config/Conexao.php';
-// Certifique-se de que o modelo User estÃ¡ incluÃ­do
+// Certifique-se de que o modelo User está incluído
 require_once '../../backend/models/User.php';
 
 $idUsuarioLogado = $_SESSION['usuario_id'];
 $userModel = new User($pdo);
 $usuarioLogado = $userModel->buscarPorId($idUsuarioLogado);
 
-// Captura o ID do perfil que estÃ¡ sendo visitado. Se nÃ£o houver, mostra o do usuÃ¡rio logado.
+// Captura o ID do perfil que está sendo visitado. Se não houver, mostra o do usuário logado.
 $idPerfilVisitado = isset($_GET['id']) ? intval($_GET['id']) : $idUsuarioLogado;
 
-// 1. BUSCA DADOS COMPLETOS DO USUÃRIO
+// 1. BUSCA DADOS COMPLETOS DO USUÁRIO
 $perfil = $userModel->buscarPerfilCompleto($idPerfilVisitado); 
 if (!$perfil) {
     header("Location: dashboard.php");
     exit;
 }
 
-// 2. VERIFICAÃ‡ÃƒO PARA A SIDEBAR DO USUÃRIO LOGADO (se ele tem serviÃ§os)
+// 2. VERIFICAÇÒO PARA A SIDEBAR DO USUÁRIO LOGADO (se ele tem serviços)
 $stmtCheck = $pdo->prepare("SELECT COUNT(*) FROM servicos WHERE prestador_id = :id");
 $stmtCheck->execute([':id' => $idUsuarioLogado]);
 $temServicoLogado = $stmtCheck->fetchColumn() > 0;
 
 $isPrestador = !empty($perfil['nicho']);
 
-// 3. BUSCA DE SERVIÃ‡OS (Apenas se for Prestador)
+// 3. BUSCA DE SERVIÇOS (Apenas se for Prestador)
 $servicos = [];
 if ($isPrestador) {
     $stmtServ = $pdo->prepare("SELECT id, titulo, categoria_nome, valor_base, descricao_curta FROM servicos WHERE prestador_id = :id ORDER BY id DESC");
@@ -33,7 +33,7 @@ if ($isPrestador) {
     $servicos = $stmtServ->fetchAll(PDO::FETCH_ASSOC);
 }
 
-// 4. BUSCA HISTÃ“RICO DE AVALIAÃ‡Ã•ES (ConsistÃªncia com detalhes.php)
+// 4. BUSCA HISTÓRICO DE AVALIAÇÕES (Consistência com detalhes.php)
 $stmtAval = $pdo->prepare("
     SELECT a.nota, a.comentario, a.data_avaliacao, u.nome AS avaliador_nome, u.foto_perfil AS avaliador_foto, a.avaliador_tipo 
     FROM avaliacoes a
@@ -56,7 +56,7 @@ $urlBaseSupabase = "https://yplpxzmwtkencrrtxmof.supabase.co/storage/v1/object/p
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>ReformAÃ­ â€“ Perfil de <?= htmlspecialchars($perfil['nome']) ?></title>
+  <title>ReformAí – Perfil de <?= htmlspecialchars($perfil['nome']) ?></title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
   <script>
@@ -97,7 +97,7 @@ $urlBaseSupabase = "https://yplpxzmwtkencrrtxmof.supabase.co/storage/v1/object/p
         <button onclick="history.back()" class="hover:text-gray-600 transition-colors p-1 -ml-1 rounded-lg hover:bg-gray-100">
           <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
         </button>
-        <a href="dashboard.php" class="text-gray-400 text-sm hover:text-orange transition-colors ml-2">InÃ­cio</a>
+        <a href="dashboard.php" class="text-gray-400 text-sm hover:text-orange transition-colors ml-2">Início</a>
         <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
         <span class="text-gray-800 font-bold text-lg tracking-tight">Perfil</span>
       </div>
@@ -126,7 +126,7 @@ $urlBaseSupabase = "https://yplpxzmwtkencrrtxmof.supabase.co/storage/v1/object/p
               <?php endif; ?>
             </div>
             
-            <p class="text-sm text-gray-500 font-medium"><?= htmlspecialchars($perfil['cidade'] ?? 'Cidade nÃ£o informada') ?></p>
+            <p class="text-sm text-gray-500 font-medium"><?= htmlspecialchars($perfil['cidade'] ?? 'Cidade não informada') ?></p>
             
             <div class="flex flex-wrap items-center justify-center md:justify-start gap-4 pt-1 text-xs text-gray-400">
               <span class="flex items-center gap-1.5">
@@ -152,7 +152,7 @@ $urlBaseSupabase = "https://yplpxzmwtkencrrtxmof.supabase.co/storage/v1/object/p
             <svg class="w-5 h-5 fill-orange" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
             <div class="text-left">
               <p class="text-xs font-bold text-gray-800 leading-none"><?= $mediaNota > 0 ? number_format($mediaNota, 1) . ' / 5.0' : 'Sem Notas' ?></p>
-              <p class="text-[10px] text-gray-400 font-medium mt-0.5"><?= $totalAvaliacoes ?> avaliaÃ§Ãµes</p>
+              <p class="text-[10px] text-gray-400 font-medium mt-0.5"><?= $totalAvaliacoes ?> avaliações</p>
             </div>
           </div>
           <?php if($idPerfilVisitado !== $idUsuarioLogado): ?>
@@ -171,7 +171,7 @@ $urlBaseSupabase = "https://yplpxzmwtkencrrtxmof.supabase.co/storage/v1/object/p
               <svg class="w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                 <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
               </svg>
-              ExperiÃªncia: <b><?= intval($perfil['experiencia_anos']) ?> anos</b>
+              Experiência: <b><?= intval($perfil['experiencia_anos']) ?> anos</b>
             </span>
           </div>
           <p class="text-sm text-gray-600 leading-relaxed italic">
@@ -180,7 +180,7 @@ $urlBaseSupabase = "https://yplpxzmwtkencrrtxmof.supabase.co/storage/v1/object/p
         </div>
 
         <div class="space-y-3">
-          <h3 class="text-xs font-extrabold text-gray-400 uppercase tracking-wider pl-1">ServiÃ§os DisponÃ­veis</h3>
+          <h3 class="text-xs font-extrabold text-gray-400 uppercase tracking-wider pl-1">Serviços Disponíveis</h3>
           <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             <?php foreach($servicos as $s): ?>
               <div class="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm flex flex-col gap-3 justify-between">
@@ -206,7 +206,7 @@ $urlBaseSupabase = "https://yplpxzmwtkencrrtxmof.supabase.co/storage/v1/object/p
 
       <div class="space-y-3">
         <h3 class="text-xs font-extrabold text-gray-400 uppercase tracking-wider pl-1">
-          <?= $isPrestador ? 'HistÃ³rico de AvaliaÃ§Ãµes Profissionais' : 'ReputaÃ§Ã£o como Cliente / Comprador' ?>
+          <?= $isPrestador ? 'Histórico de Avaliações Profissionais' : 'Reputação como Cliente / Comprador' ?>
         </h3>
         <div class="bg-white rounded-2xl border border-gray-200 shadow-sm divide-y divide-gray-100">
           <?php foreach($avaliacoes as $a): ?>
@@ -225,8 +225,8 @@ $urlBaseSupabase = "https://yplpxzmwtkencrrtxmof.supabase.co/storage/v1/object/p
                   <div class="flex items-center gap-2">
                     <h5 class="text-xs font-bold text-gray-900"><?= htmlspecialchars($a['avaliador_nome']) ?></h5>
                     <?= ($a['avaliador_tipo'] === 'prestador') 
-                        ? '<span class="text-[9px] bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded font-extrabold uppercase tracking-wide">AvaliaÃ§Ã£o como Cliente</span>' 
-                        : '<span class="text-[9px] bg-orange/10 text-orange px-1.5 py-0.5 rounded font-extrabold uppercase tracking-wide">AvaliaÃ§Ã£o como Prestador</span>' ?>
+                        ? '<span class="text-[9px] bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded font-extrabold uppercase tracking-wide">Avaliação como Cliente</span>' 
+                        : '<span class="text-[9px] bg-orange/10 text-orange px-1.5 py-0.5 rounded font-extrabold uppercase tracking-wide">Avaliação como Prestador</span>' ?>
                   </div>
                   <span class="text-[10px] text-gray-400"><?= date('d/m/Y', strtotime($a['data_avaliacao'])) ?></span>
                 </div>
@@ -240,7 +240,7 @@ $urlBaseSupabase = "https://yplpxzmwtkencrrtxmof.supabase.co/storage/v1/object/p
             </div>
           <?php endforeach; ?>
           <?php if(empty($avaliacoes)): ?>
-            <p class="text-xs text-gray-400 p-4 italic">Este perfil ainda nÃ£o recebeu pontuaÃ§Ãµes ou comentÃ¡rios na plataforma.</p>
+            <p class="text-xs text-gray-400 p-4 italic">Este perfil ainda não recebeu pontuações ou comentários na plataforma.</p>
           <?php endif; ?>
         </div>
       </div>

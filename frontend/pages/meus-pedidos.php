@@ -29,7 +29,7 @@ try {
             c.avaliado,
             c.favorito AS contrato_favorito,
             s.id AS servico_id,
-            COALESCE(s.titulo, 'ServiÃ§o Removido') AS servico_titulo,
+            COALESCE(s.titulo, 'Serviço Removido') AS servico_titulo,
             u.id AS prestador_id,
             u.nome AS prestador_nome,
             u.foto_perfil AS prestador_foto
@@ -76,7 +76,7 @@ try {
     $isAdmin = (isset($usuarioLogado['tipo_usuario']) && $usuarioLogado['tipo_usuario'] === 'admin');
 
 } catch (PDOException $e) {
-    // Fallback preventivo caso a tabela 'favoritos' ainda nÃ£o esteja criada fisicamente
+    // Fallback preventivo caso a tabela 'favoritos' ainda não esteja criada fisicamente
     $pedidos = isset($pedidos) ? $pedidos : [];
     $favoritos = [];
     $favoritosIds = [];
@@ -89,7 +89,7 @@ try {
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>ReformAÃ­ â€“ Meus Pedidos</title>
+  <title>ReformAí – Meus Pedidos</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
   <script>
@@ -136,7 +136,7 @@ try {
         </button>
         <div>
           <h1 class="text-xl font-extrabold text-gray-900 tracking-tight uppercase">Meus Pedidos</h1>
-          <p class="text-xs text-gray-500">Acompanhe seus serviÃ§os contratados</p>
+          <p class="text-xs text-gray-500">Acompanhe seus serviços contratados</p>
         </div>
       </div>
     </header>
@@ -168,7 +168,7 @@ try {
             <button onclick="filterStatus('all')" class="filter-btn bg-orange text-white text-xs font-bold px-4 py-2 rounded-lg transition-all shadow-sm">TODOS</button>
             <button onclick="filterStatus('pendente')" class="filter-btn text-gray-500 hover:text-gray-800 text-xs font-bold px-4 py-2 rounded-lg transition-all">PENDENTES</button>
             <button onclick="filterStatus('aceito')" class="filter-btn text-gray-500 hover:text-gray-800 text-xs font-bold px-4 py-2 rounded-lg transition-all">EM ANDAMENTO</button>
-            <button onclick="filterStatus('concluido')" class="filter-btn text-gray-500 hover:text-gray-800 text-xs font-bold px-4 py-2 rounded-lg transition-all">CONCLUÃDOS</button>
+            <button onclick="filterStatus('concluido')" class="filter-btn text-gray-500 hover:text-gray-800 text-xs font-bold px-4 py-2 rounded-lg transition-all">CONCLUÍDOS</button>
           </div>
 
           <?php if(empty($pedidos)): ?>
@@ -277,7 +277,7 @@ try {
               </div>
             </div>
             <div id="section-concluido" class="status-section space-y-4 pt-2">
-              <h2 class="text-xs font-extrabold text-gray-400 uppercase tracking-wider">ConcluÃ­dos</h2>
+              <h2 class="text-xs font-extrabold text-gray-400 uppercase tracking-wider">Concluídos</h2>
               <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <?php 
                 $hasConcluido = false;
@@ -302,7 +302,7 @@ try {
                       <div class="space-y-1.5 text-xs text-gray-500 mb-4 bg-gray-50 p-3 rounded-xl border border-gray-100">
                         <p>Enviado em: <span class="font-semibold text-gray-700"><?= date('d/m/Y', strtotime($pedido['data_envio'])) ?></span></p>
                         <p>
-                          <?= $pedido['status'] === 'cancelado' ? 'Cancelado em:' : 'ConcluÃ­do em:' ?> 
+                          <?= $pedido['status'] === 'cancelado' ? 'Cancelado em:' : 'Concluído em:' ?> 
                           <span class="font-semibold text-gray-700"><?= $pedido['data_conclusao'] ? date('d/m/Y', strtotime($pedido['data_conclusao'])) : date('d/m/Y', strtotime($pedido['data_agendamento'])) ?></span>
                         </p>
                       </div>
@@ -312,7 +312,7 @@ try {
                         <?php if($pedido['status'] === 'cancelado'): ?>
                           <span class="text-[11px] font-bold text-red-600 uppercase tracking-wider">Status: CANCELADO</span>
                         <?php else: ?>
-                          <span class="text-[11px] font-bold text-emerald-600 uppercase tracking-wider">Status: CONCLUÃDO</span>
+                          <span class="text-[11px] font-bold text-emerald-600 uppercase tracking-wider">Status: CONCLUÍDO</span>
                         <?php endif; ?>
                       </div>
                       <div class="flex gap-2 pt-2 border-t border-gray-100">
@@ -335,7 +335,7 @@ try {
                   </div>
                 <?php endforeach; ?>
                 <?php if(!$hasConcluido): ?>
-                  <p class="text-xs text-gray-400 italic col-span-full">Nenhum contrato finalizado ou concluÃ­do.</p>
+                  <p class="text-xs text-gray-400 italic col-span-full">Nenhum contrato finalizado ou concluído.</p>
                 <?php endif; ?>
               </div>
             </div>
@@ -347,7 +347,7 @@ try {
           
           <?php if(empty($favoritos)): ?>
             <div class="text-center py-12 bg-white rounded-2xl border border-gray-100 shadow-sm">
-              <p class="text-gray-400 text-sm italic">Nenhum serviÃ§o na sua lista de favoritos.</p>
+              <p class="text-gray-400 text-sm italic">Nenhum serviço na sua lista de favoritos.</p>
             </div>
           <?php else: ?>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -408,7 +408,7 @@ try {
     function filterStatus(status) {
       const buttons = document.querySelectorAll('.filter-btn');
       buttons.forEach(btn => {
-        let textNormalizado = btn.innerText.toLowerCase().replace('Ãº', 'u');
+        let textNormalizado = btn.innerText.toLowerCase().replace('ú', 'u');
         if(textNormalizado === status || (status === 'all' && textNormalizado === 'todos')) {
           btn.className = "filter-btn bg-orange text-white text-xs font-bold px-4 py-2 rounded-lg transition-all shadow-sm";
         } else {
@@ -446,7 +446,7 @@ try {
         const result = await response.json();
         
         if (result.sucesso) {
-          // 1. Sincroniza todos os botÃµes com o mesmo servicoId na aba "Meus pedidos"
+          // 1. Sincroniza todos os botões com o mesmo servicoId na aba "Meus pedidos"
           const allButtons = document.querySelectorAll(`button[data-service-id="${servicoId}"]`);
           allButtons.forEach(button => {
             const svg = button.querySelector('svg');
@@ -462,7 +462,7 @@ try {
             }
           });
 
-          // 2. Se estiver na aba "Favoritos" e o usuÃ¡rio desfavoritou, removemos o card correspondente da lista de favoritos com uma animaÃ§Ã£o suave
+          // 2. Se estiver na aba "Favoritos" e o usuário desfavoritou, removemos o card correspondente da lista de favoritos com uma animação suave
           const card = document.querySelector(`[data-fav-card-id="${servicoId}"]`);
           if (card && !result.favoritado) {
             card.style.transition = 'all 0.3s ease';
@@ -470,7 +470,7 @@ try {
             card.style.transform = 'scale(0.95)';
             setTimeout(() => {
               card.remove();
-              // Se nÃ£o sobrar nenhum favorito, recarrega para exibir a tela de lista vazia
+              // Se não sobrar nenhum favorito, recarrega para exibir a tela de lista vazia
               const grid = document.querySelector('#content-favoritos .grid');
               if (grid && grid.children.length === 0) {
                 window.location.reload();
@@ -482,7 +482,7 @@ try {
         }
       } catch (error) {
         console.error('Erro ao favoritar:', error);
-        alert('Erro de conexÃ£o com o servidor.');
+        alert('Erro de conexão com o servidor.');
       }
     }
   </script>

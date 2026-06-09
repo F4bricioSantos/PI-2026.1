@@ -39,7 +39,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['acao'])) {
         if (strlen($novaSenha) < 8) {
             $erro = 'A nova senha deve ter pelo menos 8 caracteres.';
         } elseif ($novaSenha !== $confirmar) {
-            $erro = 'As senhas nÃ£o coincidem.';
+            $erro = 'As senhas não coincidem.';
         } else {
             $stmt = $pdo->prepare("SELECT senha FROM usuarios WHERE id = :id");
             $stmt->execute([':id' => $idUsuario]);
@@ -61,34 +61,34 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['acao'])) {
         $novoEmail = trim($_POST['novo_email'] ?? '');
 
         if (!filter_var($novoEmail, FILTER_VALIDATE_EMAIL)) {
-            $erro = 'E-mail invÃ¡lido.';
+            $erro = 'E-mail inválido.';
         } elseif ($novoEmail === ($usuario['email'] ?? '')) {
-            $erro = 'O novo e-mail Ã© igual ao atual.';
+            $erro = 'O novo e-mail é igual ao atual.';
         } else {
             $stmt = $pdo->prepare("SELECT id FROM usuarios WHERE email = :email AND id != :id");
             $stmt->execute([':email' => $novoEmail, ':id' => $idUsuario]);
             if ($stmt->fetch()) {
-                $erro = 'Este e-mail jÃ¡ estÃ¡ em uso.';
+                $erro = 'Este e-mail já está em uso.';
             } else {
                 $codigo = (string)rand(100000, 999999);
                 $_SESSION['novo_email'] = $novoEmail;
                 $_SESSION['codigo_verificacao'] = $codigo;
                 $_SESSION['codigo_expira'] = time() + 600;
 
-                $assunto = "ConfirmaÃ§Ã£o de alteraÃ§Ã£o de e-mail â€” ReformAÃ­";
+                $assunto = "Confirmação de alteração de e-mail — ReformAí";
                 $corpo = "<div style='font-family:sans-serif;max-width:460px;padding:30px;border:1px solid #e2e8f0;border-radius:16px;margin:0 auto;background:#fff;'>
-                    <h2 style='color:#f97316;margin-top:0;'>AlteraÃ§Ã£o de e-mail solicitada</h2>
-                    <p style='color:#475569;font-size:14px;'>Recebemos uma solicitaÃ§Ã£o para alterar o e-mail da sua conta ReformAÃ­ para <strong>$novoEmail</strong>.</p>
-                    <p style='color:#475569;font-size:14px;'>Use o cÃ³digo abaixo para confirmar:</p>
+                    <h2 style='color:#f97316;margin-top:0;'>Alteração de e-mail solicitada</h2>
+                    <p style='color:#475569;font-size:14px;'>Recebemos uma solicitação para alterar o e-mail da sua conta ReformAí para <strong>$novoEmail</strong>.</p>
+                    <p style='color:#475569;font-size:14px;'>Use o código abaixo para confirmar:</p>
                     <div style='background:#fff7ed;border:1px dashed #fdba74;padding:18px;text-align:center;font-size:26px;font-weight:bold;color:#ea580c;letter-spacing:5px;margin:24px 0;border-radius:8px;'>$codigo</div>
-                    <p style='color:#94a3b8;font-size:12px;'>Se vocÃª nÃ£o solicitou esta alteraÃ§Ã£o, ignore este e-mail.</p></div>";
+                    <p style='color:#94a3b8;font-size:12px;'>Se você não solicitou esta alteração, ignore este e-mail.</p></div>";
 
                 $enviado = EmailService::enviar($usuario['email'] ?? '', $usuario['nome'] ?? '', $assunto, $corpo);
                 if ($enviado) {
-                    $mensagem = 'CÃ³digo de verificaÃ§Ã£o enviado para seu e-mail atual.';
+                    $mensagem = 'Código de verificação enviado para seu e-mail atual.';
                 } else {
                     $_SESSION['codigo_teste'] = $codigo;
-                    $erro = 'Falha ao enviar e-mail. CÃ³digo de teste: ' . $codigo;
+                    $erro = 'Falha ao enviar e-mail. Código de teste: ' . $codigo;
                 }
             }
         }
@@ -98,9 +98,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['acao'])) {
     if ($acao === 'confirmar_email') {
         $codigo = trim($_POST['codigo'] ?? '');
         if (!isset($_SESSION['codigo_verificacao']) || time() > $_SESSION['codigo_expira']) {
-            $erro = 'CÃ³digo expirado. Solicite um novo.';
+            $erro = 'Código expirado. Solicite um novo.';
         } elseif ($codigo !== $_SESSION['codigo_verificacao']) {
-            $erro = 'CÃ³digo incorreto.';
+            $erro = 'Código incorreto.';
         } else {
             $novoEmail = $_SESSION['novo_email'];
             $upd = $pdo->prepare("UPDATE usuarios SET email = :email WHERE id = :id");
@@ -147,7 +147,7 @@ $emailPendente = $_SESSION['novo_email'] ?? null;
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>ReformAÃ­ â€“ ConfiguraÃ§Ãµes</title>
+  <title>ReformAí – Configurações</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
   <script>tailwind.config={theme:{extend:{fontFamily:{sans:['Manrope','sans-serif']},colors:{orange:{DEFAULT:'#F97316',light:'#FFEDD5',dark:'#EA580C'},sidebar:'#16213E',card:'#1E2A3A',bg:'#F8F9FA'}}}}</script>
@@ -164,7 +164,7 @@ $emailPendente = $_SESSION['novo_email'] ?? null;
           <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/></svg>
         </button>
         <svg class="w-5 h-5 text-gray-300 hidden md:block" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12.22 2h-.44a2 2 0 00-2 2v.18a2 2 0 01-1 1.73l-.43.25a2 2 0 01-2 0l-.15-.08a2 2 0 00-2.73.73l-.22.38a2 2 0 00.73 2.73l.15.1a2 2 0 011 1.72v.51a2 2 0 01-1 1.74l-.15.09a2 2 0 00-.73 2.73l.22.38a2 2 0 002.73.73l.15-.08a2 2 0 012 0l.43.25a2 2 0 011 1.73V20a2 2 0 002 2h.44a2 2 0 002-2v-.18a2 2 0 011-1.73l.43-.25a2 2 0 012 0l.15.08a2 2 0 002.73-.73l.22-.39a2 2 0 00-.73-2.73l-.15-.08a2 2 0 01-1-1.74v-.5a2 2 0 011-1.74l.15-.09a2 2 0 00.73-2.73l-.22-.38a2 2 0 00-2.73-.73l-.15.08a2 2 0 01-2 0l-.43-.25a2 2 0 01-1-1.73V4a2 2 0 00-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
-        <span class="text-gray-800 font-bold text-lg tracking-tight">ConfiguraÃ§Ãµes</span>
+        <span class="text-gray-800 font-bold text-lg tracking-tight">Configurações</span>
       </div>
     </header>
 
@@ -201,7 +201,7 @@ $emailPendente = $_SESSION['novo_email'] ?? null;
             <div>
               <label for="nova_senha" class="block text-[13px] font-semibold text-gray-700 mb-1.5">Nova Senha</label>
               <input type="password" name="nova_senha" id="nova_senha" required minlength="8" class="w-full h-[48px] px-4 rounded-xl border border-gray-200 bg-white text-[14px] focus:outline-none focus:ring-2 focus:ring-orange-400 transition-all">
-              <p class="text-[11px] text-gray-400 mt-1.5">MÃ­nimo de 8 caracteres.</p>
+              <p class="text-[11px] text-gray-400 mt-1.5">Mínimo de 8 caracteres.</p>
             </div>
             <div>
               <label for="confirmar_senha" class="block text-[13px] font-semibold text-gray-700 mb-1.5">Confirmar Nova Senha</label>
@@ -227,13 +227,13 @@ $emailPendente = $_SESSION['novo_email'] ?? null;
 
             <?php if ($emailPendente): ?>
               <form method="POST" class="space-y-4 border-t border-gray-100 pt-5">
-                <p class="text-sm text-gray-500">CÃ³digo enviado para <strong><?= htmlspecialchars($emailPendente) ?></strong></p>
+                <p class="text-sm text-gray-500">Código enviado para <strong><?= htmlspecialchars($emailPendente) ?></strong></p>
                 <input type="hidden" name="acao" value="confirmar_email">
                 <div>
-                  <label for="codigo" class="block text-[13px] font-semibold text-gray-700 mb-1.5">CÃ³digo de VerificaÃ§Ã£o</label>
+                  <label for="codigo" class="block text-[13px] font-semibold text-gray-700 mb-1.5">Código de Verificação</label>
                   <input type="text" name="codigo" id="codigo" required maxlength="6" class="w-full h-[48px] px-4 rounded-xl border border-gray-200 bg-white text-[14px] tracking-[8px] text-center font-bold text-lg focus:outline-none focus:ring-2 focus:ring-orange-400 transition-all" placeholder="000000">
                 </div>
-                <button type="submit" class="w-full h-[48px] bg-orange hover:bg-orange-600 text-white font-bold text-sm rounded-xl transition-all shadow-sm">Confirmar CÃ³digo</button>
+                <button type="submit" class="w-full h-[48px] bg-orange hover:bg-orange-600 text-white font-bold text-sm rounded-xl transition-all shadow-sm">Confirmar Código</button>
               </form>
             <?php else: ?>
               <form method="POST" class="space-y-4">
@@ -242,7 +242,7 @@ $emailPendente = $_SESSION['novo_email'] ?? null;
                   <label for="novo_email" class="block text-[13px] font-semibold text-gray-700 mb-1.5">Novo E-mail</label>
                   <input type="email" name="novo_email" id="novo_email" required class="w-full h-[48px] px-4 rounded-xl border border-gray-200 bg-white text-[14px] focus:outline-none focus:ring-2 focus:ring-orange-400 transition-all" placeholder="novo@email.com">
                 </div>
-                <button type="submit" class="w-full h-[48px] bg-orange hover:bg-orange-600 text-white font-bold text-sm rounded-xl transition-all shadow-sm">Enviar CÃ³digo de VerificaÃ§Ã£o</button>
+                <button type="submit" class="w-full h-[48px] bg-orange hover:bg-orange-600 text-white font-bold text-sm rounded-xl transition-all shadow-sm">Enviar Código de Verificação</button>
               </form>
             <?php endif; ?>
           </div>
@@ -256,9 +256,9 @@ $emailPendente = $_SESSION['novo_email'] ?? null;
               <h2 class="text-sm font-bold text-red-600 uppercase tracking-wide">Zona de Perigo</h2>
             </div>
           </div>
-          <form method="POST" class="p-6 space-y-5" onsubmit="return confirm('Tem certeza? Esta aÃ§Ã£o Ã© irreversÃ­vel.')">
+          <form method="POST" class="p-6 space-y-5" onsubmit="return confirm('Tem certeza? Esta ação é irreversível.')">
             <input type="hidden" name="acao" value="excluir_conta">
-            <p class="text-sm text-gray-600 leading-relaxed">Ao excluir sua conta, todos os seus dados serÃ£o removidos permanentemente: serviÃ§os, avaliaÃ§Ãµes, mensagens e fotos.</p>
+            <p class="text-sm text-gray-600 leading-relaxed">Ao excluir sua conta, todos os seus dados serão removidos permanentemente: serviços, avaliações, mensagens e fotos.</p>
             <div>
               <label for="confirmacao" class="block text-[13px] font-semibold text-gray-700 mb-1.5">Digite <span class="font-bold text-red-500">EXCLUIR</span> para confirmar</label>
               <input type="text" name="confirmacao" id="confirmacao" required class="w-full h-[48px] px-4 rounded-xl border border-red-200 bg-white text-[14px] focus:outline-none focus:ring-2 focus:ring-red-400 transition-all" placeholder="EXCLUIR" autocomplete="off">
