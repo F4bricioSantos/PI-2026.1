@@ -1,6 +1,8 @@
 <?php
-require_once '../../backend/config/auth.php';
 require_once '../../backend/config/Conexao.php';
+require_once '../../backend/config/session_setup.php';
+setup_db_session($pdo);
+require_once '../../backend/config/auth.php';
 require_once '../../backend/services/EmailService.php';
 
 use Backend\Services\EmailService;
@@ -8,6 +10,7 @@ use Backend\Services\EmailService;
 $idUsuario = $_SESSION['usuario_id'];
 $mensagem = '';
 $erro = '';
+$usuario = [];
 
 try {
     $stmt = $pdo->prepare("SELECT nome, email, telefone, foto_perfil, tipo_usuario FROM usuarios WHERE id = :id");
@@ -56,7 +59,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['acao'])) {
 
         if (!filter_var($novoEmail, FILTER_VALIDATE_EMAIL)) {
             $erro = 'E-mail inválido.';
-        } elseif ($novoEmail === $usuario['email']) {
+        } elseif ($novoEmail === ($usuario['email'] ?? '')) {
             $erro = 'O novo e-mail é igual ao atual.';
         } else {
             $stmt = $pdo->prepare("SELECT id FROM usuarios WHERE email = :email AND id != :id");
@@ -76,7 +79,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['acao'])) {
                     <div style='background:#fff7ed;border:1px dashed #fdba74;padding:18px;text-align:center;font-size:26px;font-weight:bold;color:#ea580c;letter-spacing:5px;margin:24px 0;border-radius:8px;'>$codigo</div>
                     <p style='color:#94a3b8;font-size:12px;'>Código válido por 10 minutos.</p></div>";
 
-                $enviado = EmailService::enviar($novoEmail, $usuario['nome'], $assunto, $corpo);
+                $enviado = EmailService::enviar($novoEmail, $usuario['nome'] ?? '', $assunto, $corpo);
                 if ($enviado) {
                     $mensagem = 'Código de verificação enviado para ' . htmlspecialchars($novoEmail);
                 } else {
@@ -133,7 +136,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['acao'])) {
     }
 }
 
-$isAdmin = $usuario['tipo_usuario'] === 'admin';
+$isAdmin = ($usuario['tipo_usuario'] ?? null) === 'admin';
 $emailPendente = $_SESSION['novo_email'] ?? null;
 ?>
 <!DOCTYPE html>
@@ -154,7 +157,7 @@ $emailPendente = $_SESSION['novo_email'] ?? null;
   <script type="module">
     import { renderSidebar } from '../src/components/sidebar.js';
     renderSidebar('sidebar-container', 'configuracoes', <?= json_encode($temServico) ?>, <?= json_encode($isAdmin) ?>, {}, {
-      nome: "<?= htmlspecialchars($usuario['nome']) ?>",
+      nome: "<?= htmlspecialchars($usuario['nome'] ?? '') ?>",
       foto: "<?= htmlspecialchars($usuario['foto_perfil'] ?? '') ?>"
     });
   </script>
@@ -224,7 +227,7 @@ $emailPendente = $_SESSION['novo_email'] ?? null;
           <div class="p-6 space-y-5">
             <div>
               <span class="block text-[11px] font-bold text-gray-400 uppercase tracking-wide mb-1">E-mail Atual</span>
-              <span class="text-sm font-medium text-gray-800"><?= htmlspecialchars($usuario['email']) ?></span>
+              <span class="text-sm font-medium text-gray-800"><?= htmlspecialchars($usuario['email'] ?? '') ?></span>
             </div>
 
             <?php if ($emailPendente): ?>
