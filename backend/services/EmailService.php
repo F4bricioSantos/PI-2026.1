@@ -2,68 +2,54 @@
 
 namespace Backend\Services;
 
-use PHPMailer\PHPMailer\PHPMailer;
-use PHPMailer\PHPMailer\Exception;
-
-require_once __DIR__ . '/../libs/PHPMailer/src/Exception.php';
-require_once __DIR__ . '/../libs/PHPMailer/src/PHPMailer.php';
-require_once __DIR__ . '/../libs/PHPMailer/src/SMTP.php';
-
 class EmailService
 {
-    private static string $smtpHost = '';
-    private static int    $smtpPort = 587;
-    
-    private static string $smtpUser = '';
-    private static string $smtpPass = '';
-    
-    private static string $senderName  = 'ReformAí';
-
     public static string $lastError = '';
 
     public static function enviar(string $toEmail, string $toName, string $assunto, string $corpoHTML): bool
     {
-        self::$smtpHost = getenv('SMTP_HOST') ?: 'smtp.gmail.com';
-        self::$smtpPort = (int)(getenv('SMTP_PORT') ?: 587);
-        self::$smtpUser = getenv('SMTP_USER') ?: '';
-        self::$smtpPass = getenv('SMTP_PASS') ?: '';
-        self::$senderName = getenv('SMTP_FROM_NAME') ?: 'ReformAí';
+        $apiKey = getenv('BREVO_API_KEY') ?: '';
 
-        $mail = new PHPMailer(true);
-
-        try {
-            $mail->isSMTP();
-            $mail->SMTPAuth   = true;
-            $mail->Username   = self::$smtpUser;
-            $mail->Password   = self::$smtpPass;
-            $mail->SMTPSecure = 'ssl';
-            $mail->Host       = self::$smtpHost;
-            $mail->Port       = 465;
-            $mail->CharSet    = 'UTF-8';
-
-            $mail->Timeout    = 10;
-            $mail->SMTPOptions = [
-                'ssl' => [
-                    'verify_peer'       => false,
-                    'verify_peer_name'  => false,
-                    'allow_self_signed' => true,
-                ],
-            ];
-
-            $mail->setFrom(self::$smtpUser, self::$senderName);
-            $mail->addAddress($toEmail, $toName);
-
-            $mail->isHTML(true);
-            $mail->Subject = $assunto;
-            $mail->Body    = $corpoHTML;
-            $mail->AltBody = strip_tags($corpoHTML);
-
-            $mail->send();
-            return true; 
-        } catch (Exception $e) {
-            self::$lastError = $mail->ErrorInfo;
-            error_log("Erro PHPMailer: " . self::$lastError);
+        if (!$apiKey) {
+            self::$lastError = 'BREVO_API_KEY nao configurada';
             return false;
         }
+
+        $payload = json_encode([
+            'sender' => [
+                'email' => 'fabriciosantos43@aluno.unifapce.edu.br',
+                'name'  => 'ReformAí',
+            ],
+            'to' => [
+                ['email' => $toEmail, 'name' => $toName],
+            ],
+            'subject'     => $assunto,
+            'htmlContent' => $corpoHTML,
+        ]);
+
+        $ch = curl_init('https://api.brevo.com/v3/smtp/email');
+        curl_setopt_array($ch, [
+            CURLOPT_POST           => true,
+            CURLOPT_HTTPHEADER     => [
+                'api-key: ' . $apiKey,
+                'Content-Type: application/json',
+                'Accept: application/json',
+            ],
+            CURLOPT_POSTFIELDS     => $payload,
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_TIMEOUT        => 15,
+        ]);
+
+        $response  = curl_exec($ch);
+        $httpCode  = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $curlError = curl_error($ch);
+        curl_close($ch);
+
+        if ($httpCode >= 200 && $httpCode < 300) {
+            return true;
+        }
+
+        self::$lastError = $curlError ?: "HTTP $httpCode: " . substr($response, 0, 200);
+        return false;
     }
 }
