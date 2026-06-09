@@ -22,7 +22,6 @@ $stmtCheck->execute([':id' => $idUsuario]);
 $totalServicos = (int)$stmtCheck->fetchColumn();
 $erro = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    if (!isset($_POST['csrf_token']) || $_POST['csrf_token'] !== $_SESSION['csrf_token']) { $erro = 'Requisi��o inv�lida.'; } else {
     $titulo    = trim($_POST['titulo']    ?? '');
     $categoria = trim($_POST['categoria'] ?? '');
     $valor     = $_POST['valor']          ?? '';
@@ -60,10 +59,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         } catch (Exception $e) {
             $erro = 'Erro técnico: ' . $e->getMessage();
-        }
+    }
     }
 }
-}
+
 ?>
 <!DOCTYPE html>
 <html lang="pt-BR">
@@ -153,7 +152,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
           </div>
         <?php endif; ?>
         <form method="POST" action="" class="space-y-8" onsubmit="const btn=this.querySelector('button[type=submit]'); btn.disabled=true; btn.innerHTML='Salvando...';">
-          <?= csrf_field() ?>
           <div class="space-y-2">
             <label class="text-sm font-bold text-slate-700 ml-1">Título do Serviço</label>
             <input type="text" name="titulo" required
