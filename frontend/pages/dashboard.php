@@ -231,7 +231,7 @@ $categoriasGerais = ["Reformas", "Pintura e Textura", "Elétrica", "Hidráulica"
                     </a>
                     <div>
                       <h4 class="text-sm font-bold text-gray-900 leading-tight"><?= htmlspecialchars($s['prestador_nome']) ?></h4>
-                      <p class="text-[10px] text-gray-400 font-medium"><?= htmlspecialchars(explode(' - ', $s['cidade'])[0]) ?></p>
+                      <p class="text-[10px] text-gray-400 font-medium"><?= htmlspecialchars(explode(' - ', $s['cidade'] ?? '')[0]) ?></p>
                     </div>
                   </div>
                   
