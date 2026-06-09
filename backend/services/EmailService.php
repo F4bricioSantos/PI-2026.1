@@ -41,6 +41,7 @@ class EmailService
             $mail->Port       = 465;
             $mail->CharSet    = 'UTF-8';
 
+            $mail->Timeout    = 10;
             $mail->SMTPOptions = [
                 'ssl' => [
                     'verify_peer'       => false,
