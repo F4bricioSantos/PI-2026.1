@@ -75,16 +75,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['acao'])) {
                 $_SESSION['codigo_verificacao'] = $codigo;
                 $_SESSION['codigo_expira'] = time() + 600;
 
-                $assunto = "Confirmação de novo e-mail — ReformAí";
+                $assunto = "Confirmação de alteração de e-mail — ReformAí";
                 $corpo = "<div style='font-family:sans-serif;max-width:460px;padding:30px;border:1px solid #e2e8f0;border-radius:16px;margin:0 auto;background:#fff;'>
-                    <h2 style='color:#f97316;margin-top:0;'>Confirme seu novo e-mail</h2>
-                    <p style='color:#475569;font-size:14px;'>Use o código abaixo para confirmar o e-mail <strong>$novoEmail</strong> na sua conta ReformAí:</p>
+                    <h2 style='color:#f97316;margin-top:0;'>Alteração de e-mail solicitada</h2>
+                    <p style='color:#475569;font-size:14px;'>Recebemos uma solicitação para alterar o e-mail da sua conta ReformAí para <strong>$novoEmail</strong>.</p>
+                    <p style='color:#475569;font-size:14px;'>Use o código abaixo para confirmar:</p>
                     <div style='background:#fff7ed;border:1px dashed #fdba74;padding:18px;text-align:center;font-size:26px;font-weight:bold;color:#ea580c;letter-spacing:5px;margin:24px 0;border-radius:8px;'>$codigo</div>
-                    <p style='color:#94a3b8;font-size:12px;'>Código válido por 10 minutos.</p></div>";
+                    <p style='color:#94a3b8;font-size:12px;'>Se você não solicitou esta alteração, ignore este e-mail.</p></div>";
 
-                $enviado = EmailService::enviar($novoEmail, $usuario['nome'] ?? '', $assunto, $corpo);
+                $enviado = EmailService::enviar($usuario['email'] ?? '', $usuario['nome'] ?? '', $assunto, $corpo);
                 if ($enviado) {
-                    $mensagem = 'Código de verificação enviado para ' . htmlspecialchars($novoEmail);
+                    $mensagem = 'Código de verificação enviado para seu e-mail atual.';
                 } else {
                     $_SESSION['codigo_teste'] = $codigo;
                     $erro = 'Falha ao enviar e-mail. Código de teste: ' . $codigo;
