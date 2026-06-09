@@ -315,38 +315,36 @@ try {
     </div>
   </main>
   <script>
-    async function toggleFavorito(servicoId) {
+    function setFavEstadoUI(favoritado) {
       const btn = document.getElementById('btn-favorito');
       const svg = document.getElementById('svg-favorito');
       const txt = document.getElementById('txt-favorito');
+      if (favoritado) {
+        btn.className = "w-full border font-bold py-3 rounded-xl text-xs flex items-center justify-center gap-2 transition-all shadow-sm bg-orange/10 border-orange/20 text-orange";
+        svg.setAttribute('class', 'w-4 h-4 fill-orange text-orange');
+        txt.innerText = "SALVO";
+      } else {
+        btn.className = "w-full border font-bold py-3 rounded-xl text-xs flex items-center justify-center gap-2 transition-all shadow-sm bg-white border-gray-200 hover:border-orange/20 text-gray-700 hover:bg-orange/5 hover:text-orange";
+        svg.setAttribute('class', 'w-4 h-4 fill-none text-current');
+        txt.innerText = "SALVAR NOS FAVORITOS";
+      }
+    }
+
+    async function toggleFavorito(servicoId) {
+      const estaFav = document.getElementById('btn-favorito').classList.contains('bg-orange/10');
+      const novoEstado = !estaFav;
+      setFavEstadoUI(novoEstado);
       
       try {
         const response = await fetch('../../backend/controllers/FavoritoController.php?acao=toggle', {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ servico_id: servicoId })
         });
-        
         const result = await response.json();
-        
-        if (result.sucesso) {
-          if (result.favoritado) {
-            btn.className = "w-full border font-bold py-3 rounded-xl text-xs flex items-center justify-center gap-2 transition-all shadow-sm bg-orange/10 border-orange/20 text-orange";
-            svg.setAttribute('class', 'w-4 h-4 fill-orange text-orange');
-            txt.innerText = "SALVO";
-          } else {
-            btn.className = "w-full border font-bold py-3 rounded-xl text-xs flex items-center justify-center gap-2 transition-all shadow-sm bg-white border-gray-200 hover:border-orange/20 text-gray-700 hover:bg-orange/5 hover:text-orange";
-            svg.setAttribute('class', 'w-4 h-4 fill-none text-current');
-            txt.innerText = "SALVAR NOS FAVORITOS";
-          }
-        } else {
-          alert(result.erro || 'Erro ao atualizar favorito.');
-        }
+        if (!result.sucesso) setFavEstadoUI(estaFav);
       } catch (error) {
-        console.error('Erro ao favoritar:', error);
-        alert('Erro de conexão com o servidor.');
+        setFavEstadoUI(estaFav);
       }
     }
   </script>

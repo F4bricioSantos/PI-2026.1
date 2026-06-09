@@ -299,64 +299,62 @@ $categoriasGerais = ["Reformas", "Pintura e Textura", "Elétrica", "Hidráulica"
         }
     });
 
+    function toggleFavoritoUi(servicoId, favoritado) {
+      const allButtons = document.querySelectorAll(`button[data-service-id="${servicoId}"]`);
+      allButtons.forEach(button => {
+        const svg = button.querySelector('svg');
+        if (favoritado) {
+          button.className = "fav-btn p-2.5 rounded-xl border bg-orange/10 border-orange/20 text-orange transition-all shadow-sm flex items-center justify-center";
+          svg.setAttribute('class', 'w-4 h-4 fill-orange');
+          button.setAttribute('title', 'Remover dos Favoritos');
+        } else {
+          button.className = "fav-btn p-2.5 rounded-xl border bg-gray-50 border-gray-100 text-gray-400 hover:text-orange hover:border-orange/20 transition-all shadow-sm flex items-center justify-center";
+          svg.setAttribute('class', 'w-4 h-4 fill-none');
+          button.setAttribute('title', 'Salvar nos Favoritos');
+        }
+      });
+    }
+
     async function toggleFavorito(event, servicoId) {
         event.preventDefault();
         event.stopPropagation();
         
         const btn = event.currentTarget;
-        const icon = btn.querySelector('svg');
+        const estaFav = btn.classList.contains('bg-orange/10');
+        const novoEstado = !estaFav;
+
+        toggleFavoritoUi(servicoId, novoEstado);
         
         try {
             const response = await fetch('../../backend/controllers/FavoritoController.php?acao=toggle', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ servico_id: servicoId })
             });
             
             const result = await response.json();
             
-            if (result.sucesso) {
-                // Sincroniza todos os botões com o mesmo servicoId na tela
-                const allButtons = document.querySelectorAll(`button[data-service-id="${servicoId}"]`);
-                allButtons.forEach(button => {
-                    const svg = button.querySelector('svg');
-                    if (result.favoritado) {
-                        button.className = "fav-btn p-2.5 rounded-xl border bg-orange/10 border-orange/20 text-orange transition-all shadow-sm flex items-center justify-center";
-                        svg.setAttribute('class', 'w-4 h-4 fill-orange');
-                        button.setAttribute('title', 'Remover dos Favoritos');
-                    } else {
-                        button.className = "fav-btn p-2.5 rounded-xl border bg-gray-50 border-gray-100 text-gray-400 hover:text-orange hover:border-orange/20 transition-all shadow-sm flex items-center justify-center";
-                        svg.setAttribute('class', 'w-4 h-4 fill-none');
-                        button.setAttribute('title', 'Salvar nos Favoritos');
-                    }
-                });
+            if (!result.sucesso) {
+                toggleFavoritoUi(servicoId, estaFav);
+                return;
+            }
 
-                // Se a categoria ativa for "Favoritos" e o usuário desfavoritou, removemos o card correspondente com uma animação elegante
-                const urlParams = new URLSearchParams(window.location.search);
-                if (urlParams.get('categoria') === 'Favoritos' && !result.favoritado) {
-                    const card = btn.closest('.bg-white.rounded-2xl');
-                    if (card) {
-                        card.style.transition = 'all 0.3s ease';
-                        card.style.opacity = '0';
-                        card.style.transform = 'scale(0.95)';
-                        setTimeout(() => {
-                            card.remove();
-                            // Se não sobrar nenhum card, recarrega para exibir o aviso de lista vazia
-                            const grid = document.querySelector('.grid.grid-cols-1');
-                            if (grid && grid.children.length === 0) {
-                                window.location.reload();
-                            }
-                        }, 300);
-                    }
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('categoria') === 'Favoritos' && !result.favoritado) {
+                const card = btn.closest('.bg-white.rounded-2xl');
+                if (card) {
+                    card.style.transition = 'all 0.3s ease';
+                    card.style.opacity = '0';
+                    card.style.transform = 'scale(0.95)';
+                    setTimeout(() => {
+                        card.remove();
+                        const grid = document.querySelector('.grid.grid-cols-1');
+                        if (grid && grid.children.length === 0) window.location.reload();
+                    }, 300);
                 }
-            } else {
-                alert(result.erro || 'Erro ao atualizar favorito.');
             }
         } catch (error) {
-            console.error('Erro ao favoritar:', error);
-            alert('Erro de conexão com o servidor.');
+            toggleFavoritoUi(servicoId, estaFav);
         }
     }
   </script>
