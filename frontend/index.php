@@ -11,10 +11,10 @@
   </head>
   <body class="font-sans text-gray-900 bg-white antialiased min-h-screen flex flex-col items-center">
     
-    <div id="app" class="w-full max-w-[1440px] flex flex-col px-4 sm:px-6 md:px-8 lg:px-12">
+    <div id="app" class="w-full max-w-[1440px] flex flex-col">
       
       <!-- Navbar -->
-      <nav id="navbar" class="sticky top-0 z-50 w-full flex items-center justify-between py-4 md:py-5 px-4 mb-4 border-b border-gray-100/50 bg-white/80 backdrop-blur-md transition-all duration-300">
+      <nav id="navbar" class="sticky top-0 z-50 w-full flex items-center justify-between py-4 md:py-5 px-4 md:px-8 lg:px-12 mb-4 border-b border-gray-100/50 bg-white/80 backdrop-blur-md transition-all duration-300">
         <a href="#" class="text-2xl font-bold text-orange-500 hover:opacity-80 transition-opacity">ReformAí</a>
         <div class="hidden md:flex space-x-8 font-medium text-gray-500 text-[15px]">
           <a href="#inicio" class="nav-link hover:text-slate-900 transition-all border-b-2 border-transparent">Início</a>
@@ -28,9 +28,13 @@
             Cadastre-se grátis
           </a>
         </div>
-        <button id="mobile-menu-btn" class="md:hidden text-gray-600 hover:text-gray-900 focus:outline-none" onclick="toggleMobileMenu()">
-          <i data-lucide="menu" class="w-6 h-6"></i>
-        </button>
+        <div class="flex md:hidden items-center gap-2">
+          <a href="/login" class="text-[13px] font-medium text-gray-500 hover:text-gray-900 transition-colors px-2 py-1">Entrar</a>
+          <a href="/cadastro?fluxo=cliente" class="text-[13px] font-semibold px-3 py-1.5 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors">Cadastrar</a>
+          <button id="mobile-menu-btn" class="text-gray-600 hover:text-gray-900 focus:outline-none ml-1" onclick="toggleMobileMenu()">
+            <i data-lucide="menu" class="w-6 h-6"></i>
+          </button>
+        </div>
       </nav>
 
       <!-- Mobile menu -->
@@ -129,7 +133,7 @@
         </div>
 
         <!-- Stats -->
-        <div class="mt-20 sm:mt-24 mb-20 w-full flex flex-wrap items-center justify-center gap-10 sm:gap-16 md:gap-[120px]">
+        <div class="mt-20 sm:mt-24 mb-20 w-full flex flex-wrap items-center justify-center gap-10 sm:gap-16 md:gap-[120px] px-4">
           <div class="text-center">
             <p class="text-[28px] font-bold text-gray-500 leading-none mb-1.5">+10k</p>
             <p class="text-[11px] font-bold text-gray-400 uppercase tracking-[0.15em] whitespace-nowrap">Profissionais</p>
@@ -232,7 +236,7 @@
         </section>
 
         <!-- Avaliações -->
-        <section id="avaliacoes" class="relative w-full mb-32 flex flex-col items-center pt-24 -mt-24">
+        <section id="avaliacoes" class="relative w-full mb-32 flex flex-col items-center pt-24 -mt-24 px-4">
           <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[400px] bg-amber-400/10 rounded-full blur-[120px] -z-10 pointer-events-none"></div>
           <div class="mb-4 inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-50 text-amber-600 text-[13px] font-semibold border border-amber-100/50">Experiências Reais</div>
           <h2 class="text-[32px] md:text-[44px] font-extrabold text-slate-900 tracking-tight mb-16 text-center">

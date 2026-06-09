@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/../config/session_setup.php';
 require_once '../config/auth.php';
 require_once '../config/Conexao.php';
 require_once '../models/Contrato.php';
