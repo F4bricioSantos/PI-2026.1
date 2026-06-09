@@ -157,8 +157,8 @@ $fotoExibicao = ($dados['foto_perfil'] == 'default.png' || empty($dados['foto_pe
       </div>
     </header>
 
-    <div class="flex-1 overflow-y-auto px-4 md:px-8 py-6 md:py-8">
-      <form method="POST" enctype="multipart/form-data" class="grid grid-cols-1 lg:grid-cols-12 gap-8 max-w-6xl mx-auto">
+    <div class="flex-1 overflow-y-auto px-4 md:px-8 py-6 md:py-8 custom-scroll">
+      <form method="POST" enctype="multipart/form-data" class="grid grid-cols-1 lg:grid-cols-12 gap-6 md:gap-8 max-w-6xl mx-auto">
         
         <div class="lg:col-span-4">
           <div class="bg-white rounded-3xl border border-gray-100 shadow-sm p-8 text-center">

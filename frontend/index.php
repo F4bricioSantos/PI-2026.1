@@ -28,10 +28,32 @@
             Cadastre-se grátis
           </a>
         </div>
-        <button class="md:hidden text-gray-600 hover:text-gray-900 focus:outline-none">
+        <button id="mobile-menu-btn" class="md:hidden text-gray-600 hover:text-gray-900 focus:outline-none" onclick="toggleMobileMenu()">
           <i data-lucide="menu" class="w-6 h-6"></i>
         </button>
       </nav>
+
+      <!-- Mobile menu -->
+      <div id="mobile-menu" class="fixed inset-0 z-40 hidden md:hidden">
+        <div class="absolute inset-0 bg-black/40 backdrop-blur-sm" onclick="toggleMobileMenu()"></div>
+        <div class="absolute top-0 right-0 w-72 h-full bg-white shadow-2xl p-6 flex flex-col gap-6">
+          <div class="flex justify-end">
+            <button onclick="toggleMobileMenu()" class="text-gray-400 hover:text-gray-700 p-2">
+              <i data-lucide="x" class="w-6 h-6"></i>
+            </button>
+          </div>
+          <div class="flex flex-col gap-3">
+            <a href="#inicio" onclick="toggleMobileMenu()" class="text-lg font-medium text-gray-700 hover:text-orange-500 transition-colors py-2 border-b border-gray-50">Início</a>
+            <a href="#como-funciona" onclick="toggleMobileMenu()" class="text-lg font-medium text-gray-700 hover:text-orange-500 transition-colors py-2 border-b border-gray-50">Como funciona</a>
+            <a href="#categorias" onclick="toggleMobileMenu()" class="text-lg font-medium text-gray-700 hover:text-orange-500 transition-colors py-2 border-b border-gray-50">Categorias</a>
+            <a href="#avaliacoes" onclick="toggleMobileMenu()" class="text-lg font-medium text-gray-700 hover:text-orange-500 transition-colors py-2 border-b border-gray-50">Avaliações</a>
+          </div>
+          <div class="mt-auto flex flex-col gap-3 pt-6 border-t border-gray-100">
+            <a href="/login" onclick="toggleMobileMenu()" class="w-full text-center font-medium text-gray-700 hover:text-gray-900 py-3 rounded-xl border border-gray-200 transition-colors">Entrar</a>
+            <a href="/cadastro?fluxo=cliente" onclick="toggleMobileMenu()" class="w-full text-center px-5 py-3 bg-orange-500 text-white font-medium rounded-xl hover:bg-orange-600 transition-colors">Cadastre-se grátis</a>
+          </div>
+        </div>
+      </div>
 
       <main class="flex-1 flex flex-col items-center mt-6 md:mt-12 w-full">
         
@@ -310,6 +332,12 @@
     
     <script src="https://unpkg.com/lucide@latest"></script>
     <script>
+      function toggleMobileMenu() {
+        const menu = document.getElementById('mobile-menu');
+        menu.classList.toggle('hidden');
+        document.body.classList.toggle('overflow-hidden', !menu.classList.contains('hidden'));
+      }
+
       lucide.createIcons();
       // Tabs Como Funciona
       document.getElementById('tab-cliente').addEventListener('click', () => {
