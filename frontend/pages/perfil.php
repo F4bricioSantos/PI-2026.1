@@ -23,7 +23,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $nome      = filter_input(INPUT_POST, 'nome', FILTER_SANITIZE_SPECIAL_CHARS);
     $cidade    = filter_input(INPUT_POST, 'cidade', FILTER_SANITIZE_SPECIAL_CHARS);
     $telefone  = filter_input(INPUT_POST, 'telefone', FILTER_SANITIZE_SPECIAL_CHARS);
-    $emailNovo = filter_input(INPUT_POST, 'email', FILTER_VALIDATE_EMAIL);
 
     try {
         $nomeFotoNova = $dadosBD['foto_perfil'];
@@ -49,11 +48,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             ':foto'     => $nomeFotoNova, 
             ':id'       => $idUsuario
         ];
-
-        if ($emailNovo !== $dadosBD['email']) {
-            $campos[] = "email = :email";
-            $params[':email'] = $emailNovo;
-        }
 
         $sqlUser = "UPDATE usuarios SET " . implode(', ', $campos) . " WHERE id = :id";
         $pdo->prepare($sqlUser)->execute($params);
@@ -219,7 +213,11 @@ $fotoExibicao = ($dados['foto_perfil'] == 'default.png' || empty($dados['foto_pe
 
               <div class="space-y-1.5 pt-4 pb-4">
                 <label class="text-xs font-bold text-gray-400 uppercase ml-1">E-mail</label>
-                <input type="email" name="email" value="<?= htmlspecialchars($dados['email'] ?? '') ?>" class="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:border-orange outline-none transition-all">
+                <div class="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm text-gray-600 flex items-center gap-2">
+                  <svg class="w-4 h-4 text-gray-300 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+                  <span><?= htmlspecialchars($dados['email'] ?? '') ?></span>
+                </div>
+                <p class="text-[11px] text-gray-400 ml-1">Para alterar, vá em <a href="/configuracoes" class="text-orange font-semibold hover:underline">Configurações</a></p>
               </div>
 
               <div class="pt-8 border-t border-gray-100">
