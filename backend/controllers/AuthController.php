@@ -148,7 +148,7 @@ function login(PDO $pdo): void
     $ok   = $user->login($email, $senha);
     if (!$ok)
         responder(200, ['sucesso' => false, 'erro_global' => true, 'mensagem' => 'E-mail ou senha invÃ¡lidos.']);
-    // Regenera ID da sessão após login para prevenir session fixation
+    // Regenera ID da sessÃ£o apÃ³s login para prevenir session fixation
     session_regenerate_id(true);
     responder(200, [
         'sucesso'  => true,
@@ -252,4 +252,3 @@ function responder(int $status, array $dados): never
     echo json_encode($dados);
     exit;
 }
-

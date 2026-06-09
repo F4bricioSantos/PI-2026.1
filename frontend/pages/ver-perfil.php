@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 require_once '../../backend/config/auth.php';
 require_once '../../backend/config/Conexao.php';
 // Certifique-se de que o modelo User estÃ¡ incluÃ­do

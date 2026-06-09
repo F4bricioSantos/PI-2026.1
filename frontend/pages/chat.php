@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 require_once '../../backend/config/auth.php';
 require_once '../../backend/config/Conexao.php';
 require_once '../../backend/models/User.php';

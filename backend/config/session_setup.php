@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 function setup_db_session(?PDO $pdo = null): void {
     if ($pdo === null) {
         $host   = getenv('DB_HOST');
@@ -35,6 +35,15 @@ function setup_db_session(?PDO $pdo = null): void {
     ini_set('session.gc_probability', 1);
     ini_set('session.gc_divisor', 100);
 
+    $isSecure = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') || ($_SERVER['SERVER_PORT'] ?? 80) == 443;
+    session_set_cookie_params([
+        'lifetime' => $maxlifetime,
+        'path' => '/',
+        'secure' => $isSecure,
+        'httponly' => true,
+        'samesite' => 'Lax',
+    ]);
+
     session_set_save_handler(
         function () use ($pdo) { return true; },
         function () use ($pdo) { $pdo = null; return true; },
@@ -60,12 +69,4 @@ function setup_db_session(?PDO $pdo = null): void {
             return $stmt->rowCount();
         }
     );
-    $isSecure = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') || ($_SERVER['SERVER_PORT'] ?? 80) == 443;
-    session_set_cookie_params([
-        'lifetime' => $maxlifetime,
-        'path' => '/',
-        'secure' => $isSecure,
-        'httponly' => true,
-        'samesite' => 'Lax',
-    ]);
 }

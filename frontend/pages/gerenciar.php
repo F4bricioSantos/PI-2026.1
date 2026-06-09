@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 require_once '../../backend/config/Conexao.php';
 require_once '../../backend/config/session_setup.php';
 setup_db_session($pdo);
