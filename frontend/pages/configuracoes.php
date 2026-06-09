@@ -14,7 +14,7 @@ $usuario = [];
 $temServico = false;
 
 try {
-    $stmt = $pdo->prepare("SELECT nome, email, telefone, foto_perfil, tipo_usuario FROM usuarios WHERE id = :id");
+    $stmt = $pdo->prepare("SELECT nome, email, telefone, foto_perfil FROM usuarios WHERE id = :id");
     $stmt->execute([':id' => $idUsuario]);
     $usuario = $stmt->fetch();
 
@@ -24,6 +24,8 @@ try {
 } catch (Exception $e) {
     $erro = "Erro ao carregar dados.";
 }
+
+$isAdmin = ($usuario['tipo_usuario'] ?? false) === 'admin';
 
 // Alterar senha
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['acao'])) {
@@ -137,7 +139,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['acao'])) {
     }
 }
 
-$isAdmin = ($usuario['tipo_usuario'] ?? null) === 'admin';
 $emailPendente = $_SESSION['novo_email'] ?? null;
 ?>
 <!DOCTYPE html>
