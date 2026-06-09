@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 require_once '../../backend/config/auth.php';
 require_once '../../backend/config/Conexao.php';
 
@@ -15,10 +15,10 @@ try {
     $stmtCheck->execute([':id' => $idUsuario]);
     $temServico = $stmtCheck->fetchColumn() > 0;
 } catch (Exception $e) {
-    $mensagem = "Erro de conexão: " . $e->getMessage();
+    $mensagem = "Erro de conexÃ£o: " . $e->getMessage();
 }
 
-// 2. PROCESSAMENTO DO FORMULÁRIO
+// 2. PROCESSAMENTO DO FORMULÃRIO
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $nome      = filter_input(INPUT_POST, 'nome', FILTER_SANITIZE_SPECIAL_CHARS);
     $cidade    = filter_input(INPUT_POST, 'cidade', FILTER_SANITIZE_SPECIAL_CHARS);
@@ -66,7 +66,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         $pdo->commit();
 
-        // Fluxo condicional: se for novo cadastro, redireciona para o próximo passo
+        // Fluxo condicional: se for novo cadastro, redireciona para o prÃ³ximo passo
         if (isset($_GET['new']) && $_GET['new'] === '1') {
             $fluxo = $_GET['fluxo'] ?? 'cliente';
             $destino = ($fluxo === 'prestador') ? 'novo-servico.php' : 'dashboard.php';
@@ -78,7 +78,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     } catch (Exception $e) {
         if ($pdo->inTransaction()) $pdo->rollBack();
-        $mensagem = (strpos($e->getMessage(), 'usuarios_email_key') !== false) ? "O e-mail informado já está em uso." : "Erro técnico: " . $e->getMessage();
+        $mensagem = (strpos($e->getMessage(), 'usuarios_email_key') !== false) ? "O e-mail informado jÃ¡ estÃ¡ em uso." : "Erro tÃ©cnico: " . $e->getMessage();
     }
 }
 
@@ -97,13 +97,14 @@ $fotoExibicao = ($dados['foto_perfil'] == 'default.png' || empty($dados['foto_pe
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8" />
-  <title>ReformAí – Meu Perfil</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ReformAÃ­ â€“ Meu Perfil</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
   <script src="https://unpkg.com/@phosphor-icons/web"></script>
   <script>
     tailwind.config = {
-      theme: { extend: { fontFamily: { sans: ['Manrope', 'sans-serif'] }, colors: { orange: '#F97316', sidebar: '#16213E', bg: '#F8F9FA' } } }
+      theme: { extend: { fontFamily: { sans: ['Manrope', 'sans-serif'] }, colors:{orange:{DEFAULT:'#F97316',light:'#FFEDD5',dark:'#EA580C'},sidebar:'#16213E',card:'#1E2A3A',bg:'#F8F9FA'} } }
     }
   </script>
 </head>
@@ -114,14 +115,14 @@ $fotoExibicao = ($dados['foto_perfil'] == 'default.png' || empty($dados['foto_pe
   <script type="module">
     import { renderSidebar } from '/frontend/src/components/sidebar.js';
     
-    // No perfil.php a variável que você usou no topo é $temServico
+    // No perfil.php a variÃ¡vel que vocÃª usou no topo Ã© $temServico
     const isPro = <?= ($temServico) ? 'true' : 'false' ?>;
     const isAdmin = <?= (isset($dados['tipo_usuario']) && $dados['tipo_usuario'] === 'admin') ? 'true' : 'false' ?>;
     
-    // Renderiza a sidebar - a lógica interna agora cuida da marcação ativa
+    // Renderiza a sidebar - a lÃ³gica interna agora cuida da marcaÃ§Ã£o ativa
     renderSidebar('sidebar-container', 'perfil', isPro, isAdmin, {}, {
       nome: "<?= htmlspecialchars($dados['nome']) ?>",
-      foto: "<?= $dados['foto_perfil'] ?>",
+      foto: "<?= htmlspecialchars($dados['foto_perfil'] ?? '') ?>",
       id: "<?= $idUsuario ?>"
     });
 </script> 
@@ -134,13 +135,13 @@ $fotoExibicao = ($dados['foto_perfil'] == 'default.png' || empty($dados['foto_pe
         <button onclick="history.back()" class="hover:text-gray-600 p-1 md:-ml-1 rounded-lg hover:bg-gray-100 hidden md:block">
           <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
         </button>
-        <a href="./dashboard.php" class="text-gray-400 text-sm hover:text-orange transition-colors">Início</a>
+        <a href="./dashboard.php" class="text-gray-400 text-sm hover:text-orange transition-colors">InÃ­cio</a>
         <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
         <span class="text-gray-800 font-bold text-lg tracking-tight">Meu Perfil</span>
       </div>
       <div class="flex items-center gap-3">
         <?php if(isset($_GET['sucesso']) && empty($mensagem)): ?>
-            <span class="text-xs font-bold text-emerald-600 bg-emerald-50 px-3 py-1 rounded-lg border border-emerald-100">Alterações salvas!</span>
+            <span class="text-xs font-bold text-emerald-600 bg-emerald-50 px-3 py-1 rounded-lg border border-emerald-100">AlteraÃ§Ãµes salvas!</span>
         <?php endif; ?>
         <?php if(isset($_GET['new']) && $_GET['new'] === '1'): ?>
             <span class="text-xs font-bold text-orange bg-orange-50 px-3 py-1 rounded-lg border border-orange-100 italic">Bem-vindo! Complete seu perfil para continuar.</span>
@@ -179,14 +180,14 @@ $fotoExibicao = ($dados['foto_perfil'] == 'default.png' || empty($dados['foto_pe
 
             <h2 class="text-xl font-extrabold text-slate-900"><?= htmlspecialchars($dados['nome'] ?? '') ?></h2>
             <p class="text-gray-400 text-[10px] font-bold uppercase tracking-widest mt-1">
-                <i class="ph ph-map-pin"></i> <?= htmlspecialchars($dados['cidade'] ?: 'Não informada') ?>
+                <i class="ph ph-map-pin"></i> <?= htmlspecialchars($dados['cidade'] ?: 'NÃ£o informada') ?>
             </p>
           </div>
         </div>
 
         <div class="lg:col-span-8">
           <div class="bg-white rounded-3xl border border-gray-100 shadow-sm p-8">
-              <h3 class="text-lg font-bold text-slate-900 mb-6">Informações Pessoais</h3>
+              <h3 class="text-lg font-bold text-slate-900 mb-6">InformaÃ§Ãµes Pessoais</h3>
               
               <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div class="space-y-1.5">
@@ -217,7 +218,7 @@ $fotoExibicao = ($dados['foto_perfil'] == 'default.png' || empty($dados['foto_pe
                   <svg class="w-4 h-4 text-gray-300 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
                   <span><?= htmlspecialchars($dados['email'] ?? '') ?></span>
                 </div>
-                <p class="text-[11px] text-gray-400 ml-1">Para alterar, vá em <a href="/configuracoes" class="text-orange font-semibold hover:underline">Configurações</a></p>
+                <p class="text-[11px] text-gray-400 ml-1">Para alterar, vÃ¡ em <a href="/configuracoes" class="text-orange font-semibold hover:underline">ConfiguraÃ§Ãµes</a></p>
               </div>
 
               <div class="pt-8 border-t border-gray-100">
@@ -229,7 +230,7 @@ $fotoExibicao = ($dados['foto_perfil'] == 'default.png' || empty($dados['foto_pe
                             <input type="text" name="nicho" value="<?= htmlspecialchars($dados['nicho'] ?? '') ?>" class="w-full bg-orange-50/30 border border-orange-100 rounded-xl px-4 py-3 text-sm outline-none">
                         </div>
                         <div class="space-y-1.5">
-                            <label class="text-xs font-bold text-gray-400 uppercase ml-1">Experiência (anos)</label>
+                            <label class="text-xs font-bold text-gray-400 uppercase ml-1">ExperiÃªncia (anos)</label>
                             <input type="number" name="experiencia" value="<?= $dados['experiencia_anos'] ?? 0 ?>" class="w-full bg-orange-50/30 border border-orange-100 rounded-xl px-4 py-3 text-sm outline-none">
                         </div>
                     </div>
@@ -239,14 +240,14 @@ $fotoExibicao = ($dados['foto_perfil'] == 'default.png' || empty($dados['foto_pe
                     </div>
                 <?php else: ?>
                     <div class="p-6 bg-blue-50 rounded-3xl border border-blue-100 flex items-center justify-between">
-                        <p class="text-xs text-blue-700 font-medium max-w-[70%]">Quer trabalhar com a ReformAí? Comece cadastrando seu primeiro serviço para liberar as ferramentas de prestador!</p>
-                        <a href="novo-servico.php" class="bg-blue-600 text-white text-[10px] font-bold px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">CADASTRAR SERVIÇO</a>
+                        <p class="text-xs text-blue-700 font-medium max-w-[70%]">Quer trabalhar com a ReformAÃ­? Comece cadastrando seu primeiro serviÃ§o para liberar as ferramentas de prestador!</p>
+                        <a href="novo-servico.php" class="bg-blue-600 text-white text-[10px] font-bold px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">CADASTRAR SERVIÃ‡O</a>
                     </div>
                 <?php endif; ?>
               </div>
 
               <div class="flex justify-end pt-8">
-                <button type="submit" class="w-full md:w-auto bg-orange hover:bg-orange-600 text-white px-12 py-4 md:py-3.5 rounded-xl font-black text-sm shadow-lg transition-transform active:scale-95">SALVAR ALTERAÇÕES</button>
+                <button type="submit" class="w-full md:w-auto bg-orange hover:bg-orange-600 text-white px-12 py-4 md:py-3.5 rounded-xl font-black text-sm shadow-lg transition-transform active:scale-95">SALVAR ALTERAÃ‡Ã•ES</button>
               </div>
           </div>
         </div>
@@ -309,3 +310,5 @@ $fotoExibicao = ($dados['foto_perfil'] == 'default.png' || empty($dados['foto_pe
   </script>
 </body>
 </html>
+
+

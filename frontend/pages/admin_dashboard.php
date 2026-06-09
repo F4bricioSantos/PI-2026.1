@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 if (session_status() === PHP_SESSION_NONE) session_start();
 require_once '../../backend/config/auth.php';
 require_once '../../backend/config/Conexao.php';
@@ -18,7 +18,7 @@ try {
     $totalServicos = $pdo->query("SELECT COUNT(*) FROM servicos")->fetchColumn();
     $totalContratos = $pdo->query("SELECT COUNT(*) FROM contratos")->fetchColumn();
     $totalAvaliacoes = $pdo->query("SELECT COUNT(*) FROM avaliacoes")->fetchColumn();
-    $novosHoje = $pdo->query("SELECT COUNT(*) FROM usuarios WHERE criado_em::date = CURRENT_DATE")->fetchColumn();
+    $stmtHoje = $pdo->prepare("SELECT COUNT(*) FROM usuarios WHERE criado_em::date = CURRENT_DATE"); $stmtHoje->execute(); $novosHoje = $stmtHoje->fetchColumn();
 } catch (Exception $e) {
     $totalUsuarios = $totalServicos = $totalContratos = $totalAvaliacoes = $novosHoje = 0;
 }
@@ -28,10 +28,10 @@ try {
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>ReformAí – Painel Geral</title>
+  <title>ReformAÃ­ â€“ Painel Geral</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-  <script>tailwind.config={theme:{extend:{fontFamily:{sans:['Manrope','sans-serif']},colors:{orange:{DEFAULT:'#F97316',dark:'#EA580C'},sidebar:'#16213E',bg:'#F8F9FA'}}}}</script>
+  <script>tailwind.config={theme:{extend:{fontFamily:{sans:['Manrope','sans-serif']},colors:{orange:{DEFAULT:'#F97316',light:'#FFEDD5',dark:'#EA580C'},sidebar:'#16213E',card:'#1E2A3A',bg:'#F8F9FA'}}}}</script>
   <style>.custom-scroll::-webkit-scrollbar{width:6px}.custom-scroll::-webkit-scrollbar-track{background:transparent}.custom-scroll::-webkit-scrollbar-thumb{background:#d1d5db;border-radius:99px}</style>
 </head>
 <body class="font-sans bg-bg text-gray-800 flex h-screen overflow-hidden">
@@ -39,10 +39,10 @@ try {
 
   <script type="module">
     import { renderSidebar } from '/frontend/src/components/sidebar.js';
-    const temServico = <?= $pdo->query("SELECT COUNT(*) FROM servicos WHERE prestador_id = $idUsuarioLogado")->fetchColumn() > 0 ? 'true' : 'false' ?>;
+    $stmtCount = $pdo->prepare("SELECT COUNT(*) FROM servicos WHERE prestador_id = :id"); $stmtCount->execute([":id" => $idUsuarioLogado]); $temServico = $stmtCount->fetchColumn() > 0;
     renderSidebar('sidebar-container', 'admin', temServico, true, {badgeMensagens:0,badgeAgendamentos:0}, {
       nome: "<?= htmlspecialchars($usuario['nome']) ?>",
-      foto: "<?= $usuario['foto_perfil'] ?>"
+      foto: "<?= htmlspecialchars($usuario['foto_perfil'] ?? '') ?>"
     });
   </script>
 
@@ -61,12 +61,12 @@ try {
     <div class="flex-1 overflow-y-auto px-4 md:px-8 py-6 custom-scroll">
       <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         <div class="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
-          <p class="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Usuários</p>
+          <p class="text-[11px] font-bold text-gray-400 uppercase tracking-wider">UsuÃ¡rios</p>
           <p class="text-3xl font-black text-gray-900 mt-2"><?= $totalUsuarios ?></p>
           <p class="text-xs text-gray-400 mt-1"><?= $novosHoje ?> novos hoje</p>
         </div>
         <div class="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
-          <p class="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Serviços</p>
+          <p class="text-[11px] font-bold text-gray-400 uppercase tracking-wider">ServiÃ§os</p>
           <p class="text-3xl font-black text-gray-900 mt-2"><?= $totalServicos ?></p>
         </div>
         <div class="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
@@ -74,7 +74,7 @@ try {
           <p class="text-3xl font-black text-gray-900 mt-2"><?= $totalContratos ?></p>
         </div>
         <div class="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
-          <p class="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Avaliações</p>
+          <p class="text-[11px] font-bold text-gray-400 uppercase tracking-wider">AvaliaÃ§Ãµes</p>
           <p class="text-3xl font-black text-gray-900 mt-2"><?= $totalAvaliacoes ?></p>
         </div>
       </div>
@@ -82,3 +82,5 @@ try {
   </main>
 </body>
 </html>
+
+

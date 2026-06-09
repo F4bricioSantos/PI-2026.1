@@ -1,5 +1,5 @@
 @import "tailwindcss";
-@source "../../Pages/**/*.html";
+@source "../../pages/**/*.{html,php}";
 
 @layer utilities {
   .font-sans {

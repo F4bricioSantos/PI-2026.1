@@ -48,7 +48,7 @@ function enviarCodigoVerificacao(PDO $pdo): void
     $existe = $user->verificarExistencia($email, $cpfNumerico);
     if ($existe === true)
         responder(200, ['sucesso' => false, 'erros' => ['email' => 'Este e-mail ou CPF já está cadastrado.']]);
-    $codigoToken = (string)rand(100000, 999999);
+    $codigoToken = (string)random_int(100000, 999999);
     $_SESSION['registro_token'] = $codigoToken;
     $_SESSION['registro_token_expira'] = time() + (15 * 60);
     $primeiroNome = explode(' ', $nome)[0];
@@ -148,6 +148,8 @@ function login(PDO $pdo): void
     $ok   = $user->login($email, $senha);
     if (!$ok)
         responder(200, ['sucesso' => false, 'erro_global' => true, 'mensagem' => 'E-mail ou senha inválidos.']);
+    // Regenera ID da sess�o ap�s login para prevenir session fixation
+    session_regenerate_id(true);
     responder(200, [
         'sucesso'  => true,
         'redirect' => '/dashboard',
@@ -174,7 +176,7 @@ function enviarCodigoReset(PDO $pdo): void
     if (!$usuario) {
         responder(200, ['sucesso' => true, 'mensagem' => 'Se o e-mail estiver cadastrado, você receberá o código.']);
     }
-    $codigoToken = (string)rand(100000, 999999);
+    $codigoToken = (string)random_int(100000, 999999);
     $_SESSION['reset_token']        = $codigoToken;
     $_SESSION['reset_email']        = $email;
     $_SESSION['reset_token_expira'] = time() + (15 * 60); // 15 minutos
@@ -250,3 +252,4 @@ function responder(int $status, array $dados): never
     echo json_encode($dados);
     exit;
 }
+

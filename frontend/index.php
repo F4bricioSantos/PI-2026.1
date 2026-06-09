@@ -40,7 +40,7 @@
       <!-- Mobile menu -->
       <div id="mobile-menu" class="fixed inset-0 z-40 hidden md:hidden">
         <div class="absolute inset-0 bg-black/40 backdrop-blur-sm" onclick="toggleMobileMenu()"></div>
-        <div class="absolute top-0 right-0 w-72 h-full bg-white shadow-2xl p-6 flex flex-col gap-6">
+        <div class="absolute top-0 right-0 w-72 max-w-[85vw] h-full bg-white shadow-2xl p-6 flex flex-col gap-6">
           <div class="flex justify-end">
             <button onclick="toggleMobileMenu()" class="text-gray-400 hover:text-gray-700 p-2">
               <i data-lucide="x" class="w-6 h-6"></i>

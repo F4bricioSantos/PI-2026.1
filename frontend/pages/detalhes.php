@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 header('Content-Type: text/html; charset=UTF-8');
 
 if (session_status() === PHP_SESSION_NONE) {
@@ -54,8 +54,8 @@ try {
 
     if (!$servico) {
         die("<div style='font-family:sans-serif; text-align:center; padding:50px;'>
-                <h2>Serviço não encontrado.</h2>
-                <a href='dashboard.php'>Voltar ao início</a>
+                <h2>ServiÃ§o nÃ£o encontrado.</h2>
+                <a href='dashboard.php'>Voltar ao inÃ­cio</a>
              </div>");
     }
 
@@ -96,7 +96,7 @@ try {
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>ReformAí – <?= htmlspecialchars($servico['titulo']) ?></title>
+  <title>ReformAÃ­ â€“ <?= htmlspecialchars($servico['titulo']) ?></title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
   <script>
@@ -105,9 +105,7 @@ try {
         extend: {
           fontFamily: { sans: ['Manrope', 'sans-serif'] },
           colors: {
-            orange:  { DEFAULT: '#F97316', light: '#FFEDD5', dark: '#EA580C' },
-            sidebar: '#16213E',
-            bg:      '#F8F9FA',
+            orange:{DEFAULT:'#F97316',light:'#FFEDD5',dark:'#EA580C'},sidebar:'#16213E',card:'#1E2A3A',bg:'#F8F9FA',
           }
         }
       }
@@ -130,12 +128,12 @@ try {
     const hasServices = <?= $temServico ? 'true' : 'false' ?>;
     const isAdmin = <?= $isAdmin ? 'true' : 'false' ?>;
     const badges = {
-      badgeMensagens: <?= $totalMensagensNaoLidas ?>,
+      badgeMensagens: <?= (int)($totalMensagensNaoLidas ?? 0) ?>,
       badgeAgendamentos: 0
     };
     renderSidebar('sidebar-container', 'inicio', hasServices, isAdmin, badges, {
       nome: "<?= htmlspecialchars($usuarioLogado['nome']) ?>",
-      foto: "<?= $usuarioLogado['foto_perfil'] ?>"
+      foto: "<?= htmlspecialchars($usuarioLogado['foto_perfil'] ?? '') ?>"
     });
   </script>
   <main class="flex-1 flex flex-col min-w-0 relative bg-bg">
@@ -147,7 +145,7 @@ try {
         <button onclick="history.back()" class="hover:text-gray-600 transition-colors p-1 md:-ml-1 rounded-lg hover:bg-gray-100 hidden md:block">
           <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
         </button>
-        <a href="dashboard.php" class="text-gray-400 text-sm hover:text-orange transition-colors md:ml-2">Início</a>
+        <a href="dashboard.php" class="text-gray-400 text-sm hover:text-orange transition-colors md:ml-2">InÃ­cio</a>
         <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
         <span class="text-gray-800 font-bold text-lg tracking-tight">Detalhes</span>
       </div>
@@ -169,7 +167,7 @@ try {
                 <svg class="w-4 h-4 fill-orange" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
                 <span class="text-sm font-bold text-orange"><?= $servico['media_nota'] ?: '0.0' ?> (<?= $servico['total_avaliacoes'] ?>)</span>
               </div>
-              <span class="text-gray-400 text-sm"><?= htmlspecialchars($servico['cidade'] ?: 'Cidade não informada') ?></span>
+              <span class="text-gray-400 text-sm"><?= htmlspecialchars($servico['cidade'] ?: 'Cidade nÃ£o informada') ?></span>
               <span class="text-gray-300">|</span>
               <span class="text-sm font-medium text-gray-500"><?= htmlspecialchars($servico['categoria_nome'] ?? 'Geral') ?></span>
             </div>
@@ -177,7 +175,7 @@ try {
           <div class="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
             <div class="flex items-center gap-2 mb-4">
               <div class="w-1 h-5 bg-orange rounded-full"></div>
-              <h2 class="text-sm font-bold text-gray-800 uppercase tracking-wide">Sobre o serviço</h2>
+              <h2 class="text-sm font-bold text-gray-800 uppercase tracking-wide">Sobre o serviÃ§o</h2>
             </div>
             <div class="text-gray-600 text-sm leading-relaxed">
                 <?= nl2br(htmlspecialchars($servico['descricao_curta'])) ?>
@@ -191,7 +189,7 @@ try {
                                 <div><span class="block text-[10px] font-bold text-gray-400 uppercase">Especialidade</span><span class="text-xs font-bold text-gray-700"><?= htmlspecialchars($servico['nicho']) ?></span></div>
                             <?php endif; ?>
                             <?php if(!empty($servico['experiencia_anos'])): ?>
-                                <div><span class="block text-[10px] font-bold text-gray-400 uppercase">Experiência</span><span class="text-xs font-bold text-gray-700"><?= (int)$servico['experiencia_anos'] ?> anos</span></div>
+                                <div><span class="block text-[10px] font-bold text-gray-400 uppercase">ExperiÃªncia</span><span class="text-xs font-bold text-gray-700"><?= (int)$servico['experiencia_anos'] ?> anos</span></div>
                             <?php endif; ?>
                         </div>
                     </div>
@@ -205,7 +203,7 @@ try {
             </div>
             <?php if(empty($portfolio)): ?>
               <div class="py-10 text-center border-2 border-dashed border-gray-100 rounded-2xl">
-                <p class="text-gray-400 text-xs italic">Nenhuma foto cadastrada para este serviço.</p>
+                <p class="text-gray-400 text-xs italic">Nenhuma foto cadastrada para este serviÃ§o.</p>
               </div>
             <?php else: ?>
               <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
@@ -214,7 +212,7 @@ try {
                     <img src="<?= $urlBaseSupabase . htmlspecialchars($projeto['url_imagem']) ?>" 
                          class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" 
                          alt="Foto do Trabalho"
-                         onerror="this.src='https://via.placeholder.com/400?text=Imagem+Indisponível'">
+                         onerror="this.src='https://via.placeholder.com/400?text=Imagem+IndisponÃ­vel'">
                   </div>
                 <?php endforeach; ?>
               </div>
@@ -223,11 +221,11 @@ try {
           <div class="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
             <div class="flex items-center gap-2 mb-6">
               <div class="w-1 h-5 bg-orange rounded-full"></div>
-              <h2 class="text-sm font-bold text-gray-800 uppercase tracking-wide">Avaliações dos Clientes</h2>
+              <h2 class="text-sm font-bold text-gray-800 uppercase tracking-wide">AvaliaÃ§Ãµes dos Clientes</h2>
             </div>
             <div class="space-y-4">
               <?php if(empty($avaliacoes)): ?>
-                <p class="text-gray-400 text-xs italic">Ainda não há avaliações para este prestador.</p>
+                <p class="text-gray-400 text-xs italic">Ainda nÃ£o hÃ¡ avaliaÃ§Ãµes para este prestador.</p>
               <?php else: ?>
                 <?php foreach($avaliacoes as $aval): ?>
                   <div class="p-5 rounded-2xl bg-gray-50/70 border border-gray-100 flex items-start gap-4">
@@ -287,7 +285,7 @@ try {
             <div class="space-y-2">
               <div class="flex items-center gap-3 bg-gray-50 rounded-xl px-4 py-3 border border-gray-100 text-gray-700">
                 <svg class="w-4 h-4 text-orange" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg>
-                <span class="text-xs font-medium"><?= htmlspecialchars($servico['telefone'] ?: 'Não informado') ?></span>
+                <span class="text-xs font-medium"><?= htmlspecialchars($servico['telefone'] ?: 'NÃ£o informado') ?></span>
               </div>
               <div class="flex items-center gap-3 bg-gray-50 rounded-xl px-4 py-3 border border-gray-100 text-gray-700">
                 <svg class="w-4 h-4 text-orange" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>

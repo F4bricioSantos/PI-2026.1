@@ -155,7 +155,7 @@ if ($totalAvaliacoes > 0) {
     const isAdmin    = <?= $isAdmin ? 'true' : 'false' ?>;
     renderSidebar('sidebar-container', 'agendamentos', temServico, isAdmin, {}, {
       nome: "<?= htmlspecialchars($usuario['nome']) ?>",
-      foto: "<?= $usuario['foto_perfil'] ?>"
+      foto: "<?= htmlspecialchars($usuario['foto_perfil'] ?? '') ?>"
     });
   </script>
 

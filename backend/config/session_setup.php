@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 function setup_db_session(?PDO $pdo = null): void {
     if ($pdo === null) {
         $host   = getenv('DB_HOST');
@@ -60,9 +60,11 @@ function setup_db_session(?PDO $pdo = null): void {
             return $stmt->rowCount();
         }
     );
+    $isSecure = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') || ($_SERVER['SERVER_PORT'] ?? 80) == 443;
     session_set_cookie_params([
         'lifetime' => $maxlifetime,
         'path' => '/',
+        'secure' => $isSecure,
         'httponly' => true,
         'samesite' => 'Lax',
     ]);

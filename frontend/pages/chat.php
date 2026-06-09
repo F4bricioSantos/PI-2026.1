@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 require_once '../../backend/config/auth.php';
 require_once '../../backend/config/Conexao.php';
 require_once '../../backend/models/User.php';
@@ -54,15 +54,15 @@ if ($idDestinatario > 0) {
     }
     $outraPessoaTemServico = $contratoModel->checarSeTemServico($idDestinatario);
     if (empty($contratosAtivos)) {
-    // Se não houver contrato ativo, busca se existe um recém-concluído para avaliar
+    // Se nÃ£o houver contrato ativo, busca se existe um recÃ©m-concluÃ­do para avaliar
     if (!$contratoAtivo) {
         $contratoParaAvaliar = $contratoModel->buscarContratoParaAvaliar($idUsuarioLogado, $idDestinatario);
     }
     }
 }
 
-// Busca o contrato mais recente (independente de estar ativo ou concluído) apenas para sincronismo do JS
-// Isso evita o loop infinito de recarregamento quando o contrato é finalizado
+// Busca o contrato mais recente (independente de estar ativo ou concluÃ­do) apenas para sincronismo do JS
+// Isso evita o loop infinito de recarregamento quando o contrato Ã© finalizado
 $contratoSincronismo = null;
 if ($idDestinatario > 0) {
     $stmtSync = $pdo->prepare("SELECT id, status, finalizado_prestador_em, finalizado_cliente_em FROM contratos WHERE ((cliente_id = :u1 AND prestador_id = :u2) OR (cliente_id = :u2 AND prestador_id = :u1)) AND status IN ('pendente', 'aceito', 'concluido') ORDER BY criado_em DESC LIMIT 1");
@@ -74,7 +74,7 @@ $listaServicosDisponiveis = $outraPessoaTemServico
     ? $contratoModel->listarServicosPrestador($idDestinatario)
     : [];
 
-// Busca a contagem global de mensagens não lidas para o usuário logado
+// Busca a contagem global de mensagens nÃ£o lidas para o usuÃ¡rio logado
 $stmtUnreadMsgCount = $pdo->prepare("SELECT COUNT(*) FROM mensagens_chat WHERE destinatario_id = :uid AND lido_em IS NULL AND deletado = 0");
 $stmtUnreadMsgCount->execute([':uid' => $idUsuarioLogado]);
 $totalMensagensNaoLidas = (int)$stmtUnreadMsgCount->fetchColumn();
@@ -84,7 +84,7 @@ $totalMensagensNaoLidas = (int)$stmtUnreadMsgCount->fetchColumn();
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <title>ReformAí – Mensagens</title>
+  <title>ReformAÃ­ â€“ Mensagens</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
   <script>
@@ -93,8 +93,9 @@ $totalMensagensNaoLidas = (int)$stmtUnreadMsgCount->fetchColumn();
         extend: {
           fontFamily: { sans: ['Manrope', 'sans-serif'] },
           colors: {
-            orange: { DEFAULT: '#F97316', dark: '#EA580C' },
+            orange: { DEFAULT: '#F97316', light: '#FFEDD5', dark: '#EA580C' },
             sidebar: '#16213E',
+            card: '#1E2A3A',
             bg: '#F8F9FA'
           }
         }
@@ -118,9 +119,9 @@ $totalMensagensNaoLidas = (int)$stmtUnreadMsgCount->fetchColumn();
     import { renderSidebar } from '/frontend/src/components/sidebar.js';
     const temServico = <?= $temServico ? 'true' : 'false' ?>;
     const isAdmin    = <?= (isset($usuario['tipo_usuario']) && $usuario['tipo_usuario'] === 'admin') ? 'true' : 'false' ?>;
-    renderSidebar('sidebar-container', 'chat', temServico, isAdmin, { badgeMensagens: <?= $totalMensagensNaoLidas ?>, badgeAgendamentos: 0 }, {
+    renderSidebar('sidebar-container', 'chat', temServico, isAdmin, { badgeMensagens: <?= (int)($totalMensagensNaoLidas ?? 0) ?>, badgeAgendamentos: 0 }, {
       nome: "<?= htmlspecialchars($usuario['nome']) ?>",
-      foto: "<?= $usuario['foto_perfil'] ?>"
+      foto: "<?= htmlspecialchars($usuario['foto_perfil'] ?? '') ?>"
     });
   </script>
 
@@ -141,12 +142,12 @@ $totalMensagensNaoLidas = (int)$stmtUnreadMsgCount->fetchColumn();
       <div id="lista-contatos" class="flex-1 overflow-y-auto p-2 space-y-1 custom-scroll"></div>
     </section>
 
-    <!-- Área do chat -->
+    <!-- Ãrea do chat -->
     <section class="flex-1 bg-white md:rounded-2xl md:border border-gray-200 shadow-sm flex-col h-full overflow-hidden relative <?= ($idDestinatario > 0) ? 'flex' : 'hidden md:flex' ?>">
 
       <?php if ($idDestinatario > 0): ?>
 
-      <!-- Cabeçalho com nome e avatar -->
+      <!-- CabeÃ§alho com nome e avatar -->
       <div class="bg-gray-50 border-b border-gray-200 px-4 md:px-5 py-3 flex items-center gap-3 flex-shrink-0">
         <a href="chat.php" class="md:hidden p-2 -ml-2 text-gray-500 hover:bg-gray-200 rounded-lg transition-colors">
           <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
@@ -154,7 +155,7 @@ $totalMensagensNaoLidas = (int)$stmtUnreadMsgCount->fetchColumn();
         <a href="ver-perfil.php?id=<?= $idDestinatario ?>" class="flex items-center gap-3 hover:opacity-80 transition-opacity">
           <div id="topo-avatar"></div>
           <div>
-            <h2 class="text-sm font-bold text-gray-900 truncate"><?= $nomeDestinatario ?></h2>
+            <h2 class="text-sm font-bold text-gray-900 truncate"><?= htmlspecialchars($nomeDestinatario) ?></h2>
           </div>
         </a>
       </div>
@@ -196,7 +197,7 @@ $totalMensagensNaoLidas = (int)$stmtUnreadMsgCount->fetchColumn();
                           Recusar
                       </button>
                   <?php else: ?>
-                      <!-- Usuário: aguardando -->
+                      <!-- UsuÃ¡rio: aguardando -->
                       <span class="bg-yellow-100 text-yellow-700 px-2.5 py-1 rounded-lg text-[10px] font-bold">
                           Esperando aceite do prestador
                       </span>
@@ -207,11 +208,11 @@ $totalMensagensNaoLidas = (int)$stmtUnreadMsgCount->fetchColumn();
                   <?php endif; ?>
 
               <?php elseif ($status === 'aceito' && !$fpEm && !$fcEm): ?>
-                  <!-- ESTADO 2: Em andamento — igual para ambos -->
+                  <!-- ESTADO 2: Em andamento â€” igual para ambos -->
                   <span class="bg-green-100 text-green-700 px-2.5 py-1 rounded-lg text-[10px] font-bold">Em andamento</span>
                   <button onclick="alterarStatusContrato(<?= $contratoAtivo['id'] ?>, 'concluido')"
                           class="bg-orange hover:bg-orange-dark text-white font-bold px-3 py-1.5 rounded-xl text-xs cursor-pointer shadow-md transition-all">
-                      Marcar como concluído
+                      Marcar como concluÃ­do
                   </button>
                   <button onclick="alterarStatusContrato(<?= $contratoAtivo['id'] ?>, 'cancelado')"
                           class="bg-white hover:bg-red-50 border border-red-200 text-red-500 font-bold px-3 py-1.5 rounded-xl text-xs cursor-pointer transition-all">
@@ -219,14 +220,14 @@ $totalMensagensNaoLidas = (int)$stmtUnreadMsgCount->fetchColumn();
                   </button>
 
               <?php elseif ($status === 'aceito' && $fcEm && !$fpEm): ?>
-                  <!-- ESTADO 3: Cliente marcou como concluído primeiro -->
+                  <!-- ESTADO 3: Cliente marcou como concluÃ­do primeiro -->
                   <?php if ($souPrestador): ?>
                       <span class="bg-blue-100 text-blue-700 px-2.5 py-1 rounded-lg text-[10px] font-bold animate-pulse">
-                          Marcado como concluído pelo cliente
+                          Marcado como concluÃ­do pelo cliente
                       </span>
                       <button onclick="alterarStatusContrato(<?= $contratoAtivo['id'] ?>, 'concluido')"
                               class="bg-green-600 hover:bg-green-700 text-white font-bold px-3 py-1.5 rounded-xl text-xs cursor-pointer transition-all shadow-sm">
-                          Concluir serviço
+                          Concluir serviÃ§o
                       </button>
                       <button onclick="alterarStatusContrato(<?= $contratoAtivo['id'] ?>, 'em_andamento')"
                               class="bg-blue-500 hover:bg-blue-600 text-white font-bold px-3 py-1.5 rounded-xl text-xs cursor-pointer transition-all">
@@ -239,10 +240,10 @@ $totalMensagensNaoLidas = (int)$stmtUnreadMsgCount->fetchColumn();
                   <?php else: ?>
                       <div class="flex flex-col gap-0.5 max-w-xs">
                           <span class="bg-blue-100 text-blue-700 px-2.5 py-1 rounded-lg text-[10px] font-bold">
-                              Aguardando confirmação do prestador (10 dias)
+                              Aguardando confirmaÃ§Ã£o do prestador (10 dias)
                           </span>
                           <p class="text-[10px] text-gray-400 italic px-0.5 leading-relaxed">
-                              O prestador tem até 10 dias para responder. Após esse prazo, o serviço será concluído automaticamente.
+                              O prestador tem atÃ© 10 dias para responder. ApÃ³s esse prazo, o serviÃ§o serÃ¡ concluÃ­do automaticamente.
                           </p>
                       </div>
                       <button onclick="alterarStatusContrato(<?= $contratoAtivo['id'] ?>, 'cancelado')"
@@ -252,14 +253,14 @@ $totalMensagensNaoLidas = (int)$stmtUnreadMsgCount->fetchColumn();
                   <?php endif; ?>
 
               <?php elseif ($status === 'aceito' && $fpEm && !$fcEm): ?>
-                  <!-- ESTADO 4: Prestador marcou como concluído primeiro -->
+                  <!-- ESTADO 4: Prestador marcou como concluÃ­do primeiro -->
                   <?php if ($souPrestador): ?>
                       <div class="flex flex-col gap-0.5 max-w-xs">
                           <span class="bg-blue-100 text-blue-700 px-2.5 py-1 rounded-lg text-[10px] font-bold">
-                              Aguardando confirmação do usuário (10 dias)
+                              Aguardando confirmaÃ§Ã£o do usuÃ¡rio (10 dias)
                           </span>
                           <p class="text-[10px] text-gray-400 italic px-0.5 leading-relaxed">
-                              O usuário tem até 10 dias para responder. Após esse prazo, o serviço será concluído automaticamente.
+                              O usuÃ¡rio tem atÃ© 10 dias para responder. ApÃ³s esse prazo, o serviÃ§o serÃ¡ concluÃ­do automaticamente.
                           </p>
                       </div>
                       <button onclick="alterarStatusContrato(<?= $contratoAtivo['id'] ?>, 'em_andamento')"
@@ -272,11 +273,11 @@ $totalMensagensNaoLidas = (int)$stmtUnreadMsgCount->fetchColumn();
                       </button>
                   <?php else: ?>
                       <span class="bg-blue-100 text-blue-700 px-2.5 py-1 rounded-lg text-[10px] font-bold animate-pulse">
-                          Marcado como concluído pelo prestador
+                          Marcado como concluÃ­do pelo prestador
                       </span>
                       <button onclick="alterarStatusContrato(<?= $contratoAtivo['id'] ?>, 'concluido')"
                               class="bg-green-600 hover:bg-green-700 text-white font-bold px-3 py-1.5 rounded-xl text-xs cursor-pointer transition-all shadow-sm">
-                          Concluir serviço
+                          Concluir serviÃ§o
                       </button>
                       <button onclick="alterarStatusContrato(<?= $contratoAtivo['id'] ?>, 'cancelado')"
                               class="bg-white hover:bg-red-50 border border-red-200 text-red-500 font-bold px-3 py-1.5 rounded-xl text-xs cursor-pointer transition-all">
@@ -288,16 +289,16 @@ $totalMensagensNaoLidas = (int)$stmtUnreadMsgCount->fetchColumn();
             </div>
 
         <?php else: ?>
-            <!-- ESTADO 5: Sem contrato ativo — Avaliação / Novo contrato -->
+            <!-- ESTADO 5: Sem contrato ativo â€” AvaliaÃ§Ã£o / Novo contrato -->
             <div class="absolute left-0 top-0 bottom-0 w-1 bg-gray-300"></div>
             <div class="flex items-center justify-between w-full pl-2">
                 <?php if ($contratoParaAvaliar): ?>
-                    <p class="text-xs text-gray-500 font-medium">Serviço concluído — deixe sua avaliação!</p>
+                    <p class="text-xs text-gray-500 font-medium">ServiÃ§o concluÃ­do â€” deixe sua avaliaÃ§Ã£o!</p>
                     <div class="flex items-center gap-2">
                         <a href="./avaliar-prestador.php?contrato_id=<?= $contratoParaAvaliar['id'] ?>&com=<?= $idDestinatario ?>"
                            class="flex items-center gap-1.5 bg-yellow-400 hover:bg-yellow-500 text-white font-bold px-3 py-1.5 rounded-xl text-xs transition-all cursor-pointer shadow-md">
                             <svg class="w-3.5 h-3.5 fill-white" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
-                            <?= ($contratoParaAvaliar['cliente_id'] == $idUsuarioLogado) ? 'Avaliar prestador' : 'Avaliar usuário' ?>
+                            <?= ($contratoParaAvaliar['cliente_id'] == $idUsuarioLogado) ? 'Avaliar prestador' : 'Avaliar usuÃ¡rio' ?>
                         </a>
                         <?php if ($outraPessoaTemServico): ?>
                             <button onclick="abrirModalContrato()" class="bg-orange hover:bg-orange-dark text-white font-bold px-4 py-2 rounded-xl text-xs transition-all cursor-pointer shadow-md">
@@ -306,12 +307,12 @@ $totalMensagensNaoLidas = (int)$stmtUnreadMsgCount->fetchColumn();
                         <?php endif; ?>
                     </div>
                 <?php elseif ($outraPessoaTemServico): ?>
-                    <p class="text-xs text-gray-500 font-medium">Combine os detalhes por aqui e feche um serviço!</p>
+                    <p class="text-xs text-gray-500 font-medium">Combine os detalhes por aqui e feche um serviÃ§o!</p>
                     <button onclick="abrirModalContrato()" class="bg-orange hover:bg-orange-dark text-white font-bold px-4 py-2 rounded-xl text-xs transition-all cursor-pointer shadow-md">
                         Enviar Contrato
                     </button>
                 <?php else: ?>
-                    <p class="text-xs text-gray-400 italic">Nenhum vínculo de serviço ativo ou disponível para este usuário.</p>
+                    <p class="text-xs text-gray-400 italic">Nenhum vÃ­nculo de serviÃ§o ativo ou disponÃ­vel para este usuÃ¡rio.</p>
                 <?php endif; ?>
             </div>
         <?php endif; ?>
@@ -328,7 +329,7 @@ $totalMensagensNaoLidas = (int)$stmtUnreadMsgCount->fetchColumn();
             <img id="img-preview" src="#" alt="Preview"
                  class="max-h-20 max-w-[120px] rounded-xl object-cover border-2 border-white shadow-md">
             <button type="button" onclick="limparPreview()"
-                    class="absolute -top-2 -right-2 w-5 h-5 bg-red-500 text-white font-bold text-[10px] rounded-full flex items-center justify-center cursor-pointer shadow hover:bg-red-600 transition-colors">✕</button>
+                    class="absolute -top-2 -right-2 w-5 h-5 bg-red-500 text-white font-bold text-[10px] rounded-full flex items-center justify-center cursor-pointer shadow hover:bg-red-600 transition-colors">âœ•</button>
           </div>
           <div class="flex flex-col min-w-0">
             <span id="nome-arquivo-preview" class="text-xs font-semibold text-gray-700 truncate max-w-[200px]">imagem.jpg</span>
@@ -382,7 +383,7 @@ $totalMensagensNaoLidas = (int)$stmtUnreadMsgCount->fetchColumn();
         </div>
         <div>
           <h3 class="text-sm font-bold text-gray-900">Editar mensagem</h3>
-          <p class="text-[11px] text-gray-400">Você tem até 5 minutos para editar</p>
+          <p class="text-[11px] text-gray-400">VocÃª tem atÃ© 5 minutos para editar</p>
         </div>
       </div>
       <textarea id="modal-editar-input" rows="3"
@@ -390,7 +391,7 @@ $totalMensagensNaoLidas = (int)$stmtUnreadMsgCount->fetchColumn();
         placeholder="Digite a nova mensagem..."></textarea>
       <div class="flex gap-2 justify-end">
         <button onclick="fecharModalEditar()" class="px-4 py-2 rounded-xl text-xs font-bold text-gray-500 bg-gray-100 hover:bg-gray-200 transition-all cursor-pointer">Cancelar</button>
-        <button onclick="confirmarEdicao()" class="px-4 py-2 rounded-xl text-xs font-bold text-white bg-orange hover:bg-orange-dark transition-all cursor-pointer shadow-md shadow-orange/20">Salvar alteração</button>
+        <button onclick="confirmarEdicao()" class="px-4 py-2 rounded-xl text-xs font-bold text-white bg-orange hover:bg-orange-dark transition-all cursor-pointer shadow-md shadow-orange/20">Salvar alteraÃ§Ã£o</button>
       </div>
     </div>
   </div>
@@ -407,7 +408,7 @@ $totalMensagensNaoLidas = (int)$stmtUnreadMsgCount->fetchColumn();
         </div>
         <div>
           <h3 class="text-sm font-bold text-gray-900">Apagar mensagem?</h3>
-          <p class="text-[11px] text-gray-400">Esta ação não pode ser desfeita</p>
+          <p class="text-[11px] text-gray-400">Esta aÃ§Ã£o nÃ£o pode ser desfeita</p>
         </div>
       </div>
       <div class="flex gap-2 justify-end">
@@ -429,8 +430,8 @@ $totalMensagensNaoLidas = (int)$stmtUnreadMsgCount->fetchColumn();
   const inputFile          = document.getElementById('input-file');
 
   const idUsuarioLogado    = <?= (int)$idUsuarioLogado ?>;
-  const urlBaseSupabase    = "<?= $urlBaseSupabase ?>";
-  const urlBaseChatImagens = "<?= $urlBaseChatImagens ?>";
+  const urlBaseSupabase    = "<?= htmlspecialchars($urlBaseSupabase) ?>";
+  const urlBaseChatImagens = "<?= htmlspecialchars($urlBaseChatImagens) ?>";
   const comQuemId          = new URLSearchParams(window.location.search).get('com');
 
   const urlApiBase      = '../../backend/controllers/RoteadorChat.php';
@@ -459,7 +460,7 @@ $totalMensagensNaoLidas = (int)$stmtUnreadMsgCount->fetchColumn();
   }
 
   if (comQuemId && topoAvatarBox) {
-    topoAvatarBox.innerHTML = gerarAvatarHtml("<?= $nomeDestinatario ?>", "<?= $fotoDestinatario ?>");
+    topoAvatarBox.innerHTML = gerarAvatarHtml("<?= htmlspecialchars($nomeDestinatario) ?>", "<?= htmlspecialchars($fotoDestinatario) ?>");
   }
 
   async function carregarContatos() {
@@ -506,10 +507,10 @@ $totalMensagensNaoLidas = (int)$stmtUnreadMsgCount->fetchColumn();
       const mensagens = JSON.parse(textoPuro);
       if (!mensagens || mensagens.erro) return;
       
-      // Verifica se o usuário estava no final do chat antes de atualizar
+      // Verifica se o usuÃ¡rio estava no final do chat antes de atualizar
       const estavaNoBaixo = (chatContainer.scrollHeight - chatContainer.scrollTop - chatContainer.clientHeight) < 150;
       
-      // Se for a primeira vez que carregamos, não queremos transições bruscas
+      // Se for a primeira vez que carregamos, nÃ£o queremos transiÃ§Ãµes bruscas
       const primeiraCarga = chatContainer.innerHTML === '';
       
       chatContainer.innerHTML = '';
@@ -565,7 +566,7 @@ $totalMensagensNaoLidas = (int)$stmtUnreadMsgCount->fetchColumn();
           }
         }
 
-        const editadaLabel = (msg.atualizado_em && !foiDeletado) ? `<span class="italic opacity-60"> · editada</span>` : '';
+        const editadaLabel = (msg.atualizado_em && !foiDeletado) ? `<span class="italic opacity-60"> Â· editada</span>` : '';
         const classeBalao = souEu
           ? `bg-orange text-white rounded-2xl rounded-tr-none py-2 px-4 text-xs shadow-sm max-w-full break-words ${foiDeletado ? 'opacity-60 bg-gray-300 !text-gray-700 italic' : ''}`
           : `bg-white text-gray-800 rounded-2xl rounded-tl-none py-2 px-4 text-xs shadow-sm max-w-full break-words border border-gray-100 ${foiDeletado ? 'italic text-gray-400' : ''}`;
@@ -579,14 +580,14 @@ $totalMensagensNaoLidas = (int)$stmtUnreadMsgCount->fetchColumn();
           const estaEntregue = msg.entregue_em !== null && msg.entregue_em !== undefined;
           
           if (estaLida) {
-            // Fase 3: Lida (abriu o chat) → ✓✓ azul
-            checkmarkHtml = `<span class="check-lido ml-1" title="Lida" style="font-size: 11px;">✓✓</span>`;
+            // Fase 3: Lida (abriu o chat) â†’ âœ“âœ“ azul
+            checkmarkHtml = `<span class="check-lido ml-1" title="Lida" style="font-size: 11px;">âœ“âœ“</span>`;
           } else if (estaEntregue) {
-            // Fase 2: Entregue (online na plataforma, mas não abriu este chat) → ✓✓ cinza
-            checkmarkHtml = `<span class="check-entregue ml-1" title="Entregue" style="font-size: 11px;">✓✓</span>`;
+            // Fase 2: Entregue (online na plataforma, mas nÃ£o abriu este chat) â†’ âœ“âœ“ cinza
+            checkmarkHtml = `<span class="check-entregue ml-1" title="Entregue" style="font-size: 11px;">âœ“âœ“</span>`;
           } else {
-            // Fase 1: Enviada (destinatário offline) → ✓ cinza
-            checkmarkHtml = `<span class="check-enviado ml-1" title="Enviada" style="font-size: 11px;">✓</span>`;
+            // Fase 1: Enviada (destinatÃ¡rio offline) â†’ âœ“ cinza
+            checkmarkHtml = `<span class="check-enviado ml-1" title="Enviada" style="font-size: 11px;">âœ“</span>`;
           }
         }
 
@@ -599,7 +600,7 @@ $totalMensagensNaoLidas = (int)$stmtUnreadMsgCount->fetchColumn();
         chatContainer.appendChild(divAlinhamento);
       });
 
-      // Se estava no final ou é a primeira carga, rola para o fim (Estilo WhatsApp)
+      // Se estava no final ou Ã© a primeira carga, rola para o fim (Estilo WhatsApp)
       if (estavaNoBaixo || primeiraCarga) {
           chatContainer.scrollTop = chatContainer.scrollHeight;
       }
@@ -645,7 +646,7 @@ $totalMensagensNaoLidas = (int)$stmtUnreadMsgCount->fetchColumn();
         try {
           uploadResp = await fetch(urlApiUpload, { method: 'POST', body: formData });
         } catch (errRede) {
-          mostrarToast('Não foi possível conectar ao servidor.');
+          mostrarToast('NÃ£o foi possÃ­vel conectar ao servidor.');
           btnEnviar.disabled = false;
           return;
         }
@@ -735,7 +736,7 @@ $totalMensagensNaoLidas = (int)$stmtUnreadMsgCount->fetchColumn();
     }
   });
 
-  // ─── Marcação de leitura ao abrir chat ───
+  // â”€â”€â”€ MarcaÃ§Ã£o de leitura ao abrir chat â”€â”€â”€
   async function marcarComoLidoNoServidor() {
     if (!comQuemId) return;
     try {
@@ -753,7 +754,7 @@ $totalMensagensNaoLidas = (int)$stmtUnreadMsgCount->fetchColumn();
 
   let isReloading = false;
 
-  // ─── Polling de contrato (detecta mudanças e recarrega a barra) ───
+  // â”€â”€â”€ Polling de contrato (detecta mudanÃ§as e recarrega a barra) â”€â”€â”€
   const _contratoStatusInicial = <?= json_encode($contratoSincronismo ? [
       'id' => (string)$contratoSincronismo['id'],
       'status' => (string)$contratoSincronismo['status'],
@@ -822,3 +823,4 @@ $totalMensagensNaoLidas = (int)$stmtUnreadMsgCount->fetchColumn();
 </script>
 </body>
 </html>
+

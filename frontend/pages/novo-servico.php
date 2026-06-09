@@ -6,6 +6,7 @@ if (empty($_SESSION['usuario_id'])) {
     header('Location: login.php');
     exit;
 }
+require_once '../../backend/helpers/csrf.php';
 require_once '../../backend/config/Conexao.php';
 require_once '../../backend/models/User.php';
 
@@ -22,6 +23,7 @@ $stmtCheck->execute([':id' => $idUsuario]);
 $totalServicos = (int)$stmtCheck->fetchColumn();
 $erro = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    if (!isset($_POST['csrf_token']) || $_POST['csrf_token'] !== $_SESSION['csrf_token']) { $erro = 'Requisi��o inv�lida.'; } else {
     $titulo    = trim($_POST['titulo']    ?? '');
     $categoria = trim($_POST['categoria'] ?? '');
     $valor     = $_POST['valor']          ?? '';
@@ -62,6 +64,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 }
+}
 ?>
 <!DOCTYPE html>
 <html lang="pt-BR">
@@ -77,9 +80,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         extend: {
           fontFamily: { sans: ['Manrope', 'sans-serif'] },
           colors: {
-            orange:  { DEFAULT: '#F97316', light: '#FFEDD5', dark: '#EA580C' },
-            sidebar: '#16213E',
-            bg:      '#F8F9FA',
+            orange:{DEFAULT:'#F97316',light:'#FFEDD5',dark:'#EA580C'},sidebar:'#16213E',card:'#1E2A3A',bg:'#F8F9FA',
           }
         }
       }
@@ -101,7 +102,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     const isPro = <?= ($totalServicos > 0) ? 'true' : 'false' ?>;
     renderSidebar('sidebar-container', 'novo-servico', isPro, false, {}, {
       nome: "<?= htmlspecialchars($usuario['nome']) ?>",
-      foto: "<?= $usuario['foto_perfil'] ?>"
+      foto: "<?= htmlspecialchars($usuario['foto_perfil'] ?? '') ?>"
     });
 </script>
 
@@ -153,6 +154,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
           </div>
         <?php endif; ?>
         <form method="POST" action="" class="space-y-8" onsubmit="const btn=this.querySelector('button[type=submit]'); btn.disabled=true; btn.innerHTML='Salvando...';">
+          <?= csrf_field() ?>
           <div class="space-y-2">
             <label class="text-sm font-bold text-slate-700 ml-1">Título do Serviço</label>
             <input type="text" name="titulo" required

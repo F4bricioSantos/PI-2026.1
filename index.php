@@ -26,7 +26,7 @@ $routes = [
     '/logout'           => '/backend/controllers/AuthController.php',
 ];
 
-if ($uri === '/test-env') { diagnostic(); exit; }
+if ($uri === '/test-env' && ($_SERVER['REMOTE_ADDR'] ?? '') === '127.0.0.1') { diagnostic(); exit; }
 
 if (isset($routes[$uri])) {
     $file = __DIR__ . $routes[$uri];

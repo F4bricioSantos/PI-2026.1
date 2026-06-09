@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
@@ -20,4 +20,10 @@ if (!$stmtCheckAuth->fetch()) {
     session_destroy();
     header('Location: /login?erro=usuario_inexistente');
     exit;
+}
+
+// 3. Regenera ID da sessão periodicamente (a cada 30 minutos) para prevenir fixation
+if (empty($_SESSION['_ultima_regeneracao']) || (time() - $_SESSION['_ultima_regeneracao']) > 1800) {
+    session_regenerate_id(true);
+    $_SESSION['_ultima_regeneracao'] = time();
 }
