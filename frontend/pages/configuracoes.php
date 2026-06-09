@@ -11,6 +11,7 @@ $idUsuario = $_SESSION['usuario_id'];
 $mensagem = '';
 $erro = '';
 $usuario = [];
+$temServico = false;
 
 try {
     $stmt = $pdo->prepare("SELECT nome, email, telefone, foto_perfil, tipo_usuario FROM usuarios WHERE id = :id");
@@ -154,14 +155,6 @@ $emailPendente = $_SESSION['novo_email'] ?? null;
 
   <div id="sidebar-container" class="fixed inset-y-0 left-0 z-50 w-60 bg-sidebar flex flex-col h-screen transform -translate-x-full md:relative md:translate-x-0 transition-transform duration-300 ease-in-out"></div>
 
-  <script type="module">
-    import { renderSidebar } from '/frontend/src/components/sidebar.js';
-    renderSidebar('sidebar-container', 'configuracoes', <?= json_encode($temServico) ?>, <?= json_encode($isAdmin) ?>, {}, {
-      nome: "<?= htmlspecialchars($usuario['nome'] ?? '') ?>",
-      foto: "<?= htmlspecialchars($usuario['foto_perfil'] ?? '') ?>"
-    });
-  </script>
-
   <main class="flex-1 flex flex-col min-w-0 relative bg-bg">
     <header class="flex items-center justify-between px-4 md:px-8 py-4 md:py-5 border-b border-gray-200 bg-white flex-shrink-0">
       <div class="flex items-center gap-2 text-gray-400">
@@ -275,5 +268,12 @@ $emailPendente = $_SESSION['novo_email'] ?? null;
       </div>
     </div>
   </main>
+  <script type="module">
+    import { renderSidebar } from '/frontend/src/components/sidebar.js';
+    renderSidebar('sidebar-container', 'configuracoes', <?= json_encode($temServico) ?>, <?= json_encode($isAdmin) ?>, {}, {
+      nome: "<?= htmlspecialchars($usuario['nome'] ?? '') ?>",
+      foto: "<?= htmlspecialchars($usuario['foto_perfil'] ?? '') ?>"
+    });
+  </script>
 </body>
 </html>
