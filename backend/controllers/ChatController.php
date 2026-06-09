@@ -1,7 +1,8 @@
 <?php
-require_once __DIR__ . '/../config/session_setup.php';
-require_once __DIR__ . '/../config/auth.php';
 require_once __DIR__ . '/../config/Conexao.php';
+require_once __DIR__ . '/../config/session_setup.php';
+setup_db_session($pdo);
+require_once __DIR__ . '/../config/auth.php';
 
 date_default_timezone_set('America/Sao_Paulo');
 

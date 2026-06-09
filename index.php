@@ -1,5 +1,7 @@
 <?php
+require __DIR__ . '/backend/config/Conexao.php';
 require __DIR__ . '/backend/config/session_setup.php';
+setup_db_session($pdo);
 
 $uri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
 $uri = rtrim($uri, '/');

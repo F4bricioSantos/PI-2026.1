@@ -1,11 +1,12 @@
 <?php
 ini_set('display_errors', 1);
 error_reporting(E_ALL);
+require_once __DIR__ . '/../config/Conexao.php';
 require_once __DIR__ . '/../config/session_setup.php';
+setup_db_session($pdo);
 if (session_status() === PHP_SESSION_NONE) session_start();
 
 header('Content-Type: application/json; charset=utf-8');
-require_once __DIR__ . '/../config/Conexao.php';
 require_once __DIR__ . '/../models/User.php';
 require_once __DIR__ . '/../services/EmailService.php';
 
