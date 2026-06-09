@@ -244,7 +244,7 @@ $categoriasGerais = ["Reformas", "Pintura e Textura", "Elétrica", "Hidráulica"
                 <div class="space-y-1">
                   <span class="text-[9px] font-extrabold text-orange uppercase tracking-wider"><?= htmlspecialchars($s['categoria_nome']) ?></span>
                   <h3 class="font-bold text-gray-900 text-base line-clamp-1 h-6"><?= htmlspecialchars($s['titulo']) ?></h3>
-                  <p class="text-xs text-gray-400 line-clamp-2 h-8 leading-relaxed italic">"<?= htmlspecialchars($s['descricao_curta']) ?>"</p>
+                  <p class="text-xs text-gray-400 line-clamp-2 leading-relaxed italic">"<?= htmlspecialchars($s['descricao_curta']) ?>"</p>
                 </div>
 
                 <div class="flex items-center justify-between pt-4 border-t border-gray-50 mt-auto">
