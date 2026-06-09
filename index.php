@@ -2,6 +2,71 @@
 $uri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
 $uri = rtrim($uri, '/');
 
+// Sessao no banco (PostgreSQL) para persistir apos restart do container
+(function () {
+    $host   = getenv('DB_HOST');
+    $port   = getenv('DB_PORT');
+    $dbname = getenv('DB_NAME');
+    $user   = getenv('DB_USER');
+    $pass   = getenv('DB_PASS');
+    if (!$host || !$dbname) return;
+    try {
+        $pdo = new PDO("pgsql:host=$host;port=$port;dbname=$dbname;sslmode=require", $user, $pass, [
+            PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+            PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+        ]);
+        $pdo->exec("CREATE TABLE IF NOT EXISTS sessions (
+            session_id TEXT PRIMARY KEY,
+            data TEXT NOT NULL DEFAULT '',
+            last_active TIMESTAMP DEFAULT NOW()
+        )");
+        $pdo->exec("CREATE INDEX IF NOT EXISTS idx_sessions_last_active ON sessions(last_active)");
+
+        $maxlifetime = 30 * 24 * 3600; // 30 dias
+        ini_set('session.gc_maxlifetime', $maxlifetime);
+        ini_set('session.cookie_lifetime', $maxlifetime);
+        ini_set('session.gc_probability', 1);
+        ini_set('session.gc_divisor', 100);
+
+        session_set_save_handler(
+            function () use ($pdo) { return true; }, // open
+            function () use ($pdo) {                 // close
+                $pdo = null;
+                return true;
+            },
+            function ($id) use ($pdo): string {      // read
+                $stmt = $pdo->prepare("SELECT data FROM sessions WHERE session_id = ? AND last_active > NOW() - INTERVAL '30 days'");
+                $stmt->execute([$id]);
+                $row = $stmt->fetch();
+                return $row ? $row['data'] : '';
+            },
+            function ($id, $data) use ($pdo): bool { // write
+                $stmt = $pdo->prepare("INSERT INTO sessions (session_id, data, last_active) VALUES (?, ?, NOW()) ON CONFLICT (session_id) DO UPDATE SET data = EXCLUDED.data, last_active = NOW()");
+                $stmt->execute([$id, $data]);
+                return true;
+            },
+            function ($id) use ($pdo): bool {         // destroy
+                $stmt = $pdo->prepare("DELETE FROM sessions WHERE session_id = ?");
+                $stmt->execute([$id]);
+                return true;
+            },
+            function ($max) use ($pdo): int {          // gc
+                $stmt = $pdo->prepare("DELETE FROM sessions WHERE last_active < NOW() - INTERVAL '30 days'");
+                $stmt->execute();
+                return $stmt->rowCount();
+            }
+        );
+        session_set_cookie_params([
+            'lifetime' => $maxlifetime,
+            'path' => '/',
+            'httponly' => true,
+            'samesite' => 'Lax',
+        ]);
+    } catch (PDOException $e) {
+        // fallback silencioso para sessions em arquivo
+    }
+})();
+
 $routes = [
     ''                  => '/frontend/index.php',
     '/login'            => '/frontend/pages/login.php',

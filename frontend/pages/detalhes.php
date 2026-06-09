@@ -155,7 +155,7 @@ try {
     <div class="flex-1 overflow-y-auto px-4 md:px-8 py-6 md:py-8 custom-scroll">
       <div class="flex flex-col lg:flex-row gap-8 max-w-6xl mx-auto">
         
-        <div class="flex-1 space-y-8">
+        <div class="order-last lg:order-1 flex-1 space-y-8">
           
           <div class="space-y-2">
             <div class="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2 sm:gap-4">
@@ -258,7 +258,7 @@ try {
             </div>
           </div>
         </div>
-        <div class="w-full lg:w-80">
+        <div class="order-first lg:order-2 w-full lg:w-80">
           <div class="sticky top-6 bg-white rounded-2xl border border-gray-100 shadow-sm p-5 space-y-6">
             <div class="flex items-center gap-4">
               
