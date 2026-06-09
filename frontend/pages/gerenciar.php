@@ -1,4 +1,7 @@
 <?php
+require_once '../../backend/config/Conexao.php';
+require_once '../../backend/config/session_setup.php';
+setup_db_session($pdo);
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
@@ -8,16 +11,11 @@ if (empty($_SESSION['usuario_id'])) {
 }
 
 require_once '../../backend/config/auth.php';
-require_once '../../backend/config/Conexao.php';
 require_once '../../backend/models/User.php';
 
 $idUsuario = (int)$_SESSION['usuario_id'];
 $mensagem = '';
 $erro = '';
-
-if (empty($_SESSION['csrf_token'])) {
-    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
-}
 if (!defined('SB_URL')) define('SB_URL', getenv('SB_URL') ?: 'https://yplpxzmwtkencrrtxmof.supabase.co');
 $urlBaseSupabase = SB_URL . "/storage/v1/object/public/fotos/";
  
@@ -131,6 +129,9 @@ $servicos = $stmtServicos->fetchAll(PDO::FETCH_ASSOC);
 
 // CORREÇÃO DA SIDEBAR: Verifica se existem serviços para definir como "Pro"
 $temServico = count($servicos) > 0;
+
+// CSRF: sempre gera token novo para o formulario
+$_SESSION['csrf_token'] = bin2hex(random_bytes(32));
 ?>
 
 <!DOCTYPE html>

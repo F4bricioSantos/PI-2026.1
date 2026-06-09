@@ -83,7 +83,7 @@ $totalMensagensNaoLidas = (int)$stmtUnreadMsgCount->fetchColumn();
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>ReformAí – Mensagens</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
@@ -321,7 +321,7 @@ $totalMensagensNaoLidas = (int)$stmtUnreadMsgCount->fetchColumn();
       <div id="chat-mensagens" class="flex-1 overflow-y-auto p-5 space-y-4 custom-scroll bg-[#F4F3F1] flex flex-col"></div>
 
       <!-- Input de envio -->
-      <div class="border-t border-gray-200 bg-white flex flex-col flex-shrink-0">
+      <div class="border-t border-gray-200 bg-white flex flex-col flex-shrink-0" style="padding-bottom: env(safe-area-inset-bottom, 0px)">
 
         <div id="preview-container" class="hidden p-4 bg-gray-50 border-b border-gray-100 items-center gap-4 relative">
           <div class="relative inline-block">
