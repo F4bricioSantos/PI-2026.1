@@ -2,7 +2,7 @@ const NAV_ITEMS = [
   {
     id: 'inicio',
     label: 'Explorar Serviços',
-    href: 'dashboard.php',
+    href: '/dashboard',
     icon: '<path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>',
   },
 ];
@@ -11,20 +11,20 @@ const CLIENT_ITEMS = [
   {
     id: 'agendamentos',
     label: 'Minhas Contratações',
-    href: 'meus-pedidos.php',
+    href: '/meus-pedidos',
     icon: '<rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>',
     badgeKey: 'badgeAgendamentos'
   },
   {
     id: 'favoritos',
     label: 'Serviços Favoritos',
-    href: 'dashboard.php?categoria=Favoritos',
+    href: '/dashboard?categoria=Favoritos',
     icon: '<path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>',
   },
   {
     id: 'chat',
     label: 'Minhas Conversas',
-    href: 'chat.php',
+    href: '/chat',
     icon: '<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>',
     badgeKey: 'badgeMensagens'
   }
@@ -34,19 +34,19 @@ const PRO_ONLY_ITEMS = [
   {
     id: 'novo-servico',
     label: 'Anunciar Serviço',
-    href: 'novo-servico.php',
+    href: '/novo-servico',
     icon: '<path d="M12 5v14M5 12h14"/>',
   },
   {
     id: 'gerenciar',
     label: 'Gerenciar Serviços',
-    href: 'gerenciar.php',
+    href: '/gerenciar',
     icon: '<path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>',
   },
   {
     id: 'portfolio',
     label: 'Meu Portfólio',
-    href: 'portfolio.php',
+    href: '/portfolio',
     icon: '<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/>',
   },
 ];
@@ -55,7 +55,7 @@ const ADMIN_ITEMS = [
   {
     id: 'admin',
     label: 'Painel Geral',
-    href: 'admin_dashboard.php',
+    href: '/admin',
     icon: '<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>',
   }
 ];
@@ -64,7 +64,7 @@ const SETTINGS_ITEMS = [
   {
     id: 'perfil',
     label: 'Meu Perfil',
-    href: 'perfil.php',
+    href: '/perfil',
     icon: '<path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/>',
   }
 ];
@@ -94,23 +94,19 @@ export function renderSidebar(containerId, activePage = '', isPro = false, isAdm
   if (!container) return;
 
   const seguroBadges = badges || {};
-  const currentPath = window.location.pathname.split('/').pop() || 'dashboard.php';
+  const currentPath = window.location.pathname.replace(/\/$/, '') || '/dashboard';
   const currentSearch = window.location.search;
 
-  // Função interna para checar se o item está ativo
   const isItemActive = (item) => {
     if (activePage === item.id) return true;
-
-    const itemUrl = new URL(item.href, window.location.origin);
-    const itemFile = itemUrl.pathname.split('/').pop();
-    if (itemFile !== currentPath) return false;
-    if (itemUrl.search) return itemUrl.search === currentSearch;
-    // Se o item não tem parâmetros mas a página tem, só marca se for o arquivo base sem filtros
+    const itemPath = item.href.split('?')[0];
+    if (itemPath !== currentPath) return false;
+    const itemSearch = item.href.includes('?') ? '?' + item.href.split('?')[1] : '';
+    if (itemSearch) return itemSearch === currentSearch;
     return !currentSearch || currentSearch === '';
   };
 
   container.className = "fixed inset-y-0 left-0 z-50 w-60 bg-sidebar flex flex-col h-screen border-r border-white/5 transition-transform duration-300 ease-in-out transform -translate-x-full md:relative md:translate-x-0";
-
 
   const mainNav = NAV_ITEMS
     .map((item) => buildNavLink(item, isItemActive(item)))
@@ -136,7 +132,7 @@ export function renderSidebar(containerId, activePage = '', isPro = false, isAdm
   } else {
     proNavHtml = `
       <div class="pt-6 pb-2 px-6 text-[10px] font-bold text-white/30 uppercase tracking-widest">Seja um Profissional</div>
-      <a href="novo-servico.php" class="flex items-center gap-3 px-6 py-3 text-sm text-orange hover:bg-orange/5 transition-all font-bold">
+      <a href="/novo-servico" class="flex items-center gap-3 px-6 py-3 text-sm text-orange hover:bg-orange/5 transition-all font-bold">
         <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
         Anunciar Meus Serviços
       </a>`;
@@ -197,7 +193,7 @@ export function renderSidebar(containerId, activePage = '', isPro = false, isAdm
 
     <div class="mt-auto p-4 border-t border-white/5 bg-black/20">
       <div class="flex items-center justify-between gap-2">
-        <a href="perfil.php" class="flex items-center gap-3 flex-1 min-w-0 group">
+        <a href="/perfil" class="flex items-center gap-3 flex-1 min-w-0 group">
           <div class="w-10 h-10 rounded-full overflow-hidden border-2 border-white/10 group-hover:border-orange transition-all flex-shrink-0">
             ${avatarHtml}
           </div>
@@ -237,7 +233,7 @@ export function renderSidebar(containerId, activePage = '', isPro = false, isAdm
       if (isClosed) {
         sidebar.classList.remove('-translate-x-full');
         overlay.classList.remove('hidden');
-        void overlay.offsetWidth; // trigger reflow
+        void overlay.offsetWidth;
         overlay.classList.remove('opacity-0');
         overlay.classList.add('opacity-100');
       } else {
@@ -252,10 +248,8 @@ export function renderSidebar(containerId, activePage = '', isPro = false, isAdm
   window.updateSidebarBadge = function (newCount) {
     const container = document.getElementById(containerId);
     if (!container) return;
-    // Encontra o link de Mensagens pela href
-    const chatLink = container.querySelector('a[href="chat.php"]');
+    const chatLink = container.querySelector('a[href="/chat"]');
     if (!chatLink) return;
-    // Remove badge antigo se existir
     const oldBadge = chatLink.querySelector('.sidebar-msg-badge');
     if (oldBadge) oldBadge.remove();
     if (newCount > 0) {
@@ -266,7 +260,7 @@ export function renderSidebar(containerId, activePage = '', isPro = false, isAdm
     }
   };
 
-  const API_UNREAD = '../../backend/controllers/RoteadorChat.php?acao=unread_count';
+  const API_UNREAD = '/backend/controllers/RoteadorChat.php?acao=unread_count';
   async function _pollUnreadCount() {
     try {
       const resp = await fetch(API_UNREAD);

@@ -17,6 +17,7 @@ $routes = [
     '/esqueci-senha'    => '/frontend/pages/esqueci-senha.php',
     '/avaliar-prestador'=> '/frontend/pages/avaliar-prestador.php',
     '/ver-perfil'       => '/frontend/pages/ver-perfil.php',
+    '/admin'            => '/frontend/pages/admin_dashboard.php',
     '/logout'           => '/backend/controllers/AuthController.php',
 ];
 
@@ -27,6 +28,15 @@ if (isset($routes[$uri])) {
     if ($uri === '/logout') {
         $_GET['action'] = 'logout';
     }
+    chdir(dirname($file));
+    require $file;
+    exit;
+}
+
+// Fallback: se a URL termina com .php, tenta sem (para links antigos)
+if (str_ends_with($uri, '.php') && isset($routes[substr($uri, 0, -4)])) {
+    $uri = substr($uri, 0, -4);
+    $file = __DIR__ . $routes[$uri];
     chdir(dirname($file));
     require $file;
     exit;
