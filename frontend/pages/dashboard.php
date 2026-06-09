@@ -126,7 +126,7 @@ $categoriasGerais = ["Reformas", "Pintura e Textura", "Elétrica", "Hidráulica"
 
   <div id="sidebar-container" class="fixed inset-y-0 left-0 z-50 w-60 bg-sidebar flex flex-col h-screen transform -translate-x-full md:relative md:translate-x-0 transition-transform duration-300 ease-in-out"></div>
   <script type="module">
-    import { renderSidebar } from '../src/components/sidebar.js';
+    import { renderSidebar } from '/frontend/src/components/sidebar.js';
     const temServico = <?= $temServico ? 'true' : 'false' ?>;
     const isAdmin = <?= (isset($usuario['tipo_usuario']) && $usuario['tipo_usuario'] === 'admin') ? 'true' : 'false' ?>;
     const badges = {

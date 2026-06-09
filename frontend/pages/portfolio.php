@@ -145,7 +145,7 @@ foreach ($stmtP->fetchAll(PDO::FETCH_ASSOC) as $item) {
   </div>
   <div id="sidebar-container" class="fixed inset-y-0 left-0 z-50 w-60 bg-sidebar flex flex-col h-screen transform -translate-x-full md:relative md:translate-x-0 transition-transform duration-300 ease-in-out"></div>
   <script type="module">
-    import { renderSidebar } from '../src/components/sidebar.js';
+    import { renderSidebar } from '/frontend/src/components/sidebar.js';
     const isAdmin = <?= (isset($usuarioLogado['tipo_usuario']) && $usuarioLogado['tipo_usuario'] === 'admin') ? 'true' : 'false' ?>;
     renderSidebar('sidebar-container', 'portfolio', <?= $temServico ? 'true' : 'false' ?>, isAdmin, {}, {
       nome: "<?= htmlspecialchars($usuarioLogado['nome']) ?>",

@@ -79,7 +79,7 @@ $urlBaseSupabase = "https://yplpxzmwtkencrrtxmof.supabase.co/storage/v1/object/p
   <div id="sidebar-container" class="w-60 bg-sidebar flex-shrink-0 h-screen"></div>
   
   <script type="module">
-    import { renderSidebar } from '../src/components/sidebar.js';
+    import { renderSidebar } from '/frontend/src/components/sidebar.js';
     const temServico = <?= $temServicoLogado ? 'true' : 'false' ?>;
     renderSidebar('sidebar-container', 'perfil', temServico, false, { badgeMensagens: 0, badgeAgendamentos: 0 }, {
       nome: "<?= htmlspecialchars($usuarioLogado['nome']) ?>",

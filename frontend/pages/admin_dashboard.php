@@ -38,7 +38,7 @@ try {
   <div id="sidebar-container" class="fixed inset-y-0 left-0 z-50 w-60 bg-sidebar flex flex-col h-screen transform -translate-x-full md:relative md:translate-x-0 transition-transform duration-300 ease-in-out"></div>
 
   <script type="module">
-    import { renderSidebar } from '../src/components/sidebar.js';
+    import { renderSidebar } from '/frontend/src/components/sidebar.js';
     const temServico = <?= $pdo->query("SELECT COUNT(*) FROM servicos WHERE prestador_id = $idUsuarioLogado")->fetchColumn() > 0 ? 'true' : 'false' ?>;
     renderSidebar('sidebar-container', 'admin', temServico, true, {badgeMensagens:0,badgeAgendamentos:0}, {
       nome: "<?= htmlspecialchars($usuario['nome']) ?>",
