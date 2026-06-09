@@ -58,6 +58,7 @@ if ($idDestinatario > 0) {
     if (!$contratoAtivo) {
         $contratoParaAvaliar = $contratoModel->buscarContratoParaAvaliar($idUsuarioLogado, $idDestinatario);
     }
+    }
 }
 
 // Busca o contrato mais recente (independente de estar ativo ou concluído) apenas para sincronismo do JS
