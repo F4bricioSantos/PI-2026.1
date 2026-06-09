@@ -160,7 +160,7 @@ $categoriasGerais = ["Reformas", "Pintura e Textura", "Elétrica", "Hidráulica"
           <?php if($usuario['foto_perfil'] && $usuario['foto_perfil'] !== 'default.png'): ?>
             <img src="<?= $urlBaseSupabase . $usuario['foto_perfil'] ?>" class="w-full h-full object-cover">
           <?php else: ?>
-            <?= strtoupper(mb_substr($usuario['nome'], 0, 1)) ?>
+            <?= strtoupper(mb_substr($usuario['nome'] ?? 'U', 0, 1)) ?>
           <?php endif; ?>
         </div>
       </a>
@@ -225,7 +225,7 @@ $categoriasGerais = ["Reformas", "Pintura e Textura", "Elétrica", "Hidráulica"
                         <img src="<?= $urlBaseSupabase . $s['prestador_foto'] ?>" class="w-full h-full object-cover">
                       <?php else: ?>
                         <div class="w-full h-full flex items-center justify-center bg-orange/10 text-orange font-bold text-xs">
-                          <?= strtoupper(substr($s['prestador_nome'], 0, 1)) ?>
+                          <?= strtoupper(substr($s['prestador_nome'] ?? '?', 0, 1)) ?>
                         </div>
                       <?php endif; ?>
                     </a>

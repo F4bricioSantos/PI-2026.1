@@ -109,7 +109,7 @@ $urlBaseSupabase = "https://yplpxzmwtkencrrtxmof.supabase.co/storage/v1/object/p
             <?php if($perfil['foto_perfil'] && $perfil['foto_perfil'] !== 'default.png'): ?>
               <img src="<?= $urlBaseSupabase . $perfil['foto_perfil'] ?>" class="w-full h-full object-cover">
             <?php else: ?>
-              <?= strtoupper(mb_substr($perfil['nome'], 0, 1)) ?>
+              <?= strtoupper(mb_substr($perfil['nome'] ?? '?', 0, 1)) ?>
             <?php endif; ?>
           </div>
 
@@ -213,7 +213,7 @@ $urlBaseSupabase = "https://yplpxzmwtkencrrtxmof.supabase.co/storage/v1/object/p
                   <img src="<?= $urlBaseSupabase . $a['avaliador_foto'] ?>" class="w-full h-full object-cover">
                 <?php else: ?>
                   <div class="w-full h-full bg-orange/10 text-orange font-bold text-xs flex items-center justify-center">
-                    <?= strtoupper(substr($a['avaliador_nome'], 0, 1)) ?>
+                    <?= strtoupper(substr($a['avaliador_nome'] ?? '?', 0, 1)) ?>
                   </div>
                 <?php endif; ?>
               </div>
