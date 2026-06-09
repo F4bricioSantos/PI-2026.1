@@ -6,7 +6,6 @@ if (empty($_SESSION['usuario_id'])) {
     header('Location: login.php');
     exit;
 }
-require_once '../../backend/helpers/csrf.php';
 require_once '../../backend/config/Conexao.php';
 require_once '../../backend/models/User.php';
 
