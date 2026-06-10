@@ -169,100 +169,131 @@ $emailPendente = $_SESSION['novo_email'] ?? null;
       </div>
     </header>
 
-    <div class="flex-1 overflow-y-auto px-4 md:px-8 py-6 md:py-8 custom-scroll">
-      <div class="max-w-2xl mx-auto space-y-8">
+    <div class="flex-1 flex min-h-0">
+      <!-- Sub-navegação vertical -->
+      <nav class="hidden md:flex flex-col w-52 bg-white border-r border-gray-200 p-4 gap-1 flex-shrink-0 overflow-y-auto">
+        <button data-tab="senha" onclick="mudarAba('senha')" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold text-left transition-all hover:bg-orange-50 hover:text-orange-600 active-tab">
+          <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+          Senha
+        </button>
+        <button data-tab="email" onclick="mudarAba('email')" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold text-left transition-all hover:bg-orange-50 hover:text-orange-600 text-gray-500">
+          <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+          E-mail
+        </button>
+        <button data-tab="excluir" onclick="mudarAba('excluir')" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold text-left transition-all hover:bg-red-50 hover:text-red-600 text-gray-500">
+          <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
+          Excluir Conta
+        </button>
+      </nav>
 
-        <?php if ($mensagem): ?>
-          <div class="bg-emerald-50 border border-emerald-200 text-emerald-700 text-sm font-medium px-5 py-4 rounded-2xl flex items-center gap-3">
-            <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-            <?= htmlspecialchars($mensagem) ?>
-          </div>
-        <?php endif; ?>
-        <?php if ($erro): ?>
-          <div class="bg-red-50 border border-red-200 text-red-600 text-sm font-medium px-5 py-4 rounded-2xl flex items-center gap-3">
-            <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
-            <?= htmlspecialchars($erro) ?>
-          </div>
-        <?php endif; ?>
+      <!-- Navegação horizontal no mobile -->
+      <div class="md:hidden flex border-b border-gray-200 bg-white">
+        <button onclick="mudarAba('senha')" class="flex-1 text-center py-3 text-xs font-bold text-orange-600 border-b-2 border-orange-500 active-tab-mobile" data-tab-mobile="senha">Senha</button>
+        <button onclick="mudarAba('email')" class="flex-1 text-center py-3 text-xs font-bold text-gray-400 border-b-2 border-transparent" data-tab-mobile="email">E-mail</button>
+        <button onclick="mudarAba('excluir')" class="flex-1 text-center py-3 text-xs font-bold text-gray-400 border-b-2 border-transparent" data-tab-mobile="excluir">Excluir</button>
+      </div>
 
-        <!-- Senha -->
-        <div class="bg-white rounded-2xl border border-gray-100 shadow-sm">
-          <div class="px-6 py-5 border-b border-gray-50">
-            <div class="flex items-center gap-2">
-              <div class="w-1 h-5 bg-orange rounded-full"></div>
-              <h2 class="text-sm font-bold text-gray-800 uppercase tracking-wide">Alterar Senha</h2>
-            </div>
-          </div>
-          <form method="POST" class="p-6 space-y-5">
-            <input type="hidden" name="acao" value="alterar_senha">
-            <div>
-              <label for="senha_atual" class="block text-[13px] font-semibold text-gray-700 mb-1.5">Senha Atual</label>
-              <input type="password" name="senha_atual" id="senha_atual" required class="w-full h-[48px] px-4 rounded-xl border border-gray-200 bg-white text-[14px] focus:outline-none focus:ring-2 focus:ring-orange-400 transition-all">
-            </div>
-            <div>
-              <label for="nova_senha" class="block text-[13px] font-semibold text-gray-700 mb-1.5">Nova Senha</label>
-              <input type="password" name="nova_senha" id="nova_senha" required minlength="8" class="w-full h-[48px] px-4 rounded-xl border border-gray-200 bg-white text-[14px] focus:outline-none focus:ring-2 focus:ring-orange-400 transition-all">
-              <p class="text-[11px] text-gray-400 mt-1.5">Mínimo de 8 caracteres.</p>
-            </div>
-            <div>
-              <label for="confirmar_senha" class="block text-[13px] font-semibold text-gray-700 mb-1.5">Confirmar Nova Senha</label>
-              <input type="password" name="confirmar_senha" id="confirmar_senha" required minlength="8" class="w-full h-[48px] px-4 rounded-xl border border-gray-200 bg-white text-[14px] focus:outline-none focus:ring-2 focus:ring-orange-400 transition-all">
-            </div>
-            <button type="submit" class="w-full h-[48px] bg-orange hover:bg-orange-600 text-white font-bold text-sm rounded-xl transition-all shadow-sm">Salvar Nova Senha</button>
-          </form>
-        </div>
+      <div class="flex-1 overflow-y-auto px-4 md:px-8 py-6 md:py-8 custom-scroll">
+        <div class="max-w-2xl mx-auto">
 
-        <!-- E-mail -->
-        <div class="bg-white rounded-2xl border border-gray-100 shadow-sm">
-          <div class="px-6 py-5 border-b border-gray-50">
-            <div class="flex items-center gap-2">
-              <div class="w-1 h-5 bg-orange rounded-full"></div>
-              <h2 class="text-sm font-bold text-gray-800 uppercase tracking-wide">Alterar E-mail</h2>
+          <?php if ($mensagem): ?>
+            <div class="mb-6 bg-emerald-50 border border-emerald-200 text-emerald-700 text-sm font-medium px-5 py-4 rounded-2xl flex items-center gap-3">
+              <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+              <?= htmlspecialchars($mensagem) ?>
             </div>
-          </div>
-          <div class="p-6 space-y-5">
-            <div>
-              <span class="block text-[11px] font-bold text-gray-400 uppercase tracking-wide mb-1">E-mail Atual</span>
-              <span class="text-sm font-medium text-gray-800"><?= htmlspecialchars($usuario['email'] ?? '') ?></span>
+          <?php endif; ?>
+          <?php if ($erro): ?>
+            <div class="mb-6 bg-red-50 border border-red-200 text-red-600 text-sm font-medium px-5 py-4 rounded-2xl flex items-center gap-3">
+              <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+              <?= htmlspecialchars($erro) ?>
             </div>
+          <?php endif; ?>
 
-            <?php if ($emailPendente): ?>
-              <form method="POST" class="space-y-4 border-t border-gray-100 pt-5">
-                <p class="text-sm text-gray-500">Código enviado para <strong><?= htmlspecialchars($emailPendente) ?></strong></p>
-                <input type="hidden" name="acao" value="confirmar_email">
-                <div>
-                  <label for="codigo" class="block text-[13px] font-semibold text-gray-700 mb-1.5">Código de Verificação</label>
-                  <input type="text" name="codigo" id="codigo" required maxlength="6" class="w-full h-[48px] px-4 rounded-xl border border-gray-200 bg-white text-[14px] tracking-[8px] text-center font-bold text-lg focus:outline-none focus:ring-2 focus:ring-orange-400 transition-all" placeholder="000000">
+          <!-- Senha -->
+          <div id="aba-senha" class="aba-config">
+            <div class="bg-white rounded-2xl border border-gray-100 shadow-sm">
+              <div class="px-6 py-5 border-b border-gray-50">
+                <div class="flex items-center gap-2">
+                  <div class="w-1 h-5 bg-orange rounded-full"></div>
+                  <h2 class="text-sm font-bold text-gray-800 uppercase tracking-wide">Alterar Senha</h2>
                 </div>
-                <button type="submit" class="w-full h-[48px] bg-orange hover:bg-orange-600 text-white font-bold text-sm rounded-xl transition-all shadow-sm">Confirmar Código</button>
-              </form>
-            <?php else: ?>
-              <form method="POST" class="space-y-4">
-                <input type="hidden" name="acao" value="enviar_codigo">
+              </div>
+              <form method="POST" class="p-6 space-y-5">
+                <input type="hidden" name="acao" value="alterar_senha">
                 <div>
-                  <label for="novo_email" class="block text-[13px] font-semibold text-gray-700 mb-1.5">Novo E-mail</label>
-                  <input type="email" name="novo_email" id="novo_email" required class="w-full h-[48px] px-4 rounded-xl border border-gray-200 bg-white text-[14px] focus:outline-none focus:ring-2 focus:ring-orange-400 transition-all" placeholder="novo@email.com">
+                  <label for="senha_atual" class="block text-[13px] font-semibold text-gray-700 mb-1.5">Senha Atual</label>
+                  <input type="password" name="senha_atual" id="senha_atual" required class="w-full h-[48px] px-4 rounded-xl border border-gray-200 bg-white text-[14px] focus:outline-none focus:ring-2 focus:ring-orange-400 transition-all">
                 </div>
-                <button type="submit" class="w-full h-[48px] bg-orange hover:bg-orange-600 text-white font-bold text-sm rounded-xl transition-all shadow-sm">Enviar Código de Verificação</button>
+                <div>
+                  <label for="nova_senha" class="block text-[13px] font-semibold text-gray-700 mb-1.5">Nova Senha</label>
+                  <input type="password" name="nova_senha" id="nova_senha" required minlength="8" class="w-full h-[48px] px-4 rounded-xl border border-gray-200 bg-white text-[14px] focus:outline-none focus:ring-2 focus:ring-orange-400 transition-all">
+                  <p class="text-[11px] text-gray-400 mt-1.5">Mínimo de 8 caracteres.</p>
+                </div>
+                <div>
+                  <label for="confirmar_senha" class="block text-[13px] font-semibold text-gray-700 mb-1.5">Confirmar Nova Senha</label>
+                  <input type="password" name="confirmar_senha" id="confirmar_senha" required minlength="8" class="w-full h-[48px] px-4 rounded-xl border border-gray-200 bg-white text-[14px] focus:outline-none focus:ring-2 focus:ring-orange-400 transition-all">
+                </div>
+                <button type="submit" class="w-full h-[48px] bg-orange hover:bg-orange-600 text-white font-bold text-sm rounded-xl transition-all shadow-sm">Salvar Nova Senha</button>
               </form>
-            <?php endif; ?>
-          </div>
-        </div>
-
-        <!-- Excluir Conta -->
-        <div class="bg-white rounded-2xl border border-red-100 shadow-sm">
-          <div class="px-6 py-5 border-b border-red-50">
-            <div class="flex items-center gap-2">
-              <div class="w-1 h-5 bg-red-500 rounded-full"></div>
-              <h2 class="text-sm font-bold text-red-600 uppercase tracking-wide">Zona de Perigo</h2>
             </div>
           </div>
-          <div class="p-6 space-y-5">
-            <p class="text-sm text-gray-600 leading-relaxed">Ao excluir sua conta, todos os seus dados serão removidos permanentemente: serviços, avaliações, mensagens e fotos.</p>
-            <button type="button" onclick="abrirModalExcluir()" class="w-full h-[48px] bg-red-500 hover:bg-red-600 text-white font-bold text-sm rounded-xl transition-all shadow-sm cursor-pointer">Excluir Minha Conta</button>
-          </div>
-        </div>
 
+          <!-- E-mail -->
+          <div id="aba-email" class="aba-config hidden">
+            <div class="bg-white rounded-2xl border border-gray-100 shadow-sm">
+              <div class="px-6 py-5 border-b border-gray-50">
+                <div class="flex items-center gap-2">
+                  <div class="w-1 h-5 bg-orange rounded-full"></div>
+                  <h2 class="text-sm font-bold text-gray-800 uppercase tracking-wide">Alterar E-mail</h2>
+                </div>
+              </div>
+              <div class="p-6 space-y-5">
+                <div>
+                  <span class="block text-[11px] font-bold text-gray-400 uppercase tracking-wide mb-1">E-mail Atual</span>
+                  <span class="text-sm font-medium text-gray-800"><?= htmlspecialchars($usuario['email'] ?? '') ?></span>
+                </div>
+
+                <?php if ($emailPendente): ?>
+                  <form method="POST" class="space-y-4 border-t border-gray-100 pt-5">
+                    <p class="text-sm text-gray-500">Código enviado para <strong><?= htmlspecialchars($emailPendente) ?></strong></p>
+                    <input type="hidden" name="acao" value="confirmar_email">
+                    <div>
+                      <label for="codigo" class="block text-[13px] font-semibold text-gray-700 mb-1.5">Código de Verificação</label>
+                      <input type="text" name="codigo" id="codigo" required maxlength="6" class="w-full h-[48px] px-4 rounded-xl border border-gray-200 bg-white text-[14px] tracking-[8px] text-center font-bold text-lg focus:outline-none focus:ring-2 focus:ring-orange-400 transition-all" placeholder="000000">
+                    </div>
+                    <button type="submit" class="w-full h-[48px] bg-orange hover:bg-orange-600 text-white font-bold text-sm rounded-xl transition-all shadow-sm">Confirmar Código</button>
+                  </form>
+                <?php else: ?>
+                  <form method="POST" class="space-y-4">
+                    <input type="hidden" name="acao" value="enviar_codigo">
+                    <div>
+                      <label for="novo_email" class="block text-[13px] font-semibold text-gray-700 mb-1.5">Novo E-mail</label>
+                      <input type="email" name="novo_email" id="novo_email" required class="w-full h-[48px] px-4 rounded-xl border border-gray-200 bg-white text-[14px] focus:outline-none focus:ring-2 focus:ring-orange-400 transition-all" placeholder="novo@email.com">
+                    </div>
+                    <button type="submit" class="w-full h-[48px] bg-orange hover:bg-orange-600 text-white font-bold text-sm rounded-xl transition-all shadow-sm">Enviar Código de Verificação</button>
+                  </form>
+                <?php endif; ?>
+              </div>
+            </div>
+          </div>
+
+          <!-- Excluir Conta -->
+          <div id="aba-excluir" class="aba-config hidden">
+            <div class="bg-white rounded-2xl border border-red-100 shadow-sm">
+              <div class="px-6 py-5 border-b border-red-50">
+                <div class="flex items-center gap-2">
+                  <div class="w-1 h-5 bg-red-500 rounded-full"></div>
+                  <h2 class="text-sm font-bold text-red-600 uppercase tracking-wide">Zona de Perigo</h2>
+                </div>
+              </div>
+              <div class="p-6 space-y-5">
+                <p class="text-sm text-gray-600 leading-relaxed">Ao excluir sua conta, todos os seus dados serão removidos permanentemente: serviços, avaliações, mensagens e fotos.</p>
+                <button type="button" onclick="abrirModalExcluir()" class="w-full h-[48px] bg-red-500 hover:bg-red-600 text-white font-bold text-sm rounded-xl transition-all shadow-sm cursor-pointer">Excluir Minha Conta</button>
+              </div>
+            </div>
+          </div>
+
+        </div>
       </div>
     </div>
   </main>
@@ -297,6 +328,23 @@ $emailPendente = $_SESSION['novo_email'] ?? null;
   </div>
 
   <script>
+    function mudarAba(aba) {
+      document.querySelectorAll('.aba-config').forEach(el => el.classList.add('hidden'));
+      document.getElementById('aba-' + aba).classList.remove('hidden');
+
+      document.querySelectorAll('[data-tab]').forEach(el => {
+        el.classList.remove('active-tab', 'text-orange-600', 'bg-orange-50');
+        el.classList.add('text-gray-500');
+      });
+      document.querySelector('[data-tab="' + aba + '"]')?.classList.add('active-tab', 'text-orange-600', 'bg-orange-50');
+
+      document.querySelectorAll('[data-tab-mobile]').forEach(el => {
+        el.classList.remove('text-orange-600', 'border-orange-500');
+        el.classList.add('text-gray-400', 'border-transparent');
+      });
+      document.querySelector('[data-tab-mobile="' + aba + '"]')?.classList.add('text-orange-600', 'border-orange-500');
+    }
+
     function abrirModalExcluir() {
       document.getElementById('modal-excluir').classList.remove('hidden');
     }
@@ -305,6 +353,7 @@ $emailPendente = $_SESSION['novo_email'] ?? null;
     }
     window.abrirModalExcluir = abrirModalExcluir;
     window.fecharModalExcluir = fecharModalExcluir;
+    window.mudarAba = mudarAba;
   </script>
 
   <script type="module">
