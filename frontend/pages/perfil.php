@@ -97,6 +97,7 @@ $fotoExibicao = ($dados['foto_perfil'] == 'default.png' || empty($dados['foto_pe
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 24 24%27 fill=%27none%27 stroke=%27%23F97316%27 stroke-width=%272.5%27%3E%3Cpath d=%27M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z%27/%3E%3C/svg%3E">
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>ReformAí – Meu Perfil</title>
   <script src="https://cdn.tailwindcss.com"></script>
