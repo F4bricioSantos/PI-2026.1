@@ -31,14 +31,22 @@ try {
     $erro = "Erro ao carregar dados: " . $e->getMessage();
 }
 
+// Garante que o token CSRF existe antes do processamento POST
+if (empty($_SESSION['csrf_token'])) {
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+}
+
 // 3. LÓGICA DE PROCESSAMENTO (POST)
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $acao = $_POST['acao'] ?? '';
 
     // VALIDAÇÒO CSRF
     if (!isset($_POST['csrf_token']) || $_POST['csrf_token'] !== $_SESSION['csrf_token']) {
+        http_response_code(403);
         die("Requisição inválida (CSRF).");
     }
+    // Gera novo token após POST bem-sucedido (previne reuso)
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
 
     // --- LÓGICA DE EXCLUSÒO ---
     if ($acao === 'excluir') {
@@ -130,8 +138,6 @@ $servicos = $stmtServicos->fetchAll(PDO::FETCH_ASSOC);
 // CORREÇÒO DA SIDEBAR: Verifica se existem serviços para definir como "Pro"
 $temServico = count($servicos) > 0;
 
-// CSRF: sempre gera token novo para o formulario
-$_SESSION['csrf_token'] = bin2hex(random_bytes(32));
 ?>
 
 <!DOCTYPE html>
