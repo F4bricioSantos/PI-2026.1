@@ -329,6 +329,11 @@ $emailPendente = $_SESSION['novo_email'] ?? null;
 
   <script>
     function mudarAba(aba) {
+      window.location.hash = aba;
+      mostrarAba(aba);
+    }
+
+    function mostrarAba(aba) {
       document.querySelectorAll('.aba-config').forEach(el => el.classList.add('hidden'));
       document.getElementById('aba-' + aba).classList.remove('hidden');
 
@@ -336,14 +341,21 @@ $emailPendente = $_SESSION['novo_email'] ?? null;
         el.classList.remove('active-tab', 'text-orange-600', 'bg-orange-50');
         el.classList.add('text-gray-500');
       });
-      document.querySelector('[data-tab="' + aba + '"]')?.classList.add('active-tab', 'text-orange-600', 'bg-orange-50');
+      const navBtn = document.querySelector('[data-tab="' + aba + '"]');
+      if (navBtn) navBtn.classList.add('active-tab', 'text-orange-600', 'bg-orange-50');
 
       document.querySelectorAll('[data-tab-mobile]').forEach(el => {
         el.classList.remove('text-orange-600', 'border-orange-500');
         el.classList.add('text-gray-400', 'border-transparent');
       });
-      document.querySelector('[data-tab-mobile="' + aba + '"]')?.classList.add('text-orange-600', 'border-orange-500');
+      const mobBtn = document.querySelector('[data-tab-mobile="' + aba + '"]');
+      if (mobBtn) mobBtn.classList.add('text-orange-600', 'border-orange-500');
     }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      const hash = window.location.hash.replace('#', '') || 'senha';
+      mostrarAba(hash);
+    });
 
     function abrirModalExcluir() {
       document.getElementById('modal-excluir').classList.remove('hidden');
