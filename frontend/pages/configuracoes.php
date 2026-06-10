@@ -256,20 +256,56 @@ $emailPendente = $_SESSION['novo_email'] ?? null;
               <h2 class="text-sm font-bold text-red-600 uppercase tracking-wide">Zona de Perigo</h2>
             </div>
           </div>
-          <form method="POST" class="p-6 space-y-5" onsubmit="return confirm('Tem certeza? Esta ação é irreversível.')">
-            <input type="hidden" name="acao" value="excluir_conta">
+          <div class="p-6 space-y-5">
             <p class="text-sm text-gray-600 leading-relaxed">Ao excluir sua conta, todos os seus dados serão removidos permanentemente: serviços, avaliações, mensagens e fotos.</p>
-            <div>
-              <label for="confirmacao" class="block text-[13px] font-semibold text-gray-700 mb-1.5">Digite <span class="font-bold text-red-500">EXCLUIR</span> para confirmar</label>
-              <input type="text" name="confirmacao" id="confirmacao" required class="w-full h-[48px] px-4 rounded-xl border border-red-200 bg-white text-[14px] focus:outline-none focus:ring-2 focus:ring-red-400 transition-all" placeholder="EXCLUIR" autocomplete="off">
-            </div>
-            <button type="submit" class="w-full h-[48px] bg-red-500 hover:bg-red-600 text-white font-bold text-sm rounded-xl transition-all shadow-sm">Excluir Minha Conta</button>
-          </form>
+            <button type="button" onclick="abrirModalExcluir()" class="w-full h-[48px] bg-red-500 hover:bg-red-600 text-white font-bold text-sm rounded-xl transition-all shadow-sm cursor-pointer">Excluir Minha Conta</button>
+          </div>
         </div>
 
       </div>
     </div>
   </main>
+  <!-- Modal Excluir Conta -->
+  <div id="modal-excluir" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div class="absolute inset-0 bg-black/40 backdrop-blur-sm" onclick="fecharModalExcluir()"></div>
+    <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 flex flex-col gap-4">
+      <div class="flex items-center gap-3">
+        <div class="w-9 h-9 rounded-xl bg-red-50 flex items-center justify-center flex-shrink-0">
+          <svg class="w-5 h-5 text-red-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0"/>
+          </svg>
+        </div>
+        <div>
+          <h3 class="text-sm font-bold text-gray-900">Excluir conta</h3>
+          <p class="text-[11px] text-gray-400">Esta ação é irreversível</p>
+        </div>
+      </div>
+      <p class="text-xs text-gray-500 leading-relaxed">Todos os seus dados serão removidos permanentemente: serviços, avaliações, mensagens e fotos.</p>
+      <form method="POST" class="flex flex-col gap-4">
+        <input type="hidden" name="acao" value="excluir_conta">
+        <div>
+          <label for="confirmacao-modal" class="block text-[13px] font-semibold text-gray-700 mb-1.5">Digite <span class="font-bold text-red-500">EXCLUIR</span> para confirmar</label>
+          <input type="text" name="confirmacao" id="confirmacao-modal" required class="w-full h-[48px] px-4 rounded-xl border border-red-200 bg-white text-[14px] focus:outline-none focus:ring-2 focus:ring-red-400 transition-all" placeholder="EXCLUIR" autocomplete="off">
+        </div>
+        <div class="flex gap-2 justify-end">
+          <button type="button" onclick="fecharModalExcluir()" class="px-4 py-2 rounded-xl text-xs font-bold text-gray-500 bg-gray-100 hover:bg-gray-200 transition-all cursor-pointer">Cancelar</button>
+          <button type="submit" class="px-4 py-2 rounded-xl text-xs font-bold text-white bg-red-500 hover:bg-red-600 transition-all cursor-pointer shadow-md shadow-red-500/20">Sim, excluir conta</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    function abrirModalExcluir() {
+      document.getElementById('modal-excluir').classList.remove('hidden');
+    }
+    function fecharModalExcluir() {
+      document.getElementById('modal-excluir').classList.add('hidden');
+    }
+    window.abrirModalExcluir = abrirModalExcluir;
+    window.fecharModalExcluir = fecharModalExcluir;
+  </script>
+
   <script type="module">
     import { renderSidebar } from '/frontend/src/components/sidebar.js';
     renderSidebar('sidebar-container', 'configuracoes', <?= json_encode($temServico) ?>, <?= json_encode($isAdmin) ?>, {}, {

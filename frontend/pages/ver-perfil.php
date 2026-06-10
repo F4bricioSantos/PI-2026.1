@@ -216,7 +216,7 @@ $urlBaseSupabase = "https://yplpxzmwtkencrrtxmof.supabase.co/storage/v1/object/p
                   <img src="<?= $urlBaseSupabase . $a['avaliador_foto'] ?>" class="w-full h-full object-cover">
                 <?php else: ?>
                   <div class="w-full h-full bg-orange/10 text-orange font-bold text-xs flex items-center justify-center">
-                    <?= strtoupper(substr($a['avaliador_nome'] ?? '?', 0, 1)) ?>
+                    <?= strtoupper(mb_substr($a['avaliador_nome'] ?? '?', 0, 1)) ?>
                   </div>
                 <?php endif; ?>
               </div>

@@ -162,7 +162,7 @@ $fotoExibicao = ($dados['foto_perfil'] == 'default.png' || empty($dados['foto_pe
                  <img id="preview" src="<?= $fotoExibicao ?>" class="w-full h-full rounded-full object-cover border-4 border-gray-50 shadow-sm">
                <?php else: ?>
                  <div id="placeholder" class="w-full h-full bg-slate-100 rounded-full flex items-center justify-center border-4 border-gray-50 shadow-sm">
-                    <span class="text-3xl font-black text-slate-300"><?= strtoupper(substr($dados['nome'] ?? 'R', 0, 1)) ?></span>
+                    <span class="text-3xl font-black text-slate-300"><?= strtoupper(mb_substr($dados['nome'] ?? 'R', 0, 1)) ?></span>
                  </div>
                <?php endif; ?>
 

@@ -94,7 +94,7 @@ class User {
                     COUNT(a.id)::INT AS total_avaliacoes
                 FROM usuarios u
                 LEFT JOIN prestadores_detalhes pd ON u.id = pd.usuario_id
-                LEFT JOIN avaliacoes a ON a.prestador_id = u.id
+                LEFT JOIN avaliacoes a ON (a.prestador_id = u.id OR a.cliente_id = u.id)
                 WHERE u.id = :id
                 GROUP BY u.id, u.nome, u.email, u.telefone, u.cidade, u.foto_perfil, pd.id, pd.bio, pd.nicho, pd.experiencia_anos
             ");
@@ -111,8 +111,7 @@ class User {
             $stmt = $this->db->prepare("
                 SELECT COALESCE(ROUND(AVG(nota)::NUMERIC, 1), 0) as media, COUNT(*) as total
                 FROM avaliacoes 
-                WHERE (prestador_id = :id AND avaliador_tipo = 'cliente')
-                   OR (cliente_id = :id AND avaliador_tipo = 'prestador')
+                WHERE prestador_id = :id OR cliente_id = :id
             ");
             $stmt->execute([':id' => $id]);
             return $stmt->fetch(PDO::FETCH_ASSOC);

@@ -1,4 +1,4 @@
-<?php
+Ôªø<?php
 require_once '../../backend/config/auth.php';
 require_once '../../backend/config/Conexao.php';
 require_once '../../backend/models/User.php';
@@ -329,7 +329,7 @@ $totalMensagensNaoLidas = (int)$stmtUnreadMsgCount->fetchColumn();
             <img id="img-preview" src="#" alt="Preview"
                  class="max-h-20 max-w-[120px] rounded-xl object-cover border-2 border-white shadow-md">
             <button type="button" onclick="limparPreview()"
-                    class="absolute -top-2 -right-2 w-5 h-5 bg-red-500 text-white font-bold text-[10px] rounded-full flex items-center justify-center cursor-pointer shadow hover:bg-red-600 transition-colors">‚Sï</button>
+                    class="absolute -top-2 -right-2 w-5 h-5 bg-red-500 text-white font-bold text-[10px] rounded-full flex items-center justify-center cursor-pointer shadow hover:bg-red-600 transition-colors">&#10005;</button>
           </div>
           <div class="flex flex-col min-w-0">
             <span id="nome-arquivo-preview" class="text-xs font-semibold text-gray-700 truncate max-w-[200px]">imagem.jpg</span>
@@ -580,14 +580,11 @@ $totalMensagensNaoLidas = (int)$stmtUnreadMsgCount->fetchColumn();
           const estaEntregue = msg.entregue_em !== null && msg.entregue_em !== undefined;
           
           if (estaLida) {
-            // Fase 3: Lida (abriu o chat) ‚Üí ‚Sì‚Sì azul
-            checkmarkHtml = `<span class="check-lido ml-1" title="Lida" style="font-size: 11px;">‚Sì‚Sì</span>`;
+            checkmarkHtml = `<span class="check-lido ml-1" title="Lida" style="font-size: 11px;">&#10003;&#10003;</span>`;
           } else if (estaEntregue) {
-            // Fase 2: Entregue (online na plataforma, mas n√£o abriu este chat) ‚Üí ‚Sì‚Sì cinza
-            checkmarkHtml = `<span class="check-entregue ml-1" title="Entregue" style="font-size: 11px;">‚Sì‚Sì</span>`;
+            checkmarkHtml = `<span class="check-entregue ml-1" title="Entregue" style="font-size: 11px;">&#10003;&#10003;</span>`;
           } else {
-            // Fase 1: Enviada (destinat√°rio offline) ‚Üí ‚Sì cinza
-            checkmarkHtml = `<span class="check-enviado ml-1" title="Enviada" style="font-size: 11px;">‚Sì</span>`;
+            checkmarkHtml = `<span class="check-enviado ml-1" title="Enviada" style="font-size: 11px;">&#10003;</span>`;
           }
         }
 
