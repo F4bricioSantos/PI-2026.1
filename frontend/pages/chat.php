@@ -736,9 +736,11 @@ $totalMensagensNaoLidas = (int)$stmtUnreadMsgCount->fetchColumn();
   });
 
   // ─── iOS keyboard: scroll input into view when focused ───
-  inputMensagem.addEventListener('focus', function () {
-    setTimeout(() => this.scrollIntoView({ behavior: 'smooth', block: 'center' }), 300);
-  });
+  if (inputMensagem) {
+    inputMensagem.addEventListener('focus', function () {
+      setTimeout(() => this.scrollIntoView({ behavior: 'smooth', block: 'center' }), 300);
+    });
+  }
 
   // ─── Marcação de leitura ao abrir chat ───
   async function marcarComoLidoNoServidor() {
