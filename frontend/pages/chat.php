@@ -112,7 +112,7 @@ $totalMensagensNaoLidas = (int)$stmtUnreadMsgCount->fetchColumn();
     .check-lido { color: #34B7F1 !important; opacity: 1 !important; font-weight: 900; }
   </style>
 </head>
-<body class="font-sans bg-bg text-gray-800 flex h-screen overflow-hidden">
+<body class="font-sans bg-bg text-gray-800 flex h-screen overflow-hidden" style="height: 100dvh;">
 
   <div id="sidebar-container" class="fixed inset-y-0 left-0 z-50 w-60 bg-sidebar flex flex-col h-screen transform -translate-x-full md:relative md:translate-x-0 transition-transform duration-300 ease-in-out"></div>
 
@@ -320,7 +320,7 @@ $totalMensagensNaoLidas = (int)$stmtUnreadMsgCount->fetchColumn();
       </div>
 
       <!-- Mensagens -->
-      <div id="chat-mensagens" class="flex-1 overflow-y-auto p-5 space-y-4 custom-scroll bg-[#F4F3F1] flex flex-col"></div>
+      <div id="chat-mensagens" class="flex-1 overflow-y-auto p-5 space-y-4 custom-scroll bg-[#F4F3F1] flex flex-col min-h-0"></div>
 
       <!-- Input de envio -->
       <div class="border-t border-gray-200 bg-white flex flex-col flex-shrink-0" style="padding-bottom: env(safe-area-inset-bottom, 0px)">
