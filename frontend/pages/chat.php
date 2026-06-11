@@ -338,7 +338,7 @@ $totalMensagensNaoLidas = (int)$stmtUnreadMsgCount->fetchColumn();
           </div>
         </div>
 
-        <form id="form-chat" class="p-4 flex items-center gap-2" onsubmit="processarEnvioChat(event)">
+        <form id="form-chat" class="p-4 flex items-center gap-2" style="padding-bottom:max(1rem,env(safe-area-inset-bottom,1rem))" onsubmit="processarEnvioChat(event)">
           <button type="button" onclick="document.getElementById('input-file').click()"
                   class="p-2 text-gray-400 hover:text-orange transition-colors cursor-pointer rounded-lg hover:bg-gray-50">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
@@ -732,6 +732,11 @@ $totalMensagensNaoLidas = (int)$stmtUnreadMsgCount->fetchColumn();
     if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
       if (!document.getElementById('modal-editar').classList.contains('hidden')) confirmarEdicao();
     }
+  });
+
+  // ─── iOS keyboard: scroll input into view when focused ───
+  inputMensagem.addEventListener('focus', function () {
+    setTimeout(() => this.scrollIntoView({ behavior: 'smooth', block: 'center' }), 300);
   });
 
   // ─── Marcação de leitura ao abrir chat ───
