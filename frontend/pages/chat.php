@@ -443,6 +443,7 @@ $totalMensagensNaoLidas = (int)$stmtUnreadMsgCount->fetchColumn();
   const servicosPrestadorJS = <?= json_encode($listaServicosDisponiveis) ?>;
 
   let imagemNaMensagemFila = null;
+  let ultimoIdMensagem = 0;
 
   String.prototype.hashCode = function () {
     let h = 0;
@@ -499,109 +500,128 @@ $totalMensagensNaoLidas = (int)$stmtUnreadMsgCount->fetchColumn();
     } catch (e) { console.error('Erro ao carregar contatos:', e); }
   }
 
-  async function carregarMensagens() {
+  function criarBalaoMensagem(msg) {
+    const souEu      = parseInt(msg.remetente_id) === idUsuarioLogado;
+    const foiDeletado = parseInt(msg.deletado || 0) === 1;
+    const dataISO    = msg.criado_em.replace(' ', 'T') + 'Z';
+    const tempoCriacao = new Date(dataISO);
+    const horaLabel  = tempoCriacao.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+    const minPassados = (Date.now() - tempoCriacao.getTime()) / 60000;
+    const dentroPrazo = minPassados <= 5;
+
+    let botoesAcao = '';
+    if (souEu && !foiDeletado && dentroPrazo) {
+      const btnEditar = !msg.url_imagem
+        ? `<button onclick="dispararEdicao(${msg.id}, '${encodeURIComponent(msg.mensagem)}')" title="Editar" class="hover:text-orange p-0.5 cursor-pointer">
+             <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10"></path></svg>
+             </button>` : '';
+      botoesAcao = `
+        <div class="msg-actions hidden gap-1 mr-1 text-gray-400 bg-white border border-gray-100 rounded shadow-sm p-1 z-10 self-center">
+          ${btnEditar}
+          <button onclick="deletarMensagem(${msg.id})" title="Apagar" class="hover:text-red-500 p-0.5 cursor-pointer">
+            <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0"></path></svg>
+          </button>
+        </div>`;
+    }
+
+    let conteudo = '';
+    if (foiDeletado) {
+      conteudo = `
+        <span style="display:inline-flex; align-items:center; gap:6px; color:#ef4444; font-style:italic; opacity:.9;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;">
+                <circle cx="12" cy="12" r="9"></circle>
+                <line x1="6" y1="18" x2="18" y2="6"></line>
+            </svg>
+            <span>Esta mensagem foi apagada</span>
+        </span>`;
+    } else {
+      if (msg.url_imagem) {
+        const nomeSemPrefixo = msg.url_imagem.replace(/^chat\//, '');
+        const urlImg = `${urlBaseChatImagens}${nomeSemPrefixo}`;
+        conteudo += `<img src="${urlImg}" class="max-w-xs rounded-xl border border-gray-200 max-h-48 object-cover mb-1 block cursor-pointer hover:opacity-90" onclick="window.open('${urlImg}','_blank')" onerror="this.style.display='none'">`;
+      }
+      if (msg.mensagem && msg.mensagem.trim() !== '') {
+        conteudo += `<div class="font-medium text-sm leading-relaxed">${msg.mensagem}</div>`;
+      }
+    }
+
+    const editadaLabel = (msg.atualizado_em && !foiDeletado) ? `<span class="italic opacity-60"> · editada</span>` : '';
+    const classeBalao = souEu
+      ? `bg-orange text-white rounded-2xl rounded-tr-none py-2 px-4 text-xs shadow-sm max-w-full break-words ${foiDeletado ? 'opacity-60 bg-gray-300 !text-gray-700 italic' : ''}`
+      : `bg-white text-gray-800 rounded-2xl rounded-tl-none py-2 px-4 text-xs shadow-sm max-w-full break-words border border-gray-100 ${foiDeletado ? 'italic text-gray-400' : ''}`;
+
+    const divAlinhamento = document.createElement('div');
+    divAlinhamento.className = `msg-container flex items-end gap-1 max-w-[85%] w-full ${souEu ? 'justify-end ml-auto' : 'justify-start'}`;
+
+    let checkmarkHtml = '';
+    if (souEu && !foiDeletado) {
+      const estaLida    = msg.lido_em !== null && msg.lido_em !== undefined;
+      const estaEntregue = msg.entregue_em !== null && msg.entregue_em !== undefined;
+      
+      if (estaLida) {
+        checkmarkHtml = `<span class="check-lido ml-1" title="Lida" style="font-size: 11px;">&#10003;&#10003;</span>`;
+      } else if (estaEntregue) {
+        checkmarkHtml = `<span class="check-entregue ml-1" title="Entregue" style="font-size: 11px;">&#10003;&#10003;</span>`;
+      } else {
+        checkmarkHtml = `<span class="check-enviado ml-1" title="Enviada" style="font-size: 11px;">&#10003;</span>`;
+      }
+    }
+
+    const divBalao = document.createElement('div');
+    divBalao.className = classeBalao;
+    divBalao.innerHTML = `${conteudo}<span class="block text-[9px] text-right mt-1 select-none opacity-75 ${souEu ? 'text-orange-100' : 'text-gray-400'}">${horaLabel}${editadaLabel}${checkmarkHtml}</span>`;
+
+    divAlinhamento.appendChild(divBalao);
+    if (souEu && botoesAcao) divAlinhamento.insertAdjacentHTML('beforeend', botoesAcao);
+    return divAlinhamento;
+  }
+
+  async function carregarMensagens(forceFull) {
     if (!urlApiMensagens || !chatContainer) return;
+    const isIncremental = !forceFull && ultimoIdMensagem > 0;
+    const url = isIncremental ? `${urlApiMensagens}&since_id=${ultimoIdMensagem}` : urlApiMensagens;
     try {
-      const resp = await fetch(urlApiMensagens);
+      const resp = await fetch(url);
       if (!resp.ok) return;
       const textoPuro = await resp.text();
       if (!textoPuro.trim().startsWith('[') && !textoPuro.trim().startsWith('{')) return;
       const mensagens = JSON.parse(textoPuro);
       if (!mensagens || mensagens.erro) return;
-      
-      // Verifica se o usuário estava no final do chat antes de atualizar
-      const estavaNoBaixo = (chatContainer.scrollHeight - chatContainer.scrollTop - chatContainer.clientHeight) < 150;
-      
-      // Se for a primeira vez que carregamos, não queremos transições bruscas
-      const primeiraCarga = chatContainer.innerHTML === '';
-      
-      chatContainer.innerHTML = '';
 
-      if (mensagens.length === 0) {
-        chatContainer.innerHTML = '<div class="text-center text-gray-400 text-xs my-auto pt-10">Nenhuma mensagem por aqui ainda...</div>';
-        return;
-      }
+      if (!isIncremental) {
+        const estavaNoBaixo = (chatContainer.scrollHeight - chatContainer.scrollTop - chatContainer.clientHeight) < 150;
+        const primeiraCarga = chatContainer.innerHTML === '';
+        chatContainer.innerHTML = '';
 
-      const agora = Date.now();
-      mensagens.forEach(msg => {
-        const souEu      = parseInt(msg.remetente_id) === idUsuarioLogado;
-        const foiDeletado = parseInt(msg.deletado || 0) === 1;
-        const dataISO    = msg.criado_em.replace(' ', 'T') + 'Z';
-        const tempoCriacao = new Date(dataISO);
-        const horaLabel  = tempoCriacao.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-        const minPassados = (agora - tempoCriacao.getTime()) / 60000;
-        const dentroPrazo = minPassados <= 5;
-
-        let botoesAcao = '';
-        if (souEu && !foiDeletado && dentroPrazo) {
-          const btnEditar = !msg.url_imagem
-            ? `<button onclick="dispararEdicao(${msg.id}, '${encodeURIComponent(msg.mensagem)}')" title="Editar" class="hover:text-orange p-0.5 cursor-pointer">
-                 <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10"></path></svg>
-               </button>` : '';
-          botoesAcao = `
-            <div class="msg-actions hidden gap-1 mr-1 text-gray-400 bg-white border border-gray-100 rounded shadow-sm p-1 z-10 self-center">
-              ${btnEditar}
-              <button onclick="deletarMensagem(${msg.id})" title="Apagar" class="hover:text-red-500 p-0.5 cursor-pointer">
-                <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0"></path></svg>
-              </button>
-            </div>`;
+        if (mensagens.length === 0) {
+          chatContainer.innerHTML = '<div class="text-center text-gray-400 text-xs my-auto pt-10">Nenhuma mensagem por aqui ainda...</div>';
+          return;
         }
 
-        let conteudo = '';
-        if (foiDeletado) {
-          conteudo = `
-            <span style="display:inline-flex; align-items:center; gap:6px; color:#ef4444; font-style:italic; opacity:.9;">
-                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;">
-                    <circle cx="12" cy="12" r="9"></circle>
-                    <line x1="6" y1="18" x2="18" y2="6"></line>
-                </svg>
-                <span>Esta mensagem foi apagada</span>
-            </span>`;
-        } else {
-          if (msg.url_imagem) {
-            const nomeSemPrefixo = msg.url_imagem.replace(/^chat\//, '');
-            const urlImg = `${urlBaseChatImagens}${nomeSemPrefixo}`;
-            conteudo += `<img src="${urlImg}" class="max-w-xs rounded-xl border border-gray-200 max-h-48 object-cover mb-1 block cursor-pointer hover:opacity-90" onclick="window.open('${urlImg}','_blank')" onerror="this.style.display='none'">`;
-          }
-          if (msg.mensagem && msg.mensagem.trim() !== '') {
-            conteudo += `<div class="font-medium text-sm leading-relaxed">${msg.mensagem}</div>`;
-          }
+        mensagens.forEach(msg => {
+          chatContainer.appendChild(criarBalaoMensagem(msg));
+          ultimoIdMensagem = parseInt(msg.id);
+        });
+
+        if (estavaNoBaixo || primeiraCarga) {
+            chatContainer.scrollTop = chatContainer.scrollHeight;
         }
+      } else if (mensagens.length > 0) {
+        const estavaNoBaixo = (chatContainer.scrollHeight - chatContainer.scrollTop - chatContainer.clientHeight) < 150;
 
-        const editadaLabel = (msg.atualizado_em && !foiDeletado) ? `<span class="italic opacity-60"> · editada</span>` : '';
-        const classeBalao = souEu
-          ? `bg-orange text-white rounded-2xl rounded-tr-none py-2 px-4 text-xs shadow-sm max-w-full break-words ${foiDeletado ? 'opacity-60 bg-gray-300 !text-gray-700 italic' : ''}`
-          : `bg-white text-gray-800 rounded-2xl rounded-tl-none py-2 px-4 text-xs shadow-sm max-w-full break-words border border-gray-100 ${foiDeletado ? 'italic text-gray-400' : ''}`;
+        document.querySelectorAll('[data-otimista]').forEach(el => el.remove());
 
-        const divAlinhamento = document.createElement('div');
-        divAlinhamento.className = `msg-container flex items-end gap-1 max-w-[85%] w-full ${souEu ? 'justify-end ml-auto' : 'justify-start'}`;
+        const emptyMsg = chatContainer.querySelector('.text-center.text-gray-400');
+        if (emptyMsg) emptyMsg.remove();
 
-        let checkmarkHtml = '';
-        if (souEu && !foiDeletado) {
-          const estaLida    = msg.lido_em !== null && msg.lido_em !== undefined;
-          const estaEntregue = msg.entregue_em !== null && msg.entregue_em !== undefined;
-          
-          if (estaLida) {
-            checkmarkHtml = `<span class="check-lido ml-1" title="Lida" style="font-size: 11px;">&#10003;&#10003;</span>`;
-          } else if (estaEntregue) {
-            checkmarkHtml = `<span class="check-entregue ml-1" title="Entregue" style="font-size: 11px;">&#10003;&#10003;</span>`;
-          } else {
-            checkmarkHtml = `<span class="check-enviado ml-1" title="Enviada" style="font-size: 11px;">&#10003;</span>`;
-          }
-        }
+        mensagens.forEach(msg => {
+          chatContainer.appendChild(criarBalaoMensagem(msg));
+          if (parseInt(msg.id) > ultimoIdMensagem) ultimoIdMensagem = parseInt(msg.id);
+        });
 
-        const divBalao = document.createElement('div');
-        divBalao.className = classeBalao;
-        divBalao.innerHTML = `${conteudo}<span class="block text-[9px] text-right mt-1 select-none opacity-75 ${souEu ? 'text-orange-100' : 'text-gray-400'}">${horaLabel}${editadaLabel}${checkmarkHtml}</span>`;
-
-        divAlinhamento.appendChild(divBalao);
-        if (souEu && botoesAcao) divAlinhamento.insertAdjacentHTML('beforeend', botoesAcao);
-        chatContainer.appendChild(divAlinhamento);
-      });
-
-      // Se estava no final ou é a primeira carga, rola para o fim (Estilo WhatsApp)
-      if (estavaNoBaixo || primeiraCarga) {
+        if (estavaNoBaixo) {
           chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
       }
     } catch (err) { console.error('Erro ao carregar mensagens:', err); }
   }
@@ -643,6 +663,7 @@ $totalMensagensNaoLidas = (int)$stmtUnreadMsgCount->fetchColumn();
     }
     const divAlinhamento = document.createElement('div');
     divAlinhamento.className = 'msg-container flex items-end gap-1 max-w-[85%] w-full justify-end ml-auto';
+    divAlinhamento.setAttribute('data-otimista', 'true');
     const divBalao = document.createElement('div');
     divBalao.className = 'bg-orange text-white rounded-2xl rounded-tr-none py-2 px-4 text-xs shadow-sm max-w-full break-words';
     const checkmark = '<span class="check-enviado ml-1" title="Enviada" style="font-size: 11px;">&#10003;</span>';
@@ -683,14 +704,14 @@ $totalMensagensNaoLidas = (int)$stmtUnreadMsgCount->fetchColumn();
         if (!uploadJson.path) { mostrarToast('Resposta inesperada do servidor.'); btnEnviar.disabled = false; return; }
         pathParaSalvarNoBanco = uploadJson.path;
       }
+      adicionarMensagemLocal(texto, pathParaSalvarNoBanco);
+      inputMensagem.value = '';
+      limparPreview();
       await fetch(urlApiMensagens, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ mensagem: texto, url_imagem: pathParaSalvarNoBanco }),
       });
-      inputMensagem.value = '';
-      limparPreview();
-      adicionarMensagemLocal(texto, pathParaSalvarNoBanco);
     } catch (err) { console.error('Falha no fluxo de envio:', err); }
     finally { btnEnviar.disabled = false; }
   }
@@ -716,7 +737,7 @@ $totalMensagensNaoLidas = (int)$stmtUnreadMsgCount->fetchColumn();
       const json = await resp.json();
       fecharModalEditar();
       if (json.erro) { mostrarToast(json.erro, 'erro'); return; }
-      carregarMensagens();
+      carregarMensagens(true);
     } catch (e) { console.error(e); }
   }
 
@@ -728,7 +749,7 @@ $totalMensagensNaoLidas = (int)$stmtUnreadMsgCount->fetchColumn();
     try {
       await fetch(urlApiMensagens, { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: _deletarId }) });
       fecharModalDeletar();
-      carregarMensagens();
+      carregarMensagens(true);
     } catch (e) { console.error(e); }
   }
 
@@ -827,7 +848,7 @@ $totalMensagensNaoLidas = (int)$stmtUnreadMsgCount->fetchColumn();
       await carregarMensagens();
       await marcarComoLidoNoServidor();
     }
-    setTimeout(loopMensagens, 1000);
+    setTimeout(loopMensagens, 300);
   }
 
   async function loopContatos() {

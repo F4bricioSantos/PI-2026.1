@@ -29,7 +29,6 @@ class ChatController {
         }
 
         try {
-            // Marca todas as mensagens enviadas pelo destinatário atual para o usuário logado como lidas
             try {
                 $upd = $this->pdo->prepare("
                     UPDATE mensagens_chat
@@ -44,19 +43,29 @@ class ChatController {
                 error_log("Erro ao marcar mensagens como lidas: " . $e->getMessage());
             }
 
-            $stmt = $this->pdo->prepare("
+            $sinceId = isset($_GET['since_id']) ? (int)$_GET['since_id'] : 0;
+
+            $sql = "
                 SELECT id, remetente_id, destinatario_id, mensagem,
                        url_imagem, criado_em, atualizado_em, deletado, lido_em, entregue_em
                 FROM mensagens_chat
-                WHERE (remetente_id = :user AND destinatario_id = :dest)
-                   OR (remetente_id = :dest AND destinatario_id = :user)
-                ORDER BY criado_em ASC
-            ");
-            $stmt->execute([
+                WHERE ((remetente_id = :user AND destinatario_id = :dest)
+                   OR (remetente_id = :dest AND destinatario_id = :user))
+            ";
+            $params = [
                 ':user' => $this->idUsuarioLogado,
                 ':dest' => $this->idDestinatarioAtual,
-            ]);
+            ];
 
+            if ($sinceId > 0) {
+                $sql .= " AND id > :since_id";
+                $params[':since_id'] = $sinceId;
+            }
+
+            $sql .= " ORDER BY criado_em ASC";
+
+            $stmt = $this->pdo->prepare($sql);
+            $stmt->execute($params);
             echo json_encode($stmt->fetchAll(PDO::FETCH_ASSOC));
         } catch (PDOException $e) {
             http_response_code(500);
