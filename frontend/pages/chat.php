@@ -629,6 +629,29 @@ $totalMensagensNaoLidas = (int)$stmtUnreadMsgCount->fetchColumn();
     previewContainer.classList.add('hidden');
   }
 
+  function adicionarMensagemLocal(texto, urlImagem) {
+    if (!chatContainer) return;
+    const hora = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+    let conteudo = '';
+    if (urlImagem) {
+      const nomeSemPrefixo = urlImagem.replace(/^chat\//, '');
+      const urlImg = `${urlBaseChatImagens}${nomeSemPrefixo}`;
+      conteudo += `<img src="${urlImg}" class="max-w-xs rounded-xl border border-gray-200 max-h-48 object-cover mb-1 block cursor-pointer hover:opacity-90" onclick="window.open('${urlImg}','_blank')" onerror="this.style.display='none'">`;
+    }
+    if (texto && texto.trim() !== '') {
+      conteudo += `<div class="font-medium text-sm leading-relaxed">${texto}</div>`;
+    }
+    const divAlinhamento = document.createElement('div');
+    divAlinhamento.className = 'msg-container flex items-end gap-1 max-w-[85%] w-full justify-end ml-auto';
+    const divBalao = document.createElement('div');
+    divBalao.className = 'bg-orange text-white rounded-2xl rounded-tr-none py-2 px-4 text-xs shadow-sm max-w-full break-words';
+    const checkmark = '<span class="check-enviado ml-1" title="Enviada" style="font-size: 11px;">&#10003;</span>';
+    divBalao.innerHTML = `${conteudo}<span class="block text-[9px] text-right mt-1 select-none opacity-75 text-orange-100">${hora}${checkmark}</span>`;
+    divAlinhamento.appendChild(divBalao);
+    chatContainer.appendChild(divAlinhamento);
+    chatContainer.scrollTop = chatContainer.scrollHeight;
+  }
+
   async function processarEnvioChat(e) {
     if (e) { e.preventDefault(); e.stopPropagation(); }
     const texto = inputMensagem.value.trim();
@@ -667,7 +690,7 @@ $totalMensagensNaoLidas = (int)$stmtUnreadMsgCount->fetchColumn();
       });
       inputMensagem.value = '';
       limparPreview();
-      carregarMensagens();
+      adicionarMensagemLocal(texto, pathParaSalvarNoBanco);
     } catch (err) { console.error('Falha no fluxo de envio:', err); }
     finally { btnEnviar.disabled = false; }
   }
@@ -804,7 +827,7 @@ $totalMensagensNaoLidas = (int)$stmtUnreadMsgCount->fetchColumn();
       await carregarMensagens();
       await marcarComoLidoNoServidor();
     }
-    setTimeout(loopMensagens, 2000);
+    setTimeout(loopMensagens, 1000);
   }
 
   async function loopContatos() {
