@@ -104,6 +104,7 @@ $totalMensagensNaoLidas = (int)$stmtUnreadMsgCount->fetchColumn();
     }
   </script>
   <style>
+    #sidebar-container { height: 100dvh; }
     .custom-scroll::-webkit-scrollbar { width: 6px; }
     .custom-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 99px; }
     .msg-container:hover .msg-actions { display: flex !important; }
