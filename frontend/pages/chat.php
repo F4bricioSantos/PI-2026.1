@@ -126,7 +126,7 @@ $totalMensagensNaoLidas = (int)$stmtUnreadMsgCount->fetchColumn();
     });
   </script>
 
-  <main class="flex-1 flex overflow-hidden p-0 md:p-6 md:gap-6 w-full relative">
+  <main class="flex-1 h-full flex overflow-hidden p-0 md:p-6 md:gap-6 w-full relative">
 
     <!-- Lista de contatos -->
     <section class="w-full md:w-80 bg-white md:rounded-2xl border-r md:border border-gray-200 shadow-sm flex-col h-full flex-shrink-0 overflow-hidden <?= ($idDestinatario > 0) ? 'hidden md:flex' : 'flex' ?>">

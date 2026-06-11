@@ -112,7 +112,7 @@ export function renderSidebar(containerId, activePage = '', isPro = false, isAdm
     return !currentSearch || currentSearch === '';
   };
 
-  container.className = "fixed inset-y-0 left-0 z-50 w-60 bg-sidebar flex flex-col h-screen border-r border-white/5 transition-transform duration-300 ease-in-out transform -translate-x-full md:relative md:translate-x-0";
+  container.className = "fixed inset-y-0 left-0 z-50 w-60 bg-sidebar flex flex-col h-screen overflow-hidden border-r border-white/5 transition-transform duration-300 ease-in-out transform -translate-x-full md:relative md:translate-x-0";
 
   const mainNav = NAV_ITEMS
     .map((item) => buildNavLink(item, isItemActive(item)))
